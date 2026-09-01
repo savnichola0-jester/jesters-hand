@@ -1,0 +1,23 @@
+kind = "mobile"
+previewPath = "/"
+title = "Jester's Hand"
+version = "1.0.0"
+id = "artifacts/jesters-hand"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 26137
+
+[services.development]
+run = "pnpm --filter @workspace/jesters-hand run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/jesters-hand", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/jesters-hand", "run", "serve" ]
+
+[services.env]
+PORT = "26137"
+BASE_PATH = "/"

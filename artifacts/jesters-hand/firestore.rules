@@ -1,0 +1,1449 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isDealAdmin() {
+      return isAdmin()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId == '00-00';
+    }
+
+    // Vault curation tier: the second Hand (01-54) is a full admin EXCEPT
+    // for Vault/Chamber document uploads. Admins default to keeper unless
+    // their user doc carries vaultKeeper: false (set only out-of-band; the
+    // flag is pinned like isAdmin in the users rules below).
+    function isKeeper() {
+      return isAdmin()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('vaultKeeper', true) == true;
+    }
+
+    // Suspension: a suspended member keeps a valid ID token for up to an
+    // hour after The Hand suspends them, so rules must re-check the flag on
+    // every request. Missing user docs count as NOT suspended (fresh
+    // sign-ups create their doc after auth).
+    function isSuspended() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('suspended', false) == true;
+    }
+
+    // Standard gate for club data: signed in AND not suspended.
+    function activeUser() {
+      return request.auth != null && !isSuspended();
+    }
+
+    // Reaction integrity — `reactions` is a map of emoji -> array of member
+    // uids. Rules cannot loop over map keys, so the allowed emoji set is
+    // pinned here (keep in sync with REACTION_EMOJIS in the app) and every
+    // key is checked individually: a member may only add or remove their
+    // OWN uid (mirrors the mutedBy toSet().difference() pattern).
+    function emojiDeltaOk(before, after, k) {
+      return after.get(k, []).toSet()
+               .difference(before.get(k, []).toSet())
+               .hasOnly([request.auth.uid])
+        && before.get(k, []).toSet()
+             .difference(after.get(k, []).toSet())
+             .hasOnly([request.auth.uid]);
+    }
+
+    function reactionsDeltaOk() {
+      let before = resource.data.get('reactions', {});
+      let after = request.resource.data.get('reactions', {});
+      return after is map
+        && after.diff(before).affectedKeys().hasOnly(
+             ['👍', '👎', '👑', '🎭', '😢', '😂', '🖤', '🤍', '🔥', '🗡',
+              '👀', '🃏', '♠️', '♣️', '♥️', '♦️', '🐾'])
+        && emojiDeltaOk(before, after, '👍')
+        && emojiDeltaOk(before, after, '👎')
+        && emojiDeltaOk(before, after, '👑')
+        && emojiDeltaOk(before, after, '🎭')
+        && emojiDeltaOk(before, after, '😢')
+        && emojiDeltaOk(before, after, '😂')
+        && emojiDeltaOk(before, after, '🖤')
+        && emojiDeltaOk(before, after, '🤍')
+        && emojiDeltaOk(before, after, '🔥')
+        && emojiDeltaOk(before, after, '🗡')
+        && emojiDeltaOk(before, after, '👀')
+        && emojiDeltaOk(before, after, '🃏')
+        && emojiDeltaOk(before, after, '♠️')
+        && emojiDeltaOk(before, after, '♣️')
+        && emojiDeltaOk(before, after, '♥️')
+        && emojiDeltaOk(before, after, '♦️')
+        && emojiDeltaOk(before, after, '🐾');
+    }
+
+    // Gate for any update that may touch `reactions`: untouched, or an
+    // honest own-uid-only toggle.
+    function reactionsUntouchedOrOwnToggle() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(['reactions'])
+        || reactionsDeltaOk();
+    }
+
+    // Lock screen layout — must be readable BEFORE sign-in (it is the login
+    // screen). Contains only element positions/sizes, nothing sensitive.
+    // Only the admin can publish it.
+    match /config/lockscreen {
+      allow read: if true;
+      allow write: if activeUser() && isAdmin();
+    }
+
+    // Users — any authenticated member can read profiles (needed for member picker,
+    // chat display names, and The Hand member list); only the owner can write their own doc.
+    // isAdmin is privileged: it gates every isAdmin() check in these rules,
+    // so clients may never grant it to themselves — create without it (or
+    // false), and updates must leave it exactly as it was.
+    match /users/{userId} {
+      // Suspension carve-out #1: a suspended member may still read their OWN
+      // doc — the app needs it to detect suspension and sign them out.
+      allow read:   if request.auth != null
+        && (request.auth.uid == userId || !isSuspended());
+      allow create: if activeUser() && request.auth.uid == userId
+        && request.resource.data.get('isAdmin', false) == false;
+      // Dead push-token cleanup: any signed-in member may REMOVE another
+      // user's expoPushToken (Expo reported it DeviceNotRegistered after a
+      // send). Strictly deletion-only, touching nothing else — worst case a
+      // live token is removed and re-registers on next sign-in/app open.
+      // Suspension carve-out #2: the deletion-only expoPushToken branch stays
+      // open to suspended members so sign-out can remove their own token.
+      allow update: if request.auth != null
+        && (
+          (
+            !isSuspended()
+            && request.auth.uid == userId
+            && request.resource.data.get('isAdmin', false)
+               == resource.data.get('isAdmin', false)
+            // The vault-keeper tier flag is pinned exactly like isAdmin —
+            // the restricted second Hand cannot lift their own limit.
+            && request.resource.data.get('vaultKeeper', null)
+               == resource.data.get('vaultKeeper', null)
+            // The admin portrait is placed only by the Jester (branch below);
+            // members cannot set or clear it on their own ticket.
+            && (
+              isAdmin()
+              || request.resource.data.get('adminPhotoUrl', null)
+                 == resource.data.get('adminPhotoUrl', null)
+            )
+            // Suit is member-picked (reading genre) but must be one of the
+            // four suits — or absent.
+            && (
+              !('suit' in request.resource.data)
+              || request.resource.data.suit in ['Spade', 'Diamond', 'Heart', 'Club']
+            )
+          )
+          || (
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['expoPushToken'])
+            && !('expoPushToken' in request.resource.data)
+          )
+          // The Jester may place the admin portrait and mark the suit on any
+          // member's ticket from The Hand — ONLY those. The mug photo and all
+          // ticket fields belong to the member; privilege/identity/operational
+          // keys (isAdmin, jokerId, suspended, expoPushToken, …) stay untouchable.
+          || (
+            activeUser()
+            && isAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['adminPhotoUrl', 'suit'])
+          )
+        );
+      allow delete: if activeUser() && request.auth.uid == userId;
+    }
+
+    // The Contract wording — single doc contract/current, amended only by
+    // the Jester. Every amendment must bump the version by exactly 1 (the
+    // bundled app wording counts as version 1, so the first amendment is 2).
+    match /contract/{docId} {
+      allow read: if activeUser();
+      allow create: if activeUser() && isAdmin()
+        && docId == 'current'
+        && request.resource.data.keys().hasOnly(
+             ['version', 'heading', 'sections', 'acknowledgement', 'updatedAt'])
+        && request.resource.data.version is int
+        && request.resource.data.version >= 2
+        && request.resource.data.heading is string
+        && request.resource.data.heading.size() > 0
+        && request.resource.data.sections is list
+        && request.resource.data.sections.size() > 0
+        && request.resource.data.acknowledgement is string
+        && request.resource.data.updatedAt == request.time;
+      allow update: if activeUser() && isAdmin()
+        && request.resource.data.keys().hasOnly(
+             ['version', 'heading', 'sections', 'acknowledgement', 'updatedAt'])
+        && request.resource.data.version is int
+        && request.resource.data.version == resource.data.version + 1
+        && request.resource.data.heading is string
+        && request.resource.data.heading.size() > 0
+        && request.resource.data.sections is list
+        && request.resource.data.sections.size() > 0
+        && request.resource.data.acknowledgement is string
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // The version of the wording currently in force — the contract/current
+    // doc if the Jester has amended, otherwise the bundled version 1.
+    function currentContractVersion() {
+      return exists(/databases/$(database)/documents/contract/current)
+        ? get(/databases/$(database)/documents/contract/current).data.version
+        : 1;
+    }
+
+    // Valid signed-agreement payload (first sign and re-sign share it).
+    function validAgreementPayload(userId) {
+      return request.resource.data.uid == userId
+        && request.resource.data.keys().hasOnly(
+             ['uid', 'jokerId', 'name', 'signedDate', 'signaturePaths',
+              'sigWidth', 'sigHeight', 'version', 'signedAt'])
+        && request.resource.data.jokerId is string
+        && request.resource.data.jokerId.size() > 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.signedDate is string
+        && request.resource.data.signedDate.size() > 0
+        && request.resource.data.signaturePaths is list
+        && request.resource.data.signaturePaths.size() > 0
+        && request.resource.data.signaturePaths.size() <= 500
+        && request.resource.data.signaturePaths[0] is string
+        && request.resource.data.sigWidth is number
+        && request.resource.data.sigWidth > 0
+        && request.resource.data.sigHeight is number
+        && request.resource.data.sigHeight > 0
+        && request.resource.data.version is int
+        // A signature only counts for the wording in force right now — a
+        // member can't pre-sign a future version to dodge the re-sign gate.
+        && request.resource.data.version == currentContractVersion()
+        && request.resource.data.signedAt == request.time;
+    }
+
+    // The Contract — each member's signed agreement. Two writes only: the
+    // first signing, and a full re-sign at a strictly NEWER contract version
+    // (after the Jester amends the wording). Never editable in place, never
+    // deletable from the app (member wipes go through the api-server with
+    // owner credentials).
+    match /agreements/{userId} {
+      allow read: if activeUser() && (request.auth.uid == userId || isAdmin());
+      allow create: if activeUser()
+        && request.auth.uid == userId
+        && validAgreementPayload(userId);
+      allow update: if activeUser()
+        && request.auth.uid == userId
+        && validAgreementPayload(userId)
+        && request.resource.data.version > resource.data.version;
+      allow delete: if false;
+    }
+
+    // Conversations — members of the conversation can read and update.
+    // Anyone authenticated can create a conversation as long as they include themselves.
+    // Membership changes are locked down: a member may only remove
+    // themselves (self-leave), and on GROUP chats the creator (createdBy)
+    // may add members — but never remove others. createdBy itself is
+    // immutable after creation, so ownership can't be hijacked.
+    match /conversations/{conversationId} {
+      allow read: if activeUser()
+        && (
+          request.auth.uid in resource.data.memberUids
+          // Orphan sweep: zero-member conversations are readable by anyone
+          // signed in, so clients can find and delete pre-fix leftovers
+          // (delete below already permits this via hasOnly on an empty list).
+          || resource.data.memberUids.size() == 0
+        );
+      allow update: if activeUser()
+        && request.auth.uid in resource.data.memberUids
+        // createdBy is frozen: nobody may set, change, or delete it after
+        // create — with one exception: legacy groups created before
+        // ownership existed (no createdBy field) may be backfilled ONCE by
+        // any member, but only to the deterministic first member, and the
+        // write may touch nothing else. Once set, it is frozen forever.
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['createdBy'])
+          || (
+            !('createdBy' in resource.data)
+            && resource.data.isGroup == true
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['createdBy'])
+            && request.resource.data.createdBy == resource.data.memberUids[0]
+          )
+          // …or the group's owner is leaving and hands ownership to the
+          // deterministic first remaining member in the same write. The
+          // memberUids clause below independently enforces that the only
+          // membership change is removing the requester's own uid.
+          || (
+            resource.data.isGroup == true
+            && resource.data.createdBy == request.auth.uid
+            && request.resource.data.memberUids is list
+            && !(request.auth.uid in request.resource.data.memberUids)
+            && request.resource.data.memberUids.size() > 0
+            && request.resource.data.createdBy == request.resource.data.memberUids[0]
+          )
+        )
+        && (
+          // memberUids untouched…
+          !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['memberUids'])
+          // …or the only change is removing your own uid (self-leave).
+          // The result must never be an EMPTY member list: the last member
+          // must DELETE the conversation instead (see delete rule below).
+          // This makes new zero-member orphans unreachable, so the orphan
+          // read allowance above only ever exposes pre-fix legacy leftovers.
+          || (
+            request.resource.data.memberUids is list
+            && request.resource.data.memberUids.size() > 0
+            && request.resource.data.memberUids.toSet()
+                 .difference(resource.data.memberUids.toSet()).size() == 0
+            && resource.data.memberUids.toSet()
+                 .difference(request.resource.data.memberUids.toSet())
+                 .hasOnly([request.auth.uid])
+            && !(request.auth.uid in request.resource.data.memberUids)
+          )
+          // …or the group's creator is adding members (additions only,
+          // no removals). Direct chats have no createdBy path and stay locked.
+          || (
+            resource.data.isGroup == true
+            && resource.data.createdBy == request.auth.uid
+            && request.resource.data.memberUids is list
+            // nobody removed…
+            && resource.data.memberUids.toSet()
+                 .difference(request.resource.data.memberUids.toSet()).size() == 0
+            // …and at least one member actually added.
+            && request.resource.data.memberUids.toSet()
+                 .difference(resource.data.memberUids.toSet()).size() > 0
+          )
+        );
+      allow create: if activeUser()
+        && request.auth.uid in request.resource.data.memberUids
+        // If createdBy is set at creation, it must be the requester.
+        && (
+          !('createdBy' in request.resource.data)
+          || request.resource.data.createdBy == request.auth.uid
+        );
+      // Deletes: only when the requester is the SOLE remaining member (the
+      // last person leaving takes the conversation with them), or the
+      // conversation is already an orphan with no members at all (anyone
+      // signed in may sweep such zero-member leftovers).
+      allow delete: if activeUser()
+        && resource.data.memberUids.hasOnly([request.auth.uid]);
+    }
+
+    // Messages — members of the parent conversation can read/create/update messages.
+    // Deletes are limited to the message's own sender (even the admin cannot delete
+    // someone else's message in a whisper they are not the sender of), or an admin
+    // who is a member of the conversation.
+    match /conversations/{conversationId}/messages/{messageId} {
+      allow read: if activeUser()
+        && (
+          request.auth.uid in
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids
+          // Orphan sweep: messages under a zero-member conversation must be
+          // enumerable so the sweeper can batch-delete them with the parent.
+          || get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids.size() == 0
+        );
+      // Sender identity is immutable after create. Only the sender may touch
+      // the message body; other members are limited to reaction updates —
+      // without this split, any conversation member could rewrite anyone
+      // else's message text.
+      allow update: if activeUser()
+        && request.auth.uid in
+          get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids
+        && request.resource.data.senderUid == resource.data.senderUid
+        && (
+          resource.data.senderUid == request.auth.uid
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+        )
+        // Attachments are immutable after create (validated only at creation).
+        && request.resource.data.get('imageUrl', null) == resource.data.get('imageUrl', null)
+        && reactionsUntouchedOrOwnToggle();
+      allow create: if activeUser()
+        && request.auth.uid in
+          get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids
+        && request.resource.data.senderUid == request.auth.uid
+        // New messages can't be planted with forged reactions.
+        && request.resource.data.get('reactions', {}).size() == 0
+        // Optional photo/GIF attachment: bounded https URL string.
+        && (
+          !('imageUrl' in request.resource.data)
+          || (
+            request.resource.data.imageUrl is string
+            && request.resource.data.imageUrl.size() > 0
+            && request.resource.data.imageUrl.size() <= 2048
+            && request.resource.data.imageUrl.matches('https://.*')
+          )
+        );
+      allow delete: if activeUser()
+        && (
+          // Orphan sweep: the parent conversation is already gone, or is being
+          // deleted in this same batch (last member leaving) — anyone signed
+          // in may clean up its leftover messages.
+          !exists(/databases/$(database)/documents/conversations/$(conversationId))
+          || !existsAfter(/databases/$(database)/documents/conversations/$(conversationId))
+          || (
+            request.auth.uid in
+              get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids
+            && (resource.data.senderUid == request.auth.uid || isAdmin())
+          )
+        );
+    }
+
+    // Ante boards — any authenticated member can read and post.
+    // Creates must be authored by the requester with a valid shape.
+    // Updates may only touch reactions and commentCount (content is immutable).
+    // Deletes: post author or admin.
+    match /antePosts/{boardId}/posts/{postId} {
+      allow read: if activeUser();
+      // isAdmin(): restores from Archives recreate the original doc verbatim
+      // (original author, dates, counters), which the honesty pins below
+      // would otherwise reject.
+      allow create: if (activeUser() && isAdmin())
+        || activeUser()
+        && (boardId == 'place' || boardId == 'raised')
+        && request.resource.data.keys().hasOnly(
+             ['senderUid', 'title', 'description', 'options', 'text',
+              'reactions', 'votes', 'commentCount', 'mutedBy', 'createdAt'])
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 5000
+        // Counter must start honest: new posts always begin at zero comments.
+        && request.resource.data.commentCount == 0
+        // New posts can't be planted with forged reactions.
+        && request.resource.data.get('reactions', {}).size() == 0;
+      allow update: if activeUser()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['reactions', 'commentCount', 'countedCommentId', 'votes', 'mutedBy'])
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['commentCount', 'countedCommentId'])
+          // commentCount may only move in lockstep with a real comment create or
+          // delete in the same atomic batch: the client must name the comment in
+          // countedCommentId and that comment must actually appear (for +1) or
+          // disappear (for -1) as part of this transaction.
+          || (
+            request.resource.data.commentCount == resource.data.get('commentCount', 0) + 1
+            && request.resource.data.countedCommentId is string
+            && !exists(/databases/$(database)/documents/antePosts/$(boardId)/posts/$(postId)/comments/$(request.resource.data.countedCommentId))
+            && existsAfter(/databases/$(database)/documents/antePosts/$(boardId)/posts/$(postId)/comments/$(request.resource.data.countedCommentId))
+          )
+          || (
+            request.resource.data.commentCount == resource.data.get('commentCount', 0) - 1
+            && request.resource.data.countedCommentId is string
+            && exists(/databases/$(database)/documents/antePosts/$(boardId)/posts/$(postId)/comments/$(request.resource.data.countedCommentId))
+            && !existsAfter(/databases/$(database)/documents/antePosts/$(boardId)/posts/$(postId)/comments/$(request.resource.data.countedCommentId))
+          )
+        )
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['mutedBy'])
+          || (
+            request.resource.data.mutedBy is list
+            // Only your own uid may be added or removed from the mute list.
+            && request.resource.data.mutedBy.toSet()
+                 .difference(resource.data.get('mutedBy', []).toSet())
+                 .hasOnly([request.auth.uid])
+            && resource.data.get('mutedBy', []).toSet()
+                 .difference(request.resource.data.mutedBy.toSet())
+                 .hasOnly([request.auth.uid])
+          )
+        )
+        && reactionsUntouchedOrOwnToggle();
+      allow delete: if activeUser()
+        && (resource.data.senderUid == request.auth.uid || isAdmin());
+
+      // Comments — readable by any member; author-only creates; content
+      // immutable after posting except for reaction toggles.
+      // Deletes: comment author, admin, or the post's author cleaning up
+      // comments when deleting their own post.
+      match /comments/{commentId} {
+        allow read: if activeUser();
+        // isAdmin(): Archive restores recreate comments verbatim (see posts).
+        allow create: if (activeUser() && isAdmin())
+          || activeUser()
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          // Every comment create must bump the parent post's commentCount by
+          // exactly 1 in the same batch, so the tally can never undercount.
+          && getAfter(/databases/$(database)/documents/antePosts/$(boardId)/posts/$(postId)).data.commentCount
+             == get(/databases/$(database)/documents/antePosts/$(boardId)/posts/$(postId)).data.get('commentCount', 0) + 1
+          // New comments can't be planted with forged reactions.
+          && request.resource.data.get('reactions', {}).size() == 0;
+        allow update: if activeUser()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['reactions'])
+          && reactionsDeltaOk();
+        // Deletes must keep the tally honest: either the parent post is gone
+        // after this batch (post deletion / orphan cleanup — anyone signed in
+        // may sweep comments of a post being/already deleted), or the deleter
+        // is the comment author or an admin AND the parent post's commentCount
+        // is decremented by exactly 1 in the same atomic batch.
+        allow delete: if activeUser()
+          && (
+            !existsAfter(/databases/$(database)/documents/antePosts/$(boardId)/posts/$(postId))
+            || (
+              (resource.data.senderUid == request.auth.uid || isAdmin())
+              && getAfter(/databases/$(database)/documents/antePosts/$(boardId)/posts/$(postId)).data.commentCount
+                 == get(/databases/$(database)/documents/antePosts/$(boardId)/posts/$(postId)).data.get('commentCount', 0) - 1
+            )
+          );
+      }
+    }
+
+    // Target Tickets — theory case files. Any member reads; author creates with
+    // a valid shape and honest counters. Content edits are author-only; everyone
+    // else may only touch reactions / commentCount (counter-verified) / mutedBy.
+    match /targetTickets/{ticketId} {
+      allow read: if activeUser();
+      // isAdmin(): Archive restores recreate the ticket verbatim.
+      allow create: if (activeUser() && isAdmin())
+        || activeUser()
+        && request.resource.data.keys().hasOnly(
+             ['senderUid', 'title', 'target', 'suit', 'evidence', 'connections',
+              'contradictions', 'confidence', 'fieldDots', 'spread',
+              'reactions', 'commentCount', 'mutedBy', 'createdAt'])
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.suit in ['spade', 'diamond', 'heart', 'club']
+        && request.resource.data.spread is string
+        && request.resource.data.spread.size() <= 500000
+        && request.resource.data.commentCount == 0
+        // New tickets can't be planted with forged reactions.
+        && request.resource.data.get('reactions', {}).size() == 0;
+      allow update: if activeUser()
+        && (
+          // Author may edit content, but never senderUid/createdAt/counters.
+          (
+            resource.data.senderUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['title', 'target', 'suit', 'evidence', 'connections',
+                           'contradictions', 'confidence', 'fieldDots', 'spread'])
+            && request.resource.data.title is string
+            && request.resource.data.title.size() > 0
+            && request.resource.data.title.size() <= 200
+            && request.resource.data.suit in ['spade', 'diamond', 'heart', 'club']
+            && request.resource.data.spread is string
+            && request.resource.data.spread.size() <= 500000
+          )
+          // Anyone: reactions / counter-verified commentCount / own mute flag.
+          || (
+            request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['reactions', 'commentCount', 'countedCommentId', 'mutedBy'])
+            && (
+              !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['commentCount', 'countedCommentId'])
+              || (
+                request.resource.data.commentCount == resource.data.get('commentCount', 0) + 1
+                && request.resource.data.countedCommentId is string
+                && !exists(/databases/$(database)/documents/targetTickets/$(ticketId)/comments/$(request.resource.data.countedCommentId))
+                && existsAfter(/databases/$(database)/documents/targetTickets/$(ticketId)/comments/$(request.resource.data.countedCommentId))
+              )
+              || (
+                request.resource.data.commentCount == resource.data.get('commentCount', 0) - 1
+                && request.resource.data.countedCommentId is string
+                && exists(/databases/$(database)/documents/targetTickets/$(ticketId)/comments/$(request.resource.data.countedCommentId))
+                && !existsAfter(/databases/$(database)/documents/targetTickets/$(ticketId)/comments/$(request.resource.data.countedCommentId))
+              )
+            )
+            && (
+              !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['mutedBy'])
+              || (
+                request.resource.data.mutedBy is list
+                && request.resource.data.mutedBy.toSet()
+                     .difference(resource.data.get('mutedBy', []).toSet())
+                     .hasOnly([request.auth.uid])
+                && resource.data.get('mutedBy', []).toSet()
+                     .difference(request.resource.data.mutedBy.toSet())
+                     .hasOnly([request.auth.uid])
+              )
+            )
+          )
+        )
+        && reactionsUntouchedOrOwnToggle();
+      allow delete: if activeUser()
+        && (resource.data.senderUid == request.auth.uid || isAdmin());
+
+      match /comments/{commentId} {
+        allow read: if activeUser();
+        // isAdmin(): Archive restores recreate comments verbatim.
+        allow create: if (activeUser() && isAdmin())
+          || activeUser()
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && getAfter(/databases/$(database)/documents/targetTickets/$(ticketId)).data.commentCount
+             == get(/databases/$(database)/documents/targetTickets/$(ticketId)).data.get('commentCount', 0) + 1
+          // New comments can't be planted with forged reactions.
+          && request.resource.data.get('reactions', {}).size() == 0;
+        allow update: if activeUser()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['reactions'])
+          && reactionsDeltaOk();
+        allow delete: if activeUser()
+          && (
+            !existsAfter(/databases/$(database)/documents/targetTickets/$(ticketId))
+            || (
+              (resource.data.senderUid == request.auth.uid || isAdmin())
+              && getAfter(/databases/$(database)/documents/targetTickets/$(ticketId)).data.commentCount
+                 == get(/databases/$(database)/documents/targetTickets/$(ticketId)).data.get('commentCount', 0) - 1
+            )
+          );
+      }
+    }
+
+    // Notifications — each user's private feed at notifications/{uid}/items.
+    // Only the owner may read, mark read, or delete their notifications.
+    // Any authenticated member may CREATE a notification for someone else,
+    // but only one honestly attributed to themselves (fromUid == their uid),
+    // never to themselves, always starting unread — so message sends can
+    // fan out notifications in the same atomic write as the message.
+    match /notifications/{userId}/items/{notifId} {
+      allow read, update, delete: if activeUser()
+        && request.auth.uid == userId;
+      allow create: if activeUser()
+        && request.auth.uid != userId
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.read == false
+        && request.resource.data.type is string
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 500;
+    }
+
+    // Jester's Deal — rotating, admin-authored participation challenges.
+    // A Deal is never hard-deleted: publishing archives the former Deal and
+    // the Jester archives old drafts/published Deals by changing status.
+    function eligibleDealActivityType(t) {
+      return t in ['mark', 'black_book', 'target_whisper', 'vault_mark'];
+    }
+
+    function validDealTask(t) {
+      return t is map
+        && t.keys().hasOnly(['id', 'type', 'label', 'targetCount'])
+        && t.id is string
+        && t.id.size() > 0
+        && t.id.size() <= 80
+        && eligibleDealActivityType(t.type)
+        && t.label is string
+        && t.label.size() > 0
+        && t.label.size() <= 200
+        && t.targetCount is int
+        && t.targetCount >= 1
+        && t.targetCount <= 100;
+    }
+
+    function validDeal(d) {
+      return d.keys().hasOnly(
+          ['title', 'tasks', 'duration', 'status', 'createdBy', 'createdAt',
+           'publishedAt', 'expiresAt', 'previousDealId'])
+        && d.title is string
+        && d.title.size() > 0
+        && d.title.size() <= 200
+        && d.tasks is list
+        && d.tasks.size() > 0
+        && d.tasks.size() <= 5
+        && validDealTask(d.tasks[0])
+        && (d.tasks.size() < 2 || validDealTask(d.tasks[1]))
+        && (d.tasks.size() < 3 || validDealTask(d.tasks[2]))
+        && (d.tasks.size() < 4 || validDealTask(d.tasks[3]))
+        && (d.tasks.size() < 5 || validDealTask(d.tasks[4]))
+        && d.duration in ['24h', '48h', 'until_next']
+        && d.status in ['draft', 'published', 'archived']
+        && d.createdBy is string
+        && d.createdBy.size() > 0
+        && (d.previousDealId == null
+          || (d.previousDealId is string && d.previousDealId.size() <= 200))
+        && d.createdAt is timestamp
+        && (d.publishedAt == null || d.publishedAt is timestamp)
+        && (d.expiresAt == null || d.expiresAt is timestamp)
+        && (d.status != 'published' || d.publishedAt is timestamp)
+        && (d.duration != 'until_next' || d.expiresAt == null);
+    }
+
+    match /deals/{dealId} {
+      allow read: if activeUser()
+        && (isDealAdmin() || resource.data.status == 'published');
+      allow create: if activeUser() && isDealAdmin()
+        && validDeal(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == 'draft'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.previousDealId == null
+        && request.resource.data.publishedAt == null
+        && request.resource.data.expiresAt == null;
+      allow update: if activeUser() && isDealAdmin()
+        && validDeal(request.resource.data)
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (
+          // Draft content may be edited while it remains a draft.
+          (resource.data.status == 'draft'
+            && request.resource.data.status == 'draft')
+          // A draft may be published exactly once with a server timestamp.
+          || (resource.data.status == 'draft'
+            && request.resource.data.status == 'published'
+            && request.resource.data.publishedAt == request.time
+            && (request.resource.data.duration == 'until_next'
+              ? request.resource.data.expiresAt == null
+              : request.resource.data.expiresAt is timestamp
+                && request.resource.data.expiresAt > request.time))
+          // Archive is terminal and is the only removal operation.
+          || (resource.data.status in ['draft', 'published']
+            && request.resource.data.status == 'archived'
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['status']))
+        );
+      allow delete: if false;
+    }
+
+    // Server-verified source-of-truth activity.  Clients may inspect their
+    // own progress evidence but cannot manufacture, amend, or erase it.
+    match /dealActivity/{userId}/events/{eventId} {
+      allow read: if activeUser()
+        && (request.auth.uid == userId || isDealAdmin());
+      allow create, update, delete: if false;
+    }
+
+    match /dealCompletions/{dealId}/members/{userId} {
+      allow read: if activeUser()
+        && (request.auth.uid == userId || isDealAdmin());
+      // Reconciled only by the authenticated API server's privileged Firestore
+      // credentials. Client activity remains immutable evidence above.
+      allow create, update, delete: if false;
+    }
+
+    match /dealMemberStats/{userId} {
+      allow read: if activeUser()
+        && (request.auth.uid == userId || isDealAdmin());
+      allow create, update, delete: if false;
+    }
+
+    function validDealAward(userId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(
+          ['uid', 'milestone', 'message', 'dealId', 'awardedBy', 'awardedAt'])
+        && d.uid == userId
+        && d.milestone in [3, 6, 9, 12, 15]
+        && d.message is string
+        && d.message.size() > 0
+        && d.message.size() <= 280
+        && (!('dealId' in d)
+          || (d.dealId is string && d.dealId.size() > 0 && d.dealId.size() <= 200))
+        && d.awardedBy == request.auth.uid
+        && d.awardedAt == request.time;
+    }
+
+    match /dealAwards/{userId}/items/{awardId} {
+      allow read: if activeUser()
+        && (request.auth.uid == userId || isDealAdmin());
+      allow create, update: if activeUser() && isDealAdmin()
+        && validDealAward(userId);
+      allow delete: if false;
+    }
+
+    // Black Book (Street Art) — per-member logs at blackBook/{uid}/entries.
+    // Tabs: recruit / uniform / turn are the owner's own logs.
+    // royals entries are awarded by the admin only — members can read theirs
+    // but never create/edit/delete them. The admin may read and manage
+    // royals for anyone, and keeps their own logs like any member.
+    // Reads are open to any signed-in member (Jokers may peek at each
+    // other's books); writes stay locked to owner/admin as described above.
+    match /blackBook/{userId}/entries/{entryId} {
+      function validBlackBookEntry() {
+        let d = request.resource.data;
+        return d.tab in ['recruit', 'uniform', 'turn', 'royals']
+          && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+          && d.createdBy == request.auth.uid
+          && (!('date' in d)     || (d.date is string && d.date.size() <= 200))
+          && (!('location' in d) || (d.location is string && d.location.size() <= 200))
+          && (!('mode' in d)     || (d.mode is string && d.mode.size() <= 40))
+          && (!('price' in d)    || (d.price is string && d.price.size() <= 60))
+          && (!('notes' in d)    || (d.notes is string && d.notes.size() <= 2000))
+          && (!('progress' in d) || (d.progress is number && d.progress >= 0 && d.progress <= 100))
+          && (!('suit' in d)     || d.suit in ['Spade', 'Diamond', 'Heart', 'Club']);
+      }
+      allow read: if activeUser();
+      // First isAdmin() clause: Archive restores recreate entries verbatim.
+      allow create: if (activeUser() && isAdmin())
+        || activeUser()
+        && validBlackBookEntry()
+        && (
+          // Owner logs their own recruit/uniform/turn entries.
+          (request.auth.uid == userId && request.resource.data.tab != 'royals')
+          // Admin awards royals to anyone, and may write any tab in their own book.
+          || (isAdmin() && (request.resource.data.tab == 'royals' || request.auth.uid == userId))
+        );
+      // tab is immutable after create; same permission split as create,
+      // judged on the EXISTING entry's tab. createdBy stays honest via
+      // validBlackBookEntry (updates may not reattribute the entry).
+      allow update: if activeUser()
+        && request.resource.data.tab == resource.data.tab
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && (!('date' in request.resource.data)     || (request.resource.data.date is string && request.resource.data.date.size() <= 200))
+        && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 200))
+        && (!('mode' in request.resource.data)     || (request.resource.data.mode is string && request.resource.data.mode.size() <= 40))
+        && (!('price' in request.resource.data)    || (request.resource.data.price is string && request.resource.data.price.size() <= 60))
+        && (!('notes' in request.resource.data)    || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000))
+        && (!('progress' in request.resource.data) || (request.resource.data.progress is number && request.resource.data.progress >= 0 && request.resource.data.progress <= 100))
+        && (!('suit' in request.resource.data)     || request.resource.data.suit in ['Spade', 'Diamond', 'Heart', 'Club'])
+        && (
+          (request.auth.uid == userId && resource.data.tab != 'royals')
+          || (isAdmin() && (resource.data.tab == 'royals' || request.auth.uid == userId))
+        );
+      allow delete: if activeUser()
+        && (
+          (request.auth.uid == userId && resource.data.tab != 'royals')
+          || (isAdmin() && (resource.data.tab == 'royals' || request.auth.uid == userId))
+        );
+    }
+
+    // Table channels — any authenticated user can read messages and create new ones,
+    // except for admin-only channels (verdict, recruit) which require isAdmin == true.
+    // Update is allowed so users can toggle reactions on existing messages.
+    // Deletes: message author or admin.
+    // Vault — admin-published reading files (stack) and artwork (wall).
+    // Members may only read PUBLISHED entries; the admin reads everything
+    // and is the only writer. File bytes live in private Storage, whose
+    // rules re-check the entry's published status on every request.
+    match /vault/{entryId} {
+      function validVaultEntry(d) {
+        return d.section in ['stack', 'wall', 'margins', 'cut']
+          && d.status in ['published', 'hidden', 'archived']
+          && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+          && (!('description' in d) || (d.description is string && d.description.size() <= 2000))
+          && d.order is number
+          && (!('filePath' in d) || (
+            d.filePath is string
+            && (
+              d.filePath == 'vault/' + entryId + '/file'
+              || d.filePath.matches('vault/' + entryId + '/file-[a-z0-9]+-[a-z0-9]+')
+            )
+          ))
+          && (!('coverPath' in d) || (d.coverPath is string && d.coverPath == 'vault/' + entryId + '/cover'))
+          && (!('fileName' in d) || (d.fileName is string && d.fileName.size() <= 300))
+          && (!('contentType' in d) || (d.contentType is string && d.contentType.size() <= 150))
+          // Manuscript chapter map (admin-authored): list of {title, startPage}.
+          && (!('chapters' in d) || (d.chapters is list && d.chapters.size() <= 300))
+          // Decoder game lock (Chamber): sha256 hex of the secret answer.
+          && (!('decoderHash' in d) || (d.decoderHash is string && d.decoderHash.size() == 64));
+      }
+      allow read: if activeUser()
+        && (isAdmin() || resource.data.status == 'published');
+      allow create: if activeUser() && isKeeper()
+        && validVaultEntry(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if activeUser()
+        && (
+          (
+            isKeeper()
+            && validVaultEntry(request.resource.data)
+            && request.resource.data.section == resource.data.section
+            && request.resource.data.createdBy == resource.data.createdBy
+          )
+          // Members: reactions, counter-verified commentCount, and
+          // counter-verified review tallies (reviewCount/ratingSum) only,
+          // and only on entries they can actually read (published).
+          || (
+            resource.data.status == 'published'
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['reactions', 'commentCount', 'countedCommentId',
+                           'reviewCount', 'ratingSum', 'countedReviewId'])
+            && reactionsUntouchedOrOwnToggle()
+            && (
+              !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['commentCount', 'countedCommentId'])
+              || (
+                request.resource.data.commentCount == resource.data.get('commentCount', 0) + 1
+                && request.resource.data.countedCommentId is string
+                && !exists(/databases/$(database)/documents/vault/$(entryId)/comments/$(request.resource.data.countedCommentId))
+                && existsAfter(/databases/$(database)/documents/vault/$(entryId)/comments/$(request.resource.data.countedCommentId))
+              )
+              || (
+                request.resource.data.commentCount == resource.data.get('commentCount', 0) - 1
+                && request.resource.data.countedCommentId is string
+                && exists(/databases/$(database)/documents/vault/$(entryId)/comments/$(request.resource.data.countedCommentId))
+                && !existsAfter(/databases/$(database)/documents/vault/$(entryId)/comments/$(request.resource.data.countedCommentId))
+              )
+            )
+            // Review tallies may only move in lockstep with a real review
+            // create / rating change / delete in the same atomic batch: the
+            // client names the review in countedReviewId and the tally shift
+            // must match that review's actual rating exactly.
+            && (
+              !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['reviewCount', 'ratingSum', 'countedReviewId'])
+              // New review: count +1, sum grows by the new rating.
+              || (
+                request.resource.data.reviewCount == resource.data.get('reviewCount', 0) + 1
+                && request.resource.data.countedReviewId is string
+                && !exists(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId))
+                && existsAfter(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId))
+                && request.resource.data.ratingSum
+                   == resource.data.get('ratingSum', 0)
+                      + getAfter(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId)).data.rating
+              )
+              // Rating change: count untouched, sum shifts by (new − old).
+              || (
+                request.resource.data.get('reviewCount', 0) == resource.data.get('reviewCount', 0)
+                && request.resource.data.countedReviewId is string
+                && exists(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId))
+                && existsAfter(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId))
+                && request.resource.data.ratingSum
+                   == resource.data.get('ratingSum', 0)
+                      - get(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId)).data.rating
+                      + getAfter(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId)).data.rating
+              )
+              // Review removed: count −1, sum shrinks by the old rating.
+              || (
+                request.resource.data.reviewCount == resource.data.get('reviewCount', 0) - 1
+                && request.resource.data.countedReviewId is string
+                && exists(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId))
+                && !existsAfter(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId))
+                && request.resource.data.ratingSum
+                   == resource.data.get('ratingSum', 0)
+                      - get(/databases/$(database)/documents/vault/$(entryId)/reviews/$(request.resource.data.countedReviewId)).data.rating
+              )
+            )
+          )
+        );
+      allow delete: if activeUser() && isKeeper();
+
+      // Reading-circle comments on an entry, optionally pinned to a PDF page.
+      // Readable by any active member; author-only creates on PUBLISHED
+      // entries with the counter bumped in the same batch (like Ante).
+      match /comments/{commentId} {
+        // Members only see discussion on entries they can read (published).
+        allow read: if activeUser()
+          && (isAdmin()
+              || get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published');
+        // isAdmin(): Archive restores recreate comments verbatim.
+        allow create: if (activeUser() && isAdmin())
+          || activeUser()
+          && get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published'
+          && request.resource.data.keys().hasOnly(
+               ['senderUid', 'jokerId', 'text', 'page', 'quote', 'reactions', 'createdAt',
+                'targetType', 'targetId', 'chapterStartPage'])
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.jokerId is string
+          && request.resource.data.jokerId.size() <= 40
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && (!('page' in request.resource.data)
+              || (request.resource.data.page is int && request.resource.data.page >= 1))
+          // Optional quoted passage — only meaningful alongside a page pin.
+          && (!('quote' in request.resource.data)
+              || (request.resource.data.quote is string
+                  && request.resource.data.quote.size() > 0
+                  && request.resource.data.quote.size() <= 300
+                  && 'page' in request.resource.data))
+          // Optional structured anchor: targetType/targetId/chapterStartPage
+          // travel together (all present or all absent) and are bounded.
+          && (
+               (!('targetType' in request.resource.data)
+                 && !('targetId' in request.resource.data)
+                 && !('chapterStartPage' in request.resource.data))
+               || (
+                 request.resource.data.targetType in ['chapter', 'paragraph']
+                 && request.resource.data.targetId is string
+                 && request.resource.data.targetId.size() > 0
+                 && request.resource.data.targetId.size() <= 200
+                 && request.resource.data.chapterStartPage is int
+                 && request.resource.data.chapterStartPage >= 1
+               )
+             )
+          && getAfter(/databases/$(database)/documents/vault/$(entryId)).data.commentCount
+             == get(/databases/$(database)/documents/vault/$(entryId)).data.get('commentCount', 0) + 1
+          // New comments can't be planted with forged reactions.
+          && request.resource.data.get('reactions', {}).size() == 0;
+        allow update: if activeUser()
+          && (isAdmin()
+              || get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published')
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['reactions'])
+          && reactionsDeltaOk();
+        // Same honest-counter delete contract as Ante/ticket comments; once
+        // the entry is gone anyone may sweep the orphans.
+        allow delete: if activeUser()
+          && (
+            !existsAfter(/databases/$(database)/documents/vault/$(entryId))
+            || (
+              (resource.data.senderUid == request.auth.uid || isAdmin())
+              && (isAdmin()
+                  || get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published')
+              && getAfter(/databases/$(database)/documents/vault/$(entryId)).data.commentCount
+                 == get(/databases/$(database)/documents/vault/$(entryId)).data.get('commentCount', 0) - 1
+            )
+          );
+      }
+
+      // One review per member per entry (doc id == reviewer uid). Members
+      // review PUBLISHED entries only; owner may rewrite or remove their own
+      // review; the admin may remove any (and recreate verbatim on restore).
+      match /reviews/{reviewUid} {
+        function validVaultReview() {
+          return request.resource.data.keys().hasOnly(
+               ['uid', 'jokerId', 'rating', 'text', 'createdAt', 'updatedAt'])
+            && request.resource.data.uid == reviewUid
+            && request.resource.data.jokerId is string
+            && request.resource.data.jokerId.size() <= 40
+            && request.resource.data.rating is int
+            && request.resource.data.rating >= 1
+            && request.resource.data.rating <= 5
+            && request.resource.data.text is string
+            && request.resource.data.text.size() <= 5000;
+        }
+        allow read: if activeUser()
+          && (isAdmin()
+              || get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published');
+        // isAdmin(): Archive restores recreate reviews verbatim.
+        // Member creates must bump the entry's reviewCount by exactly 1 and
+        // grow ratingSum by exactly this rating in the same atomic batch, so
+        // the star tally on chapter cards can never undercount or drift.
+        allow create: if (activeUser() && isAdmin())
+          || activeUser()
+          && request.auth.uid == reviewUid
+          && get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published'
+          && validVaultReview()
+          && getAfter(/databases/$(database)/documents/vault/$(entryId)).data.get('reviewCount', 0)
+             == get(/databases/$(database)/documents/vault/$(entryId)).data.get('reviewCount', 0) + 1
+          && getAfter(/databases/$(database)/documents/vault/$(entryId)).data.get('ratingSum', 0)
+             == get(/databases/$(database)/documents/vault/$(entryId)).data.get('ratingSum', 0)
+                + request.resource.data.rating;
+        // Member updates keep reviewCount fixed and shift ratingSum by the
+        // rating delta (an unchanged rating needs no entry write at all).
+        allow update: if (activeUser() && isAdmin())
+          || activeUser()
+          && request.auth.uid == reviewUid
+          && get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published'
+          && validVaultReview()
+          && getAfter(/databases/$(database)/documents/vault/$(entryId)).data.get('reviewCount', 0)
+             == get(/databases/$(database)/documents/vault/$(entryId)).data.get('reviewCount', 0)
+          && getAfter(/databases/$(database)/documents/vault/$(entryId)).data.get('ratingSum', 0)
+             == get(/databases/$(database)/documents/vault/$(entryId)).data.get('ratingSum', 0)
+                - resource.data.rating + request.resource.data.rating;
+        // Deletes keep the tally honest: either the parent entry is gone
+        // after this batch (entry deletion / orphan sweep), or the deleter is
+        // the review owner or an admin AND the entry's reviewCount drops by 1
+        // with ratingSum shrinking by exactly this review's rating.
+        allow delete: if activeUser()
+          && (
+            !existsAfter(/databases/$(database)/documents/vault/$(entryId))
+            || (
+              (request.auth.uid == reviewUid || isAdmin())
+              && (isAdmin()
+                  || get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published')
+              && getAfter(/databases/$(database)/documents/vault/$(entryId)).data.get('reviewCount', 0)
+                 == get(/databases/$(database)/documents/vault/$(entryId)).data.get('reviewCount', 0) - 1
+              && getAfter(/databases/$(database)/documents/vault/$(entryId)).data.get('ratingSum', 0)
+                 == get(/databases/$(database)/documents/vault/$(entryId)).data.get('ratingSum', 0)
+                    - resource.data.rating
+            )
+          );
+      }
+
+      // Per-user emoji marks on a chapter/paragraph target. One deterministic
+      // doc per user per target (id == `${targetId}__${uid}`); the doc is
+      // deleted the moment its emoji list empties, so paragraph marks are
+      // materialized only when a member actually reacts. No counter on the
+      // parent — marks are self-contained per-user reaction sets.
+      match /marks/{markId} {
+        function validMark() {
+          return request.resource.data.keys().hasOnly(
+                 ['uid', 'jokerId', 'targetId', 'targetType', 'page',
+                  'chapterStartPage', 'quote', 'emojis', 'createdAt', 'updatedAt'])
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.jokerId is string
+            && request.resource.data.jokerId.size() <= 40
+            && request.resource.data.targetId is string
+            && request.resource.data.targetId.size() > 0
+            && request.resource.data.targetId.size() <= 200
+            && request.resource.data.targetType in ['chapter', 'paragraph']
+            && request.resource.data.page is int
+            && request.resource.data.page >= 1
+            && request.resource.data.chapterStartPage is int
+            && request.resource.data.chapterStartPage >= 1
+            && (!('quote' in request.resource.data)
+                || (request.resource.data.quote is string
+                    && request.resource.data.quote.size() > 0
+                    && request.resource.data.quote.size() <= 300))
+            // Emoji list: non-empty, bounded, drawn only from the allowlist.
+            && request.resource.data.emojis is list
+            && request.resource.data.emojis.size() > 0
+            && request.resource.data.emojis.size() <= 17
+            && request.resource.data.emojis.toSet().difference(
+                 ['👍', '👎', '👑', '🎭', '😢', '😂', '🖤', '🤍', '🔥', '🗡',
+                  '👀', '🃏', '♠️', '♣️', '♥️', '♦️', '🐾'].toSet()).size() == 0;
+        }
+        // Members only see marks on entries they can read (published);
+        // the admin (hidden entries) and archive restores are covered too.
+        allow read: if activeUser()
+          && (isAdmin()
+              || get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published');
+        // isAdmin(): archive restores recreate marks verbatim.
+        allow create: if (activeUser() && isAdmin())
+          || activeUser()
+          && get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published'
+          && markId == request.resource.data.targetId + '__' + request.auth.uid
+          && validMark();
+        // Owner may edit only their own mark; target metadata is immutable.
+        allow update: if (activeUser() && isAdmin())
+          || activeUser()
+          && resource.data.uid == request.auth.uid
+          && get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published'
+          && markId == resource.data.targetId + '__' + request.auth.uid
+          && validMark()
+          && request.resource.data.targetId == resource.data.targetId
+          && request.resource.data.targetType == resource.data.targetType
+          && request.resource.data.page == resource.data.page
+          && request.resource.data.chapterStartPage == resource.data.chapterStartPage
+          && request.resource.data.get('quote', '') == resource.data.get('quote', '')
+          && request.resource.data.uid == resource.data.uid;
+        // Owner or admin may delete their mark (empty-list cleanup); once the
+        // parent entry is gone anyone may sweep the orphans.
+        allow delete: if activeUser()
+          && (
+            !existsAfter(/databases/$(database)/documents/vault/$(entryId))
+            || (
+              (resource.data.uid == request.auth.uid || isAdmin())
+              && (isAdmin()
+                  || get(/databases/$(database)/documents/vault/$(entryId)).data.status == 'published')
+            )
+          );
+      }
+    }
+
+    // Overall book/saga reviews — one per member (doc id == reviewer uid),
+    // visible to every active member, owner-editable, admin-removable.
+    match /bookReviews/{reviewUid} {
+      allow read: if activeUser();
+      // isAdmin(): Archive restores recreate reviews verbatim.
+      allow create, update: if (activeUser() && isAdmin())
+        || activeUser()
+        && request.auth.uid == reviewUid
+        && request.resource.data.keys().hasOnly(
+             ['uid', 'jokerId', 'rating', 'text', 'createdAt', 'updatedAt'])
+        && request.resource.data.uid == reviewUid
+        && request.resource.data.jokerId is string
+        && request.resource.data.jokerId.size() <= 40
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 5000;
+      allow delete: if activeUser()
+        && (request.auth.uid == reviewUid || isAdmin());
+    }
+
+    // Vault activity records — create-only audit trail. Members may log only
+    // their own 'view' actions; the admin may log management actions. Only
+    // the admin can read them; nobody can rewrite history.
+    match /vaultActivity/{recordId} {
+      allow read: if activeUser() && isAdmin();
+      allow create: if activeUser()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.jokerId is string
+        && request.resource.data.jokerId.size() <= 40
+        && (!('street' in request.resource.data)
+            || (request.resource.data.street is string && request.resource.data.street.size() <= 120))
+        && request.resource.data.entryId is string
+        && request.resource.data.entryId.size() <= 120
+        && request.resource.data.entryTitle is string
+        && request.resource.data.entryTitle.size() <= 200
+        && request.resource.data.section in ['stack', 'wall', 'margins', 'cut']
+        && (
+          request.resource.data.action == 'view'
+          || (isAdmin() && request.resource.data.action in
+              ['upload', 'edit', 'replace', 'publish', 'hide', 'archive', 'restore', 'delete', 'reorder'])
+        );
+      allow update, delete: if false;
+    }
+
+    // Recruit/Verdict posts — admin-designed layouts on the official
+    // templates. Members may only read PUBLISHED posts; the admin reads
+    // everything and is the only writer. Photos live in private Storage
+    // (recruitPosts/{postId}/img_…) whose rules re-check published status.
+    match /recruitPosts/{postId} {
+      function validRecruitPost(d) {
+        return d.section in ['recruit', 'verdict']
+          && d.status in ['draft', 'published']
+          && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+          && d.design is string && d.design.size() <= 400000
+          && d.createdBy is string;
+      }
+      allow read: if activeUser()
+        && (isAdmin() || resource.data.status == 'published');
+      allow create: if activeUser() && isAdmin()
+        && validRecruitPost(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if activeUser() && isAdmin()
+        && validRecruitPost(request.resource.data)
+        && request.resource.data.section == resource.data.section
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if activeUser() && isAdmin();
+    }
+
+    // Issue Locker — per-member record of everything officially issued, at
+    // issuedItems/{userId}/records/{recordId}. Only the admin writes (issuing
+    // is an official act); a member may read only their OWN records. The
+    // admin reads anyone's locker. issuedBy stays honest (admin's own uid,
+    // immutable after create) and kind must be one of the locker kinds.
+    match /issuedItems/{userId}/records/{recordId} {
+      function validIssuedRecord(d) {
+        return d.kind in ['Initial Exclusive 54 Bundle', 'Armory Purchases',
+                          'Event Exclusive Merchandise', 'Anniversary Gifts',
+                          'Achievement Rewards', 'Contest Rewards', 'Limited Releases']
+          && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+          && (!('notes' in d) || (d.notes is string && d.notes.size() <= 2000))
+          // Price is required on new records (create rule below); legacy
+          // records without one may still be updated, but a price can never
+          // be malformed or removed once present.
+          && (!('price' in d) || (d.price is string && d.price.size() > 0 && d.price.size() <= 60))
+          && d.issuedBy is string;
+      }
+      allow read: if activeUser()
+        && (request.auth.uid == userId || isAdmin());
+      allow create: if activeUser() && isAdmin()
+        && validIssuedRecord(request.resource.data)
+        && 'price' in request.resource.data
+        && request.resource.data.issuedBy == request.auth.uid;
+      allow update: if activeUser() && isAdmin()
+        && validIssuedRecord(request.resource.data)
+        && (!('price' in resource.data) || 'price' in request.resource.data)
+        && request.resource.data.issuedBy == resource.data.issuedBy;
+      allow delete: if activeUser() && isAdmin();
+    }
+
+    // Armory products — issued equipment catalog on the Uniform screen.
+    // Any signed-in member may browse; only the admin stocks, edits, or
+    // removes products. Photos live in private Storage
+    // (armoryProducts/{productId}/photo) whose rules re-check on every
+    // request that the product doc still exists.
+    match /armoryProducts/{productId} {
+      function validArmoryProduct(d) {
+        return d.keys().hasOnly(
+             ['name', 'category', 'price', 'description', 'artifact',
+              'photoPath', 'order', 'createdBy', 'createdAt', 'updatedAt',
+              'shopifyHandle'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 200
+          && d.category in ['Apparel', 'Accessories', 'Books', 'Art Prints', 'Other']
+          && d.price is string && d.price.size() > 0 && d.price.size() <= 60
+          && (!('description' in d) || (d.description is string && d.description.size() <= 2000))
+          && d.artifact is bool
+          && (!('photoPath' in d)
+              || (d.photoPath is string && d.photoPath == 'armoryProducts/' + productId + '/photo'))
+          && d.order is number
+          && (!('shopifyHandle' in d)
+              || (d.shopifyHandle is string && d.shopifyHandle.size() > 0
+                  && d.shopifyHandle.size() <= 255));
+      }
+      allow read: if activeUser();
+      allow create: if activeUser() && isAdmin()
+        && validArmoryProduct(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if activeUser() && isAdmin()
+        && validArmoryProduct(request.resource.data)
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if activeUser() && isAdmin();
+    }
+
+    // Reports ("Cards") — members file reports against another Joker ID.
+    // Create-only for members (honestly attributed, evidence required);
+    // ONLY the admin may ever read them, and only the admin may delete.
+    // Reports are immutable once filed — nobody can rewrite an accusation.
+    // Session logs — login/logout history for the admin's Investigations tab.
+    // Members write only their own logs; ONLY the admin can read them.
+    // Update deliberately uses request.auth (not activeUser): a member being
+    // force-signed-out for suspension must still be able to close their
+    // session (same carve-out as push-token cleanup).
+    // Archives — soft-deleted content, admin-only. Whoever performs a delete
+    // (owner or admin) files the copy; only 00-00 can ever read, restore, or
+    // permanently purge it. Records are immutable once filed.
+    match /archives/{archiveId} {
+      allow read: if activeUser() && isAdmin();
+      allow create: if activeUser()
+        && request.resource.data.keys().hasOnly(
+             ['type', 'section', 'title', 'ownerUid', 'ownerJokerId',
+               'restorePath', 'payload', 'comments', 'reviews', 'marks', 'storagePaths',
+              'createdAtOriginal', 'deletedAt', 'deletedByUid'])
+        && request.resource.data.deletedByUid == request.auth.uid
+        && request.resource.data.deletedAt == request.time
+        && (
+          request.resource.data.type in
+             ['ante_post', 'ante_comment', 'ticket', 'ticket_comment',
+              'table_message', 'black_book', 'recruit_post', 'vault_entry',
+              'vault_comment', 'vault_review', 'book_review',
+              'armory_product', 'report']
+          // Contract signings file themselves into the archives so the
+          // Jester has a permanent record — but only for the signer's own
+          // uid, and only alongside a real signed agreement.
+          || (request.resource.data.type == 'contract_signed'
+              && request.resource.data.ownerUid == request.auth.uid
+              && existsAfter(/databases/$(database)/documents/agreements/$(request.auth.uid)))
+        );
+      allow update: if false;
+      // Purging a vault-entry archive destroys the only recovery record for
+      // Vault/Chamber documents — keeper tier only, like all vault curation.
+      allow delete: if activeUser() && isAdmin()
+        && (resource.data.type != 'vault_entry' || isKeeper());
+    }
+
+    match /sessions/{userId}/logs/{sessionId} {
+      allow read: if activeUser() && isAdmin();
+      allow create: if activeUser()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['startedAt', 'lastActiveAt', 'endedAt'])
+        && request.resource.data.startedAt == request.time
+        && request.resource.data.lastActiveAt == request.time
+        && request.resource.data.endedAt == null;
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['startedAt', 'lastActiveAt', 'endedAt'])
+        // History can't be rewritten: start is immutable, a closed session
+        // stays closed, and timestamps only ever come from the server clock.
+        && request.resource.data.startedAt == resource.data.startedAt
+        && resource.data.endedAt == null
+        && request.resource.data.lastActiveAt == request.time
+        && (request.resource.data.endedAt == null
+            || request.resource.data.endedAt == request.time)
+        // Suspended members get the carve-out ONLY to close the session —
+        // they cannot keep heartbeating an open one to look active.
+        && (activeUser() || request.resource.data.endedAt == request.time);
+      allow delete: if false;
+    }
+
+    match /reports/{reportId} {
+      // Evidence paths are fully pinned: item i must be EXACTLY the
+      // reporter's own storage slot reports/{uid}/{thisReport}/img_i, so a
+      // report can never point at someone else's files or at nothing.
+      function evp(i) {
+        return 'reports/' + request.auth.uid + '/' + reportId + '/img_' + i;
+      }
+      function validEvidencePaths(d) {
+        return d.evidencePaths is list
+          && d.evidencePaths.size() > 0
+          && d.evidencePaths.size() <= 10
+          && d.evidencePaths[0] == evp('0')
+          && (d.evidencePaths.size() < 2  || d.evidencePaths[1] == evp('1'))
+          && (d.evidencePaths.size() < 3  || d.evidencePaths[2] == evp('2'))
+          && (d.evidencePaths.size() < 4  || d.evidencePaths[3] == evp('3'))
+          && (d.evidencePaths.size() < 5  || d.evidencePaths[4] == evp('4'))
+          && (d.evidencePaths.size() < 6  || d.evidencePaths[5] == evp('5'))
+          && (d.evidencePaths.size() < 7  || d.evidencePaths[6] == evp('6'))
+          && (d.evidencePaths.size() < 8  || d.evidencePaths[7] == evp('7'))
+          && (d.evidencePaths.size() < 9  || d.evidencePaths[8] == evp('8'))
+          && (d.evidencePaths.size() < 10 || d.evidencePaths[9] == evp('9'));
+      }
+      allow read: if activeUser() && isAdmin();
+      // First isAdmin() clause: Archive restores recreate reports verbatim.
+      allow create: if (activeUser() && isAdmin())
+        || activeUser()
+        && request.resource.data.keys().hasOnly(
+             ['reporterUid', 'reporterJokerId', 'reportedUid', 'reportedJokerId',
+              'title', 'date', 'description', 'evidencePaths', 'createdAt'])
+        && request.resource.data.reporterUid == request.auth.uid
+        // Displayed Joker IDs must match the canonical user docs — no forgery.
+        && request.resource.data.reporterJokerId
+           == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId
+        && request.resource.data.reportedUid is string
+        && request.resource.data.reportedUid.size() > 0
+        // You cannot file a report against yourself.
+        && request.resource.data.reportedUid != request.auth.uid
+        && request.resource.data.reportedJokerId
+           == get(/databases/$(database)/documents/users/$(request.resource.data.reportedUid)).data.jokerId
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.date is string
+        && request.resource.data.date.size() <= 100
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 5000
+        // Evidence is mandatory so 00-00 judges facts, not feelings.
+        && validEvidencePaths(request.resource.data);
+      // Reports stay immutable to members, but the admin may set/change a
+      // status field ('open' | 'resolved') to close out settled cases —
+      // touching nothing else, so the accusation itself can never be rewritten.
+      allow update: if activeUser() && isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status'])
+        && request.resource.data.status in ['open', 'resolved'];
+      allow delete: if activeUser() && isAdmin();
+    }
+
+    // Voice presence — who is sitting in each voice channel, at
+    // voicePresence/{channelId}/members/{uid}. Members announce ONLY their
+    // own seat, with server-pinned timestamps so nobody can look "fresh"
+    // forever. Heartbeats bump lastActiveAt; an entry whose heartbeat has
+    // been silent for over 3 minutes is stale (connection lost / app killed)
+    // and ANY active member may sweep it, so ghost seats always disappear.
+    match /voicePresence/{channelId}/members/{userId} {
+      allow read: if activeUser();
+      allow create: if activeUser()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['jokerId', 'joinedAt', 'lastActiveAt'])
+        && request.resource.data.jokerId is string
+        && request.resource.data.jokerId.size() > 0
+        && request.resource.data.jokerId.size() <= 40
+        && request.resource.data.joinedAt == request.time
+        && request.resource.data.lastActiveAt == request.time;
+      allow update: if activeUser()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['jokerId', 'joinedAt', 'lastActiveAt'])
+        && request.resource.data.jokerId == resource.data.jokerId
+        && request.resource.data.joinedAt == resource.data.joinedAt
+        && request.resource.data.lastActiveAt == request.time;
+      allow delete: if activeUser()
+        && (
+          request.auth.uid == userId
+          || request.time > resource.data.lastActiveAt + duration.value(3, 'm')
+        );
+    }
+
+    match /tableMessages/{channelId}/messages/{messageId} {
+      allow read: if activeUser();
+      // First isAdmin() clause: Archive restores recreate messages verbatim.
+      allow create: if (activeUser() && isAdmin())
+        || activeUser()
+        && request.resource.data.senderUid == request.auth.uid
+        && (
+          !(channelId == 'verdict' || channelId == 'recruit')
+          || isAdmin()
+        )
+        // New messages can't be planted with forged reactions.
+        && request.resource.data.get('reactions', {}).size() == 0
+        // Optional photo/GIF attachment: bounded https URL string.
+        && (
+          !('imageUrl' in request.resource.data)
+          || (
+            request.resource.data.imageUrl is string
+            && request.resource.data.imageUrl.size() > 0
+            && request.resource.data.imageUrl.size() <= 2048
+            && request.resource.data.imageUrl.matches('https://.*')
+          )
+        );
+      // Sender identity is immutable after create. Only the sender may touch
+      // the message body; other members are limited to reaction updates.
+      // Attachments are immutable after create (validated only at creation).
+      allow update: if activeUser()
+        && request.resource.data.senderUid == resource.data.senderUid
+        && (
+          resource.data.senderUid == request.auth.uid
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+        )
+        && request.resource.data.get('imageUrl', null) == resource.data.get('imageUrl', null)
+        && reactionsUntouchedOrOwnToggle();
+      allow delete: if activeUser()
+        && (resource.data.senderUid == request.auth.uid || isAdmin());
+    }
+  }
+}

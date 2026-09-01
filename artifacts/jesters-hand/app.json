@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "Jester's Hand",
+    "slug": "jesters-hand",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "jesters-hand",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0D0900"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.jestershand.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Jester's Hand uses the microphone for live voice channels at Jester's Table."
+      }
+    },
+    "android": {
+      "package": "com.jestershand.app",
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0D0900"
+      }
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-dev-client",
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e69e8635-ec36-4fa0-b2e8-3acca6a5188f"
+      }
+    },
+    "owner": "00-00"
+  }
+}

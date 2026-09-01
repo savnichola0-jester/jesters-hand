@@ -1,0 +1,16 @@
+{
+  "name": "Jester's Hand",
+  "short_name": "Jester's Hand",
+  "description": "Members Only — One Jester, 54 Jokers.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D0900",
+  "theme_color": "#0D0900",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,117 @@
+modules = ["nodejs-24", "python-base-3.13"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "typecheck"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "rules-test"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "wipe-test"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "rules-drift-check"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "checkout-lines-test"
+
+[[workflows.workflow]]
+name = "typecheck"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/jesters-hand && npx tsc --noEmit && cd ../api-server && npx tsc --noEmit && cd ../mockup-sandbox && npx tsc --noEmit"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "rules-test"
+author = "agent"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/jesters-hand && firebase emulators:exec --only firestore,storage --project demo-rules-test \"node scripts/rules-test.mjs && node scripts/storage-rules-test.mjs\""
+
+[[workflows.workflow]]
+name = "wipe-test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/jesters-hand && firebase emulators:exec --only firestore,storage --project demo-rules-test \"node ../api-server/scripts/wipe-test.mjs\""
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "rules-drift-check"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/jesters-hand && node scripts/rules-drift-check.mjs"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "checkout-lines-test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/api-server && node scripts/checkout-lines-test.mjs"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000
+
+[userenv]
+
+[userenv.shared]
+EXPO_PUBLIC_FIREBASE_API_KEY = "AIzaSyCh2TuQI2pTXqJtVc77xw4O0IHH1J3QjEE"
+EXPO_PUBLIC_FIREBASE_APP_ID = "1:920657050672:web:1bd9889f89db53316f81f5"
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN = "jester-s-hand-3ee1d.firebaseapp.com"
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "920657050672"
+EXPO_PUBLIC_FIREBASE_PROJECT_ID = "jester-s-hand-3ee1d"
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET = "jester-s-hand-3ee1d.firebasestorage.app"
+EXPO_PUBLIC_VAPID_PUBLIC_KEY = "BErCfRMhhFoHb0l0PBZ9-rNJ9DqogHytV1uyMs0eE9k5hxPLnFn41dJnzmDd4FXP9oehBmZhtvFdD2IHUrlmtzg"
+VAPID_PRIVATE_KEY = "ovQERW2NoAoDAeF46bfowG86aGhlbwDfpW_UUr6vTLk"
+VAPID_PUBLIC_KEY = "BErCfRMhhFoHb0l0PBZ9-rNJ9DqogHytV1uyMs0eE9k5hxPLnFn41dJnzmDd4FXP9oehBmZhtvFdD2IHUrlmtzg"
+VAPID_SUBJECT = "https://jestershand54atcomand.replit.app"
+
+[nix]
+channel = "stable-25_05"

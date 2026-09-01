@@ -1,0 +1,29 @@
+- [Firebase setup](firebase-setup.md) — auth email format, Firestore structure, Storage paths, env var names
+- [Expo Go icon fonts](expo-go-icon-fonts.md) — icon fonts must load non-blocking; blocking preload broke all icons on device
+- [Firestore counter integrity](firestore-counter-integrity.md) — tamper-proof counter rules pattern (existsAfter/getAfter), emulator rules tests, deploy command
+- [Spread canvas gestures](spread-canvas-gestures.md) — child Touchables win taps over the eager drag PanResponder; device-validated, don't "fix" per generic review advice
+- [Orphan sweep rules pattern](orphan-sweep-rules.md) — client-side orphan cleanup needs rules to also block the orphan state from being re-created, or it leaks data
+- [Push notifications](push-notifications.md) — uid-based relay (server resolves targets, never client-supplied); web push subs + VAPID; new notification paths must send push post-commit
+- [Vault reader](vault-reader.md) — page-flip reader (pdf.js/mammoth); untrusted docx HTML must pass the allowlist sanitizer or the fetch token leaks; E2E seed recipe
+- [Vault protected content](vault-protected-content.md) — private Storage + ID-token REST fetch pattern; storage.rules now in-repo (new paths must be added or default-deny breaks uploads); default-bucket provisioning fix
+- [Member admin (The Hand)](member-admin.md) — Suspend/Recover/Transfer via api-server + Identity Toolkit; wipe manifest must track new collections; fail-closed storage wipe
+- [Suspension rules gate](suspension-rules-gate.md) — all rules use activeUser()/signedIn() (auth + not suspended); new match blocks must too; two sign-out carve-outs
+- [Session tracking](session-tracking.md) — heartbeat login/logout logs, multi-device status math, suspension carve-out must be terminal-close only, wipe manifest must include sessions
+- [Prod rules smoke testing](prod-smoke-testing.md) — deployed-ruleset drift now a registered validation step (rules-drift-check); throwaway signUp accounts + owner-elevated temp admin; rules edits aren't live until deployed
+- [Archives soft-delete](archives-soft-delete.md) — all deletes archive-first; atomic batch restore; admin verbatim-create rules carve-out is deliberate; ticket photos are URLs, decode for purge
+- [Shopify store connection](shopify-store.md) — member-authed relay in api-server; storefront client variables arg gotcha; Shopify-hosted checkout only
+- [Contract agreements gate](agreements-contract.md) — living contract: admin amends contract/current, members re-sign at the exact version in force; gate fails open; signings archived; themed push titles
+- [Agora live voice](agora-voice.md) — WEB-FIRST (browser/home-screen app, not stores); platform-split voiceEngine files mandatory for Metro; token relay via api-server
+- [Voice channel presence](voice-presence.md) — heartbeat presence docs + rules-verified stale sweep (duration.value); reuse for any ephemeral presence
+- [Vault reading circle](vault-discussion.md) — comments/reviews gated on published parent; archive gains reviews array; wipe re-patches commentCount; PDF page pinning via postMessage
+- [Reaction integrity rules](reaction-integrity.md) — reactions map pinned to own uid per emoji; rules emoji list must stay in sync with client REACTION_EMOJIS or new emojis get denied
+- [Lock screen artwork](lockscreen-artwork.md) — chip card is baked into lockscreen.png; exact card rect + magick recipe for background swaps; no sharp, use magick
+- [RN-web UI gotchas](web-ui-gotchas.md) — Alert.alert is a no-op on web (menus die); FIcon glyph map is local, missing names render nothing
+- [Web export caching](web-export-caching.md) — +html.tsx CSS doesn't ship in single-page export (scroll lock lives in _layout); serve.js cache headers; verify live bundle before believing "still broken" reports
+- [Browser E2E harness](browser-e2e.md) — headless chromium + puppeteer + throwaway admin recipe for "confirm in the browser" tasks; always clean up
+- [Firestore orphan enumeration](firestore-orphan-enumeration.md) — collectionGroup + !exists(parent) rules can never pass; enumerate via admin REST listing with showMissing=true
+- [Web E2E browser testing](web-e2e-browser-testing.md) — Playwright recipe for the Expo web app; tests MUST delete their throwaway accounts; purge-testers.mjs sweep for leftovers.
+- [Chat photo/GIF attachments](chat-media.md) — imageUrl immutable after create; chatMedia storage club-readable by design; delete leaves the file
+- [Phone-width web shell](phone-shell-web.md) — desktop web is a centered 430px column; use appWindow()/useAppDimensions, modals portal outside the shell and must re-cap; frames render at native 1.5 ratio
+- [Chamber decoder game](chamber-decoder.md) — decoderHash is a client-side GAME gate only, not access control; deliberate; pure-JS sha256 util for web+native parity
+- [Jester's Deal integrity](jesters-deal.md) — only server-verified app evidence may advance Deal progress, streaks, milestones, or Seat Temperature
