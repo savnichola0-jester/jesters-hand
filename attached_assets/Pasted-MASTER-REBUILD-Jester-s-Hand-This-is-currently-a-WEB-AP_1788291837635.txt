@@ -1,0 +1,124 @@
+MASTER REBUILD — Jester's Hand
+
+This is currently a WEB APP. Convert it into a REAL NATIVE Expo app (React Native + Expo). Do NOT keep it as a web app. Do NOT use Expo Go as the way members run the app. Expo Go is preview-only and blocks voice. Members must install a real standalone app on their home screen.
+
+==================================================
+GOAL
+==================================================
+- Real native iOS + Android app
+- Private distribution only (NO public App Store, NO public Play Store)
+- Android: EAS internal distribution APK / install link + QR
+- iOS: EAS build for TestFlight / internal distribution (Apple Developer account will be connected later)
+- Push notifications must work when the app is CLOSED
+- Users stay logged in until they tap Log Out in System
+- Voice chat in Jester's Table MUST work (microphone + realtime audio)
+- Keep the existing dark cracked-black + gold ornate UI exactly
+- Keep ALL existing features and data
+
+==================================================
+CRITICAL ACCOUNT RULE
+==================================================
+The ONLY account that can create/edit/publish/archive Jester's Deal, award streak messages, view Deal completion stats, and use admin Deal controls is login: 00-00
+(NOT 00-000. Exactly 00-00.)
+All other users can only view the current Deal, complete tasks, see their own streak, and see their own achievements.
+
+==================================================
+NEW SECTION: JESTER'S DEAL
+==================================================
+Add a new main grid icon/section labeled: JESTER'S DEAL
+I will upload the exact icon image. Use THAT file. Do not generate a replacement icon.
+Place it with the other main icons (Ticket, The Hand, Jester's Table, Ante, Target Ticket, Street Art, Vault, Chamber, Recruit, Uniform, System, Jester's Hand).
+
+VISUAL / THEME FOR THE DEAL
+This is a deck of BLACK cards.
+- Think: black playing cards laid out in a dealer’s spread / line
+- Dark, gothic, poker aesthetic
+- Black card faces with gold or white accents only (match the rest of the app)
+- Not colorful casino cards. Black cards. Like a shadowed deck the Jester deals.
+
+WHAT JESTER'S DEAL IS
+The Jester deals a set of tasks ("cards") for the Exclusive 54 to complete across the existing app.
+Visual metaphor: a line of black cards the dealer has laid out.
+
+MEMBER VIEW
+- Show the current active Deal as a spread of black cards
+- Each task is one black card in the spread
+- Example tasks: "Leave 3 Marks at Jester's Table", "Update one Black Book section", "Add a Whisper on any Target Ticket", "Read and Mark 2 Vault paragraphs"
+- Completing a task should verify real activity when possible (Marks, comments, Black Book updates, Vault page turns, etc.)
+- Show whether the current Deal is complete or in progress
+- Show current streak (consecutive completed Deals)
+- Show milestone achievements and any Jester message (defaults: 3, 6, 9, 12, 15 day streaks)
+- Completing Deals feeds Seat Temperature
+
+JESTER ADMIN (00-00 only, inside Jester's Hand admin)
+- Create a Deal: multiple tasks, duration (24 hours, 48 hours, or until next Deal), publish
+- View completion stats across the 54
+- Manually award streak achievements + a short custom message (shows in Jester's Deal and/or Ticket)
+- Archive old Deals
+
+==================================================
+SEAT TEMPERATURE ON TICKET
+==================================================
+On each Joker's Ticket add: Hot / Warm / Cooling / Cold
+- Driven by completing Jester's Deal + real participation (Marks, comments, Black Book, Vault reading, etc.)
+- Login alone does NOT count
+- Completing Deals warms the seat; long inactivity cools it
+- Full temperature visible to the Joker and to 00-00. Other Jokers should not see the private full meter by default.
+
+==================================================
+LOGIN + NOTIFICATIONS (NON-NEGOTIABLE)
+==================================================
+- Persistent session: stay logged in across app close, phone restart, days later, until they tap Log Out in System
+- Native push (FCM / APNs via Expo Notifications), NOT web push
+- Notifications must arrive when the app is backgrounded or fully closed
+- Must work for 00-00 AND regular Jokers
+- Do not break voice chat while adding notifications
+
+==================================================
+VOICE CHAT
+==================================================
+Keep Jester's Table voice channels working in the NATIVE app:
+- Address the Jester
+- Open Hand
+- Under the Hand / Side Deck voice
+Use a native-capable approach (not something that only works in a browser and dies in Expo Go). Microphone permission must be requested properly on iOS and Android.
+
+==================================================
+OPTIONAL IF EASY (do not block the rebuild)
+==================================================
+- Verdict: Jester can post schedule announcements (example: Address the Jester Mon/Fri, Chamber Tue/Thu)
+- Timed spotlight: 00-00 can highlight specific Target Tickets for N hours
+
+==================================================
+WHAT TO KEEP
+==================================================
+Ticket, The Hand, Pocket, Jester's Table (channels + voice), Ante, Target Tickets + Whispers, Street Art / Black Book, Vault, Chamber + Hidden Jest unlocks, Recruit, Verdict, Uniform, System, Jester's Hand admin (activity, suspend, transfer, reports, recovery). Same visual system. Same rules. Same 00-00 admin.
+
+==================================================
+BUILD / DISTRIBUTION SETUP
+==================================================
+1. Convert the project to Expo (dev client / standalone, NOT Expo Go as the member runtime).
+2. Add eas.json with:
+   - development (dev client, internal)
+   - preview (internal distribution)
+   - production (store/TestFlight-ready, but we are NOT submitting to public stores)
+3. Android preview profile: APK or installable internal build with a shareable URL/QR.
+4. iOS preview/production: configured for TestFlight / internal distribution. I will connect an Apple Developer account after this rebuild.
+5. Configure Expo Notifications + app.json plugins for notifications, microphone, and audio.
+6. After conversion, give me:
+   - Exact commands / Replit steps to run an EAS preview build
+   - How Android users install (link/QR, no Play Store)
+   - How iPhone users install via TestFlight (no public App Store)
+   - What I must do: Expo account, Apple Developer $99, EAS credentials
+   - Confirmation that members do NOT use Expo Go
+   - Confirmation voice + closed-app push are set up in native code
+   - Any env vars / keys I must paste (FCM, EAS project ID, etc.)
+
+==================================================
+PROCESS
+==================================================
+First analyze the current codebase.
+Then convert to native Expo without deleting existing features.
+Then add Jester's Deal (black-card deck aesthetic) + Seat Temperature + persistent login + native push.
+Ask me for the Jester's Deal icon file when you are ready to drop it in the grid.
+When done, summarize: what changed, new admin screens, how I build/install, and remaining things only I can do (Apple account, paying EAS if needed).

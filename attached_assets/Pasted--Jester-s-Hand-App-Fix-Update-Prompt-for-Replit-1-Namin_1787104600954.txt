@@ -1,0 +1,60 @@
+# Jester's Hand App — Fix & Update Prompt for Replit
+
+## 1. Naming Fix: Messaging vs. Comment Section
+- The **messaging feature** (currently named "Whisper") needs to be renamed to **"Pocket"**. (This includes the "Card" element within it — leave "Card" exactly as is, no changes there.)
+- The **comment section on the Target ticket** currently has **no name**. This section needs to be named **"Whisper"**.
+- End result: "Whisper" is the new name for the previously-unnamed Target ticket comment section, and "Pocket" is the renamed messaging feature (formerly "Whisper").
+
+## 2. Background: Voice Chat Fix (Jester's Table)
+- **Jester's Table itself is working correctly — no issue with this feature.**
+- Context for the bugs below: Jester's Table includes a Discord-style voice chat feature. This voice chat was not supported in Expo Go.
+- To fix that, the app was migrated from Expo Go to a **web app** (a version that can be installed to the phone's home screen, or accessed via a regular web browser on a computer). This successfully restored voice chat functionality in Jester's Table.
+- **However, this migration introduced the three bugs below (Sections 3–5), which need to be fixed.**
+
+## 3. Bug: Mobile Screen Overscroll
+- Since the migration to the web app, the mobile version now scrolls **beyond the visible screen bounds** — both horizontally (side to side) and vertically (up and down) — inside sections.
+- If the user's finger slips while scrolling, the screen scrolls away entirely, and the user has to zoom in/out to relocate the actual screen.
+- **Fix needed:** Lock scroll boundaries so the view cannot scroll past the edges of visible content, on both axes.
+
+## 4. Bug: Login Screen Stretched (Browser Only)
+- When the app is installed to the phone's home screen, it displays correctly.
+- **However**, when accessed via a regular web browser (e.g., on a laptop), the login screen appears **stretched and distorted**.
+- **Fix needed:** Correct the login screen layout/scaling specifically for plain web browser view so it displays properly (not stretched/disfigured), while keeping the home-screen-installed version working as it currently does.
+
+## 5. Bug: Notifications Broken
+- Since the migration to the web app, **notifications stopped working** — users are no longer receiving notifications they should be getting.
+- **Fix needed:** Restore notification delivery after the web app migration.
+- *Note: A document listing all app notifications will be uploaded alongside this prompt for reference.*
+
+## 6. Feature: Contract Editing (Admin Side)
+- On the **Jester's Hand admin side** (login: 00-00), the admin should be able to **edit/update the contract** at any time.
+- *Note: A document with the updated contract will be uploaded alongside this prompt — use it to update the current contract content.*
+
+## 7. Feature: Forced Re-Signature on Contract Update
+- Currently, the contract only displays on a user's **first login**, before they sign in.
+- **New requirement:** When the admin updates the contract, the **updated contract must display again** before the user is allowed back into the app — even for returning users. The user must **re-sign** the updated contract before proceeding.
+
+## 8. Bug: Signed Contracts Incorrectly Filed Under "Archive/Deleted"
+- In the Jester's Hand icon, there is an **Archive tab**. Anything deleted from the app goes there, and the admin can permanently delete it from that tab.
+- **Bug:** Signed contracts are currently being archived as if they were "deleted" items.
+- **Fix needed:** Signed contracts must be stored **separately** from deleted/archived items — they should not be mixed with things marked for deletion.
+
+## 9. Feature: Viewable Contracts with Signatures
+- The admin should be able to **click on a contract**, then **click on the person who signed it**, and **view their actual signature**.
+- This is needed so that if there's a dispute or rule violation, the admin can reference the signed contract and signature directly to support a decision (e.g., removing a user from the app).
+- **Currently broken:** Admin cannot click into contracts to view signatures — this needs to be fixed.
+
+## 10. New Feature: Decoder Game (Chamber Section)
+- Adding a new game to the **Chamber** section called **"Decoder"** — the hidden Jest on the Jester Ticket (admin login: 00-00).
+- When uploading content to Chamber (in **either tab**), there should be an option to **add a key** (a decoder key tied to the Decoder game).
+
+## 11. New Feature: Interactive Reader (Stack Tab / Vault Icon)
+- When uploading to the **Stack tab** (under the **Vault icon**), the upload should render as an **interactive, page-flipping book** (similar to Inkitt's reading experience).
+- Readers should be able to **comment and react** (mark) at three levels:
+  - Each paragraph
+  - Each chapter
+  - The end of the book/upload
+
+## Attachments (to be uploaded with this prompt)
+1. Document listing all current app notifications.
+2. Updated contract document — use this to update the in-app contract content per Section 6.

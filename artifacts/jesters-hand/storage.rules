@@ -1,0 +1,150 @@
+rules_version = '2';
+
+// Storage rules for Jester's Hand.
+// Vault content is PRIVATE: readable only by signed-in members while the
+// matching Firestore entry is published (re-checked on every request), or by
+// the admin. Only the admin may write Vault files.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Suspension is re-checked on every request: a suspended member keeps a
+    // valid ID token for up to an hour, so token presence alone is not
+    // enough. Missing user docs count as NOT suspended.
+    function isSuspended() {
+      return firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('suspended', false) == true;
+    }
+
+    function signedIn() {
+      return request.auth != null && !isSuspended();
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Vault curation tier — mirrors isKeeper() in firestore.rules: the
+    // second Hand (vaultKeeper: false) may not touch Vault/Chamber files.
+    function isKeeper() {
+      return isAdmin()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('vaultKeeper', true) == true;
+    }
+
+    // Member photos (mug / admin portrait) — only the two known object
+    // names, images only, capped at 10 MB.
+    match /users/{uid}/{fileName} {
+      allow read: if signedIn();
+      // Deletes carry no request.resource — separate branch (Go Dark removes
+      // the mug), so content checks only apply to uploads.
+      // The mug is the member's own; the admin portrait may only be written
+      // by the Jester.
+      allow write: if signedIn() && (request.auth.uid == uid || isAdmin())
+        && fileName in ['mug.jpg', 'admin.jpg']
+        && (fileName != 'admin.jpg' || isAdmin())
+        && (request.resource == null
+            || (request.resource.contentType.matches('image/.*')
+                && request.resource.size <= 10 * 1024 * 1024));
+    }
+
+    // Chat media (Whisper + Jester's Table photo/GIF attachments). Writers
+    // may only fill their own folder; any signed-in member can view (chat
+    // access itself is enforced by Firestore rules on the messages).
+    match /chatMedia/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid
+        && (request.resource == null
+            || (request.resource.contentType.matches('image/.*')
+                && request.resource.size <= 10 * 1024 * 1024));
+      // Admin delete: cleanup of attachments on admin-deleted whisper
+      // messages and permanent (archive purge) removal of table attachments.
+      allow delete: if isAdmin();
+    }
+
+    // Spread (target ticket) photos. Admin delete: permanent removal of an
+    // archived (soft-deleted) ticket purges its retained photos.
+    match /targetTickets/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
+      allow delete: if isAdmin();
+    }
+
+    // Vault: private reading files & artwork
+    match /vault/{entryId}/{fileName} {
+      function validVaultObjectName() {
+        return fileName == 'cover'
+          || fileName == 'file'
+          || fileName.matches('file-[a-z0-9]+-[a-z0-9]+');
+      }
+      function isCurrentVaultObject() {
+        let entry = firestore.get(/databases/(default)/documents/vault/$(entryId));
+        let objectPath = 'vault/' + entryId + '/' + fileName;
+        return (fileName == 'cover' && entry.data.coverPath == objectPath)
+          || (fileName != 'cover' && entry.data.filePath == objectPath);
+      }
+      // A versioned replacement is unreadable until the Firestore pointer
+      // switches, and the old object becomes unreadable immediately afterward.
+      allow read: if validVaultObjectName()
+        && isCurrentVaultObject()
+        && (isAdmin()
+            || (signedIn()
+                && firestore.get(/databases/(default)/documents/vault/$(entryId)).data.status == 'published'));
+      allow write: if validVaultObjectName()
+        && isKeeper()
+        && request.resource.size < 100 * 1024 * 1024;
+      // Permanent removal of an archived entry purges its retained files.
+      allow delete: if isKeeper();
+    }
+
+    // Recruit/Verdict post photos: private, admin-written; readable by
+    // members only while the matching post is published (re-checked on
+    // every request, exactly like the Vault).
+    match /recruitPosts/{postId}/{fileName} {
+      allow read: if fileName.matches('img_[A-Za-z0-9]+')
+        && (isAdmin()
+            || (signedIn()
+                && firestore.get(/databases/(default)/documents/recruitPosts/$(postId)).data.status == 'published'));
+      allow write: if fileName.matches('img_[A-Za-z0-9]+')
+        && isAdmin()
+        && request.resource.size < 20 * 1024 * 1024;
+      // Permanent removal of an archived post purges its retained photos.
+      allow delete: if isAdmin();
+    }
+
+    // Armory product photos: private, admin-written; readable by any
+    // signed-in member while the matching product doc exists (re-checked
+    // on every request, same protected pattern as the Vault).
+    match /armoryProducts/{productId}/{fileName} {
+      allow read: if fileName == 'photo'
+        && (isAdmin()
+            || (signedIn()
+                && firestore.exists(/databases/(default)/documents/armoryProducts/$(productId))));
+      allow write: if fileName == 'photo'
+        && isAdmin()
+        && request.resource.size < 20 * 1024 * 1024;
+      // Permanent removal of an archived product purges its retained photo.
+      allow delete: if isAdmin();
+    }
+
+    // Report evidence photos: a member may UPLOAD under their own uid;
+    // ONLY the admin may ever read them (reports are private to 00-00).
+    // Nobody edits evidence after the fact; only the admin may delete.
+    match /reports/{uid}/{reportId}/{fileName} {
+      allow read: if isAdmin();
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        // Evidence is write-once: creates are only valid onto an empty path,
+        // so an overwrite can never slip through as a "create".
+        && resource == null
+        && fileName.matches('img_[0-9]+')
+        && request.resource.size < 20 * 1024 * 1024;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Everything else: no access.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
