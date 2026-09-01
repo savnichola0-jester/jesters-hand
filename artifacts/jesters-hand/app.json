@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Jester's Hand",
-    "slug": "jesters-hand",
+    "slug": "jesters-hand-native",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
