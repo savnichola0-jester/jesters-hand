@@ -1,0 +1,52 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "uWeYLza4D8-E_J3ecyvlE"
+uri = "file://exports/jesters-hand-upload-key.jks"
+type = "unspecified"
+title = "Jester's Hand Android Keystore"
+description = "Android JKS signing keystore for package com.jestershand.app. Alias: jestershand-upload. Keep this file and both signing passwords backed up securely."
+logical_id = "d5897344-5369-4d0a-9fcf-650b593f471b"
+content_hash = "sha256:c7ca3591d45444b6887414a4f96c1f1b60eff904e76906ba3c215e54ee4b690b"
+size = 2283
+mtime_ms = 1788302067525
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/d5897344-5369-4d0a-9fcf-650b593f471b/91b6e42e-b6a7-4311-b246-adb17a62db00"
+storage_version_token = "1788302077628015"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "JVd1jrWza0ID4V7RyzrfF"
+uri = "file://Esport/Jester's%20hand%20uploaded%20key.jks"
+type = "unspecified"
+title = "Download Jester's Hand Uploaded Key"
+description = "Android Java KeyStore file. Use the download action on this card; do not open it as text."
+logical_id = "b41abd73-5dae-4bc9-9883-543eae707233"
+content_hash = "sha256:c7ca3591d45444b6887414a4f96c1f1b60eff904e76906ba3c215e54ee4b690b"
+size = 2283
+mtime_ms = 1788302483797
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/b41abd73-5dae-4bc9-9883-543eae707233/638d3db1-c3b4-4022-a902-1201e730aeca"
+storage_version_token = "1788302491196056"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "vV7bTHNbFEwyyd0eu100-"
+uri = "file://Esport/Jesters-Hand-keystore.zip"
+type = "unspecified"
+title = "Download Jester's Hand Keystore ZIP"
+description = "Private download containing Jester's hand uploaded key.jks. Download this ZIP to your computer, extract it locally, and upload the JKS through Expo's secure credential flow. Do not publish or share this file publicly."
+logical_id = "36b10fec-8b0f-48ea-9e95-b3e06a9014c4"
+
+[[outputs]]
+id = "Vk_YdsKEYTjX-eQX-1uGq"
+uri = "file://Jesters-Hand-keystore.zip"
+type = "unspecified"
+title = "Download Keystore ZIP"
+description = "Download this ZIP; do not try to open the JKS directly. Extract the ZIP on your computer, then select the extracted JKS in Expo's upload form."
+logical_id = "0d531578-5ff4-4335-868d-237882b29e7d"
+content_hash = "sha256:b79faaf23506bfeb1640324ad5737013947a75e9354a0a3c9553b5e4fffd96c0"
+size = 2375
+mtime_ms = 1788302861717
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/0d531578-5ff4-4335-868d-237882b29e7d/e79a39ec-a77a-4923-95d3-c633d4ecddbb"
+storage_version_token = "1788302865061558"
+content_type = "application/octet-stream"
