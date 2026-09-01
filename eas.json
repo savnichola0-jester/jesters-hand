@@ -6,6 +6,7 @@
   "build": {
     "preview": {
       "distribution": "internal",
+      "pnpm": "10.26.1",
       "android": {
         "buildType": "apk"
       },

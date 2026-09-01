@@ -21,6 +21,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "pnpm": "10.26.1",
       "android": { "buildType": "apk" },
       "env": {
         "EXPO_PUBLIC_DOMAIN": "jestershand54atcomand.replit.app",
