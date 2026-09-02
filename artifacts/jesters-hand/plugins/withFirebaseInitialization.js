@@ -1,10 +1,27 @@
-const { withMainApplication } = require('expo/config-plugins');
+const { withAppBuildGradle, withMainApplication } = require('expo/config-plugins');
 
 const IMPORT_KOTLIN = 'import com.google.firebase.FirebaseApp';
 const IMPORT_JAVA = 'import com.google.firebase.FirebaseApp;';
+const FIREBASE_MESSAGING_DEPENDENCY =
+  'implementation("com.google.firebase:firebase-messaging:24.0.1")';
 
 module.exports = function withFirebaseInitialization(config) {
-  return withMainApplication(config, (configWithMainApplication) => {
+  const configWithFirebaseDependency = withAppBuildGradle(config, (configWithBuildGradle) => {
+    let source = configWithBuildGradle.modResults.contents;
+    if (!source.includes(FIREBASE_MESSAGING_DEPENDENCY)) {
+      if (!source.includes('dependencies {')) {
+        throw new Error('Could not find the Android app dependencies block.');
+      }
+      source = source.replace(
+        'dependencies {',
+        `dependencies {\n    ${FIREBASE_MESSAGING_DEPENDENCY}`,
+      );
+    }
+    configWithBuildGradle.modResults.contents = source;
+    return configWithBuildGradle;
+  });
+
+  return withMainApplication(configWithFirebaseDependency, (configWithMainApplication) => {
     const mainApplication = configWithMainApplication.modResults;
     const isJava = mainApplication.language === 'java';
     const importLine = isJava ? IMPORT_JAVA : IMPORT_KOTLIN;
