@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -10,11 +10,11 @@ import {
 import { MARBLE_TEXT_SHADOW } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
 import { useLiveDeal } from '@/components/deal/useLiveDeal';
+import { InWorldCard, CardPip, CardTitle } from '@/components/InWorldCard';
 
 const { width: SW } = appWindow();
 const CREAM = '#EDE0C4';
 const GOLD = '#D4A853';
-const CARD_BACK = require('../../assets/images/black_card.png');
 
 export default function DealMemberView() {
   const { user } = useAuth();
@@ -72,7 +72,7 @@ export default function DealMemberView() {
 
   return (
     <ScrollView style={s.root} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-      
+
       <View style={s.header}>
         <Text style={s.title}>{activeDeal.title}</Text>
         <View style={s.progressRow}>
@@ -88,18 +88,16 @@ export default function DealMemberView() {
           const current = completion?.taskCounts[task.id] ?? 0;
           const done = current >= task.targetCount;
           return (
-            <View key={task.id} style={[s.card, done && s.cardDone]}>
-              <ImageBackground source={CARD_BACK} style={s.cardBack} imageStyle={s.cardBackImage} resizeMode="cover">
-                <View style={s.cardInner}>
-                  <Text style={s.cardType}>{task.type.replace('_', ' ').toUpperCase()}</Text>
-                  <Text style={s.cardLabel}>{task.label}</Text>
-                  <View style={s.cardFooter}>
-                    <Text style={s.cardCount}>{current} / {task.targetCount}</Text>
-                    {done && <Feather name="check" size={16} color={GOLD} />}
-                  </View>
-                </View>
-              </ImageBackground>
-            </View>
+            <InWorldCard key={task.id} style={s.card} isDone={done}>
+              <View style={s.cardInnerContent}>
+                <CardPip style={{ fontSize: 16, minHeight: 24, marginBottom: 8 }}>{task.type.replace(/_/g, ' ').toUpperCase()}</CardPip>
+                <CardTitle>{task.label}</CardTitle>
+              </View>
+              <View style={s.cardFooter}>
+                <Text style={s.cardCount}>{current} / {task.targetCount}</Text>
+                {done && <Feather name="check" size={16} color={GOLD} />}
+              </View>
+            </InWorldCard>
           );
         })}
       </ScrollView>
@@ -149,7 +147,7 @@ export default function DealMemberView() {
           </View>
         )}
       </View>
-      
+
     </ScrollView>
   );
 }
@@ -160,7 +158,7 @@ const s = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingBottom: 60 },
   emptyText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 18, letterSpacing: 2 },
   emptySub: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Cinzel_400Regular', fontSize: 13 },
-  
+
   header: { marginBottom: 24, alignItems: 'center' },
   title: { ...MARBLE_TEXT_SHADOW, color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 20, textAlign: 'center', marginBottom: 12, letterSpacing: 1 },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '80%' },
@@ -168,27 +166,17 @@ const s = StyleSheet.create({
   progressBarFill: { height: '100%', backgroundColor: GOLD, borderRadius: 2 },
   progressText: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 12 },
 
-  cardScroller: { flexGrow: 0, marginBottom: 32 },
-  cardSpread: { paddingHorizontal: 16, gap: 12 },
-  card: {
-    width: SW * 0.65, height: SW * 0.9, backgroundColor: '#050505',
-    borderRadius: 12, borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)',
-    overflow: 'hidden',
-    shadowColor: '#000', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 4, height: 4 }, elevation: 8,
-  },
-  cardDone: { borderColor: GOLD },
-  cardBack: { flex: 1 },
-  cardBackImage: { borderRadius: 11 },
-  cardInner: { flex: 1, padding: 16, justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(237,224,196,0.12)', borderRadius: 10, margin: 4, backgroundColor: 'rgba(0,0,0,0.22)' },
-  cardType: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 2, textAlign: 'center' },
-  cardLabel: { color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 16, textAlign: 'center', lineHeight: 24 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
-  cardCount: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 14 },
-  
+  cardScroller: { flexGrow: 0, marginBottom: 32, marginHorizontal: -16 },
+  cardSpread: { paddingHorizontal: 16, gap: 16 },
+  card: { width: SW * 0.65, height: SW * 0.9 },
+  cardInnerContent: { flex: 1, justifyContent: 'center', gap: 12 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 'auto' },
+  cardCount: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 16 },
+
   completeBox: { backgroundColor: 'rgba(212,168,83,0.1)', borderWidth: 1, borderColor: GOLD, borderRadius: 8, padding: 16, alignItems: 'center', marginBottom: 24 },
   completeTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 2, marginBottom: 4 },
   completeText: { color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 12 },
-  
+
   statsBox: { backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 10, padding: 16, borderWidth: 1, borderColor: 'rgba(237,224,196,0.15)', marginBottom: 24 },
   statsTitle: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2, marginBottom: 16, textAlign: 'center' },
   statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
