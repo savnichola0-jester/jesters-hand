@@ -227,7 +227,9 @@ export default function SystemScreen() {
   }, [doSignOut]);
 
   const version = Constants?.expoConfig?.version ?? '1.0.0';
-  const buildVersion = Constants?.nativeBuildVersion ?? '—';
+  const buildVersion = Platform.OS === 'android'
+    ? String(Constants?.platform?.android?.versionCode ?? '—')
+    : String(Constants?.platform?.ios?.buildNumber ?? '—');
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const checkForUpdate = useCallback(async () => {
