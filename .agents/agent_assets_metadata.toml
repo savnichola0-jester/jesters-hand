@@ -55,28 +55,28 @@ content_type = "application/octet-stream"
 id = "oQhWM_24qPqPseX5ImTF3"
 uri = "file://exports/jesters-hand-native-install-qr.png"
 type = "image"
-title = "Jester’s Hand Native Install QR — PNG"
-description = "High-resolution 2047×2047 QR code. Encodes the permanent native install URL: https://jestershand54atcomand.replit.app/install"
+title = "Jester's Hand Install QR (PNG)"
+description = "Stable install QR pointing to https://jestershand54atcomand.replit.app/install"
 logical_id = "9204f5a3-a6f3-458a-839c-00f7f7cf4c54"
 content_hash = "sha256:293622c2f6e4c0dc8b4a072a2059cdfd96e39d0b77291ba3faf0ae2f042a9ab4"
 size = 22687
-mtime_ms = 1788371680834
-storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/9204f5a3-a6f3-458a-839c-00f7f7cf4c54/582e9f82-4721-4e02-8da2-e0b1d9df8eef"
-storage_version_token = "1788371874194491"
+mtime_ms = 1788382823200
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/9204f5a3-a6f3-458a-839c-00f7f7cf4c54/9db17acd-2ef1-444d-bd70-efd361b031b0"
+storage_version_token = "1788382961137330"
 content_type = "image/png"
 
 [[outputs]]
 id = "uPAp0GOqST_CatseNZVYd"
 uri = "file://exports/jesters-hand-native-install-qr.svg"
 type = "image"
-title = "Jester’s Hand Native Install QR — SVG"
-description = "Vector QR code recommended for engraving. Encodes the permanent native install URL: https://jestershand54atcomand.replit.app/install"
+title = "Jester's Hand Install QR (SVG)"
+description = "Scalable stable install QR for print and engraving."
 logical_id = "9677a8cc-afdf-47a3-a3e5-0ed2f400dee6"
-content_hash = "sha256:8648d7b5be87639ede2158e7c934f05d52d872263910a85755f764b39a172016"
-size = 3034
-mtime_ms = 1788371680798
-storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/9677a8cc-afdf-47a3-a3e5-0ed2f400dee6/5425db81-59b7-42d0-bfe9-25b3b680c9b2"
-storage_version_token = "1788371874898197"
+content_hash = "sha256:e5e5a51ebd07c3018f260dc492fc70e5d0fdcc2c78cf1081a6112c29b3a36fcf"
+size = 3197
+mtime_ms = 1788382823204
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/9677a8cc-afdf-47a3-a3e5-0ed2f400dee6/a92b016a-56d6-4508-a0dd-d16eb750b48a"
+storage_version_token = "1788382961873395"
 content_type = "image/svg+xml"
 
 [[outputs]]

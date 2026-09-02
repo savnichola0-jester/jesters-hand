@@ -24,6 +24,7 @@ import {
   newPostId, parseDesign, RecruitRsvp, listenRecruitRsvp, setRecruitRsvp,
 } from '@/lib/recruitService';
 import PostCanvas from '@/components/recruit/PostCanvas';
+import RecruitViewer from '@/components/recruit/RecruitViewer';
 import RecruitEditor from '@/components/recruit/RecruitEditor';
 import SocialPostSheet from '@/components/SocialPostSheet';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
@@ -320,7 +321,7 @@ export default function RecruitScreen() {
       </View>
 
       {/* ── Protected viewer ── */}
-      {viewing?.post && user ? (
+      {viewing?.post?.status === 'published' && user ? (
         <SocialPostSheet
           visible
           onClose={() => setViewing(null)}
@@ -362,6 +363,17 @@ export default function RecruitScreen() {
           </View>
           <Text style={st.protectedNotice}>{meta.notice}</Text>
         </SocialPostSheet>
+      ) : viewing?.post ? (
+        <RecruitViewer
+          visible
+          onClose={() => setViewing(null)}
+          section={viewing.section}
+          elements={viewing.elements}
+          template={viewing.template}
+          title={viewing.title}
+          watermark={watermark}
+          notice={viewing.isReference ? 'Reference example — cannot be edited or published' : meta.notice}
+        />
       ) : null}
 
       {/* ── Editor (admin only) ── */}
