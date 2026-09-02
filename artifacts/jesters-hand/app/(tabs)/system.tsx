@@ -63,7 +63,9 @@ export default function SystemScreen() {
     getDoc(doc(db, 'users', user.uid))
       .then(snap => {
         const d = snap.data();
-        const hasTarget = !!d?.expoPushToken || Object.keys(d?.webPushSubs ?? {}).length > 0;
+        const hasTarget = Platform.OS === 'web'
+          ? Object.keys(d?.webPushSubs ?? {}).length > 0
+          : !!d?.expoPushToken;
         setAlertsOn(d?.alertsMuted !== true && hasTarget);
         setRole(typeof d?.role === 'string' ? d.role : '');
         setSuit(typeof d?.suit === 'string' ? d.suit : '');
@@ -91,7 +93,9 @@ export default function SystemScreen() {
         // is unavailable — re-read the doc so the switch reflects the truth.
         const snap = await getDoc(doc(db, 'users', user.uid));
         const d = snap.data();
-        const on = !!d?.expoPushToken || Object.keys(d?.webPushSubs ?? {}).length > 0;
+        const on = Platform.OS === 'web'
+          ? Object.keys(d?.webPushSubs ?? {}).length > 0
+          : !!d?.expoPushToken;
         setAlertsOn(on);
         if (!on) {
           let title = 'Alerts Unavailable';
@@ -116,7 +120,7 @@ export default function SystemScreen() {
           } else if (result.status === 'failed') {
             const lower = result.reason.toLowerCase();
             if (lower.includes('firebase') || lower.includes('fcm')) {
-              msg = 'This Android build is missing working Firebase push configuration. A new native build is required.';
+              msg = `Firebase push registration failed: ${result.reason}`;
             } else {
               msg = `Push registration failed: ${result.reason}`;
             }
@@ -223,6 +227,7 @@ export default function SystemScreen() {
   }, [doSignOut]);
 
   const version = Constants?.expoConfig?.version ?? '1.0.0';
+  const buildVersion = Constants?.nativeBuildVersion ?? '—';
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const checkForUpdate = useCallback(async () => {
@@ -330,6 +335,15 @@ export default function SystemScreen() {
             <Text style={s.rowLabel}>App Version</Text>
             <Text style={s.rowValue}>{version}</Text>
           </View>
+          {Platform.OS !== 'web' ? (
+            <>
+              <View style={s.hairline} />
+              <View style={s.rowBetween}>
+                <Text style={s.rowLabel}>App Build</Text>
+                <Text style={s.rowValue}>{buildVersion}</Text>
+              </View>
+            </>
+          ) : null}
         </View>
 
         {/* ── Update ── */}
