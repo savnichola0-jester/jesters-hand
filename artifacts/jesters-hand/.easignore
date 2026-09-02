@@ -1,0 +1,33 @@
+# Dependencies are installed by EAS.
+node_modules/
+
+# Expo and generated web exports are not native build inputs.
+.expo/
+dist/
+web-build/
+static-build/
+expo-env.d.ts
+
+# Native folders are generated from app.json and config plugins.
+ios/
+android/
+*.orig.*
+
+# Signing credentials and local environment files never belong in the archive.
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+.env
+.env*.local
+
+# Local tooling output.
+.metro-health-check*
+*.tsbuildinfo
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+.vercel/

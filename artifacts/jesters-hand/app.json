@@ -2,9 +2,9 @@
   "expo": {
     "name": "Jester's Hand",
     "slug": "jesters-hand-native",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
     },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -50,6 +50,7 @@
       "expo-dev-client",
       "expo-font",
       "expo-web-browser",
+      "./plugins/withFirebaseInitialization",
       [
         "expo-notifications",
         {

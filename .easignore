@@ -1,0 +1,48 @@
+# EAS archives this pnpm workspace from the repository root. Keep only the
+# mobile artifact, workspace manifests, and shared libraries it imports.
+
+# Installed dependencies and local caches are recreated by EAS.
+node_modules/
+**/node_modules/
+.cache/
+.config/
+.local/
+.agents/
+
+# Replit-only artifacts and user attachments are not Android build inputs.
+attached_assets/
+screenshots/
+exports/
+Esport/
+Jesters-Hand-keystore.zip
+.replit
+.replitignore
+replit.nix
+replit.md
+
+# Other runnable artifacts are deployed independently.
+artifacts/api-server/
+artifacts/mockup-sandbox/
+
+# Generated Expo/web/native output inside the mobile artifact.
+artifacts/jesters-hand/.expo/
+artifacts/jesters-hand/dist/
+artifacts/jesters-hand/static-build/
+artifacts/jesters-hand/web-build/
+artifacts/jesters-hand/android/
+artifacts/jesters-hand/ios/
+
+# Local logs, temporary files, and credentials.
+*.log
+*.tsbuildinfo
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+.env
+.env*.local
+.DS_Store
+.vercel/
