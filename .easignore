@@ -4,6 +4,7 @@
 # Installed dependencies and local caches are recreated by EAS.
 node_modules/
 **/node_modules/
+.git/
 .cache/
 .config/
 .local/
