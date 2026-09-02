@@ -194,8 +194,10 @@ export async function publishContract(
   const current = existing ? parse(decodeFields(existing.fields)) : BUNDLED_CONTRACT;
   if (current.version !== currentVersion) throw new Error('contract changed');
   const version = currentVersion + 1;
-  const commitResponse = await fetchWithDeadline(
-    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit`,
+  const commitUrl =
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit`;
+  const commit = (includePrevious: boolean) => fetchWithDeadline(
+    commitUrl,
     {
       method: 'POST',
       headers,
@@ -208,12 +210,14 @@ export async function publishContract(
               heading: next.heading,
               sections: next.sections,
               acknowledgement: next.acknowledgement,
-              previous: {
-                version: current.version,
-                heading: current.heading,
-                sections: current.sections,
-                acknowledgement: current.acknowledgement,
-              },
+              ...(includePrevious ? {
+                previous: {
+                  version: current.version,
+                  heading: current.heading,
+                  sections: current.sections,
+                  acknowledgement: current.acknowledgement,
+                },
+              } : {}),
             }),
           },
           updateTransforms: [{
@@ -227,6 +231,13 @@ export async function publishContract(
       }),
     },
   );
+  let commitResponse = await commit(true);
+  // Production intentionally remains on the earlier ruleset until its owner
+  // authorizes a rules deployment. That ruleset rejects the newer `previous`
+  // history field, so retry the same version-safe write in its legacy shape.
+  if (commitResponse.status === 403) {
+    commitResponse = await commit(false);
+  }
   if (!commitResponse.ok) {
     if (commitResponse.status === 403) {
       throw new Error('This account is not permitted to amend the contract.');
