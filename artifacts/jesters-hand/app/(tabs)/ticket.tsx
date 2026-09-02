@@ -18,6 +18,8 @@ import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { fieldsForJokerId, SUIT_GLYPHS, SUIT_GENRES } from '@/lib/ticketFields';
 import { appWindow } from '@/lib/appWindow';
+import { fetchSeatActivitySummary, SeatActivitySummary } from '@/lib/activityService';
+import { SeatThermometer } from '@/components/SeatThermometer';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -69,6 +71,11 @@ export default function TicketScreen() {
   const activeDeal = useLiveDeal(deals);
   const [stats, setStats] = useState<DealMemberStats | null>(null);
   const [progress, setProgress] = useState(0);
+  const [seat, setSeat] = useState<SeatActivitySummary | null>(null);
+  useEffect(() => { if (user) void fetchSeatActivitySummary(user.uid).then(setSeat); }, [user?.uid]);
+  const refreshSeat = useCallback(() => {
+    if (user) void fetchSeatActivitySummary(user.uid).then(setSeat);
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!user) return;
@@ -94,7 +101,7 @@ export default function TicketScreen() {
     });
   }, [activeDeal, user]);
 
-  const temp = seatTemperature(stats?.lastActivityAt, progress);
+  const temp = seat?.temperature ?? seatTemperature(stats?.lastActivityAt, progress);
   const streak = stats?.currentStreak ?? 0;
 
   // ── Load from Firestore on mount ─────────────────────────────────────────
@@ -118,6 +125,7 @@ export default function TicketScreen() {
     if (!user) return;
     try {
       await saveTicket(user.uid, values);
+      setTimeout(refreshSeat, 750);
       if (jokerId === '00-00') {
         void broadcastToActiveMembers(user.uid, {
           type: 'announcement',
@@ -141,6 +149,7 @@ export default function TicketScreen() {
     setValues(prev => ({ ...prev, suit: v })); // optimistic
     try {
       await saveTicket(user.uid, { suit: v } as any);
+      setTimeout(refreshSeat, 750);
       if (jokerId === '00-00') {
         void broadcastToActiveMembers(user.uid, {
           type: 'announcement',
@@ -199,10 +208,12 @@ export default function TicketScreen() {
       if (target === 'admin') {
         const url = await uploadAdminPhoto(user.uid, res.assets[0].uri, progress);
         await saveTicket(user.uid, { adminPhotoUrl: url });
+        setTimeout(refreshSeat, 750);
         setAdminPhoto(url);
       } else {
         const url = await uploadMug(user.uid, res.assets[0].uri, progress);
         await saveTicket(user.uid, { mugUrl: url });
+        setTimeout(refreshSeat, 750);
         setUserPhoto(url);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -237,6 +248,7 @@ export default function TicketScreen() {
     setFiling(true);
     try {
       await saveTicket(user.uid, { ...values, filed: true, filedAt: Date.now() });
+      setTimeout(refreshSeat, 750);
       setUnlocked(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Filed!', 'Your Intel has been filed. An admin will review it.');
@@ -407,8 +419,9 @@ export default function TicketScreen() {
               <View>
                 <Text style={[s.fieldLabel, { marginBottom: 4 }]}>SEAT TEMPERATURE</Text>
                 <Text style={[s.fieldValue, { color: temp === 'Hot' ? '#FF6B6B' : temp === 'Warm' ? '#FFA06B' : 'rgba(237,224,196,0.5)' }]}>
-                  {temp?.toUpperCase()}
+                  {temp?.toUpperCase()} {seat?.score != null ? `· ${seat.score}/100` : ''}
                 </Text>
+                <SeatThermometer score={seat?.score ?? 0} temperature={temp} />
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={[s.fieldLabel, { marginBottom: 4 }]}>STREAK</Text>

@@ -9,8 +9,8 @@ SUITS assignments, active task configuration, streak stamps, Royal awards, and a
 
 **How to apply:** use update-time or nonexistence preconditions, bounded conflict retries, and verify the full intended state before treating a repeated request as idempotent success. Keep Activity records content-free; contextual evidence belongs only in Investigations.
 
-Privileged SUITS and investigation routes require the permanent `00-00` Joker ID, the pinned admin flag, and a non-suspended user record.
+SUITS assignment and in-play dealing accept either pinned Hand dealer (00-00 or 01-54) with the admin flag and a non-suspended record. Royal stamps and Investigations remain 00-00-only.
 
-**Why:** Other admin roles must not inherit Jester authority, and relying on only one mutable or not-yet-deployed identity rule creates a privilege-escalation window.
+**Why:** 01-54 is explicitly a dealer but not the owner; broader admin capabilities must not leak through SUITS access.
 
-**How to apply:** enforce all three checks server-side before owner-credential reads or writes; client visibility is not an authorization boundary.
+**How to apply:** enforce exact role checks server-side before owner-credential reads or writes; client visibility is not an authorization boundary.

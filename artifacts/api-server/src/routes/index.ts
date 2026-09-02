@@ -9,6 +9,7 @@ import dealRouter from "./deal";
 import hiddenJestRouter from "./hiddenJest";
 import suitsRouter from "./suits";
 import auditRouter from "./audit";
+import activityRouter from "./activity";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(dealRouter);
 router.use(hiddenJestRouter);
 router.use(suitsRouter);
 router.use(auditRouter);
+router.use(activityRouter);
 
 export default router;

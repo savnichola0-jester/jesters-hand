@@ -18,6 +18,8 @@ import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
+import { fetchSeatActivitySummary, SeatActivitySummary, SeatTemperature } from '@/lib/activityService';
+import { SeatThermometer } from '@/components/SeatThermometer';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -53,6 +55,7 @@ export default function HandScreen() {
   const [stats, setStats] = useState<DealMemberStats[]>([]);
   const [completions, setCompletions] = useState<Array<DealCompletion & { dealId: string }>>([]);
   const activeDeal = useLiveDeal(deals);
+  const [seatSummaries, setSeatSummaries] = useState<Record<string, SeatActivitySummary>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,6 +63,15 @@ export default function HandScreen() {
     try {
       const data = await getAllMembers();
       setMembers(data);
+       if (canSeeAllSeats) {
+         const entries = await Promise.all(data.map(async member => {
+           const summary = await fetchSeatActivitySummary(member.uid);
+           return summary ? [member.uid, summary] as const : null;
+         }));
+         setSeatSummaries(Object.fromEntries(entries.filter((entry): entry is readonly [string, SeatActivitySummary] => !!entry)));
+       } else {
+         setSeatSummaries({});
+       }
       // Honor counts arrive separately — the list renders without waiting.
       getRoyalsCounts(data.map(m => m.uid)).then(setRoyals).catch(() => {});
     } catch (e: any) {
@@ -71,7 +83,7 @@ export default function HandScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canSeeAllSeats, user?.uid]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -152,12 +164,7 @@ export default function HandScreen() {
               key={m.uid}
               member={m}
               royalsCount={royals[m.uid] ?? 0}
-              temperature={canSeeAllSeats ? seatTemperature(
-                stats.find(item => item.uid === m.uid)?.lastActivityAt,
-                activeDeal?.tasks.length
-                  ? (completions.find(item => item.dealId === activeDeal.id && item.uid === m.uid)?.completedTaskIds.length ?? 0) / activeDeal.tasks.length
-                  : 0,
-              ) : null}
+               temperature={canSeeAllSeats ? (seatSummaries[m.uid]?.temperature ?? null) : null}
               onPress={() =>
                 router.push({ pathname: '/(tabs)/hand-ticket', params: { uid: m.uid } })
               }
@@ -173,7 +180,7 @@ export default function HandScreen() {
 function MemberCard({ member, royalsCount, temperature, onPress }: {
   member: Member;
   royalsCount: number;
-  temperature: ReturnType<typeof seatTemperature> | null;
+  temperature: SeatTemperature | null;
   onPress: () => void;
 }) {
   const hasMug   = !!member.mugUrl;
@@ -234,6 +241,7 @@ function MemberCard({ member, royalsCount, temperature, onPress }: {
               ]}>
                 {temperature}
               </Text>
+              <SeatThermometer compact temperature={temperature} />
             </View>
           ) : null}
         </View>

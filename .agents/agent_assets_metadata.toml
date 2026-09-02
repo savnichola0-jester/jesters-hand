@@ -50,3 +50,59 @@ mtime_ms = 1788302861717
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/0d531578-5ff4-4335-868d-237882b29e7d/e79a39ec-a77a-4923-95d3-c633d4ecddbb"
 storage_version_token = "1788302865061558"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "oQhWM_24qPqPseX5ImTF3"
+uri = "file://exports/jesters-hand-native-install-qr.png"
+type = "image"
+title = "Jester’s Hand Native Install QR — PNG"
+description = "High-resolution 2047×2047 QR code. Encodes the permanent native install URL: https://jestershand54atcomand.replit.app/install"
+logical_id = "9204f5a3-a6f3-458a-839c-00f7f7cf4c54"
+content_hash = "sha256:293622c2f6e4c0dc8b4a072a2059cdfd96e39d0b77291ba3faf0ae2f042a9ab4"
+size = 22687
+mtime_ms = 1788371680834
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/9204f5a3-a6f3-458a-839c-00f7f7cf4c54/582e9f82-4721-4e02-8da2-e0b1d9df8eef"
+storage_version_token = "1788371874194491"
+content_type = "image/png"
+
+[[outputs]]
+id = "uPAp0GOqST_CatseNZVYd"
+uri = "file://exports/jesters-hand-native-install-qr.svg"
+type = "image"
+title = "Jester’s Hand Native Install QR — SVG"
+description = "Vector QR code recommended for engraving. Encodes the permanent native install URL: https://jestershand54atcomand.replit.app/install"
+logical_id = "9677a8cc-afdf-47a3-a3e5-0ed2f400dee6"
+content_hash = "sha256:8648d7b5be87639ede2158e7c934f05d52d872263910a85755f764b39a172016"
+size = 3034
+mtime_ms = 1788371680798
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/9677a8cc-afdf-47a3-a3e5-0ed2f400dee6/5425db81-59b7-42d0-bfe9-25b3b680c9b2"
+storage_version_token = "1788371874898197"
+content_type = "image/svg+xml"
+
+[[outputs]]
+id = "K_Y9qjVLII693SdZlGSlp"
+uri = "file://exports/jesters-hand-expo-build-7-qr.png"
+type = "image"
+title = "Jester’s Hand — Current Expo Install QR"
+description = "Works immediately and opens the current Android Build 7 installation page on Expo."
+logical_id = "9553565b-4bf6-45e1-8007-34d214444b3d"
+content_hash = "sha256:4fddfaeea8438856d4079fed5459d008aed6e0b23708ad2fe05c1ff54ca29f60"
+size = 24843
+mtime_ms = 1788372876810
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/9553565b-4bf6-45e1-8007-34d214444b3d/3fdd5991-a395-40cf-bc05-2dd0f8f05a5f"
+storage_version_token = "1788372881530618"
+content_type = "image/png"
+
+[[outputs]]
+id = "41clT7x3BjTYvtWqOfNwC"
+uri = "file://exports/jesters-hand-expo-build-7-qr.svg"
+type = "image"
+title = "Jester’s Hand — Current Expo Install QR (SVG)"
+description = "Vector version of the current Expo Build 7 QR. Use this immediate QR until the permanent /install redirect is published."
+logical_id = "1488eb3a-86f6-4d34-976a-2ea864576b43"
+content_hash = "sha256:41a5814fe28fb33dd2198744b47abdbfc07dbd105130352df9a3a77626cc41ca"
+size = 5336
+mtime_ms = 1788372876778
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:d4d7469d-8a4f-4527-9218-dd1cd867dd35/1488eb3a-86f6-4d34-976a-2ea864576b43/57ed9a2a-48cd-4224-b138-47f0a1d330ce"
+storage_version_token = "1788372882159074"
+content_type = "image/svg+xml"

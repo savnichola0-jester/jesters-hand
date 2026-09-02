@@ -17,6 +17,8 @@ import { fieldsForJokerId, SUIT_GLYPHS, SUIT_GENRES } from '@/lib/ticketFields';
 import { MARBLE_TEXT_SHADOW } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
 import { writeNotification } from '@/lib/notificationService';
+import { fetchSeatActivitySummary, SeatActivitySummary } from '@/lib/activityService';
+import { SeatThermometer } from '@/components/SeatThermometer';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -70,6 +72,11 @@ export default function HandTicketScreen() {
   const activeDeal = useLiveDeal(deals);
   const [stats, setStats] = useState<DealMemberStats | null>(null);
   const [progress, setProgress] = useState(0);
+  const [seat, setSeat] = useState<SeatActivitySummary | null>(null);
+  useEffect(() => {
+    if (!user || !uid || (user.uid !== uid && !canSeeAllSeats)) { setSeat(null); return; }
+    void fetchSeatActivitySummary(uid).then(setSeat);
+  }, [user?.uid, uid, canSeeAllSeats]);
 
   useEffect(() => {
     if (!user || !uid) return;
@@ -99,7 +106,7 @@ export default function HandTicketScreen() {
   }, [activeDeal, uid, user, canSeeAllSeats]);
 
   const canSeeTemp = !!user && (user.uid === uid || canSeeAllSeats);
-  const temp = canSeeTemp ? seatTemperature(stats?.lastActivityAt, progress) : null;
+  const temp = canSeeTemp ? (seat?.temperature ?? null) : null;
   const streak = stats?.currentStreak ?? 0;
 
   useEffect(() => {
@@ -329,13 +336,21 @@ export default function HandTicketScreen() {
                     <View>
                       <Text style={[s.fieldLabel, { marginBottom: 4 }]}>SEAT TEMPERATURE</Text>
                       <Text style={[s.fieldValue, { color: temp === 'Hot' ? '#FF6B6B' : temp === 'Warm' ? '#FFA06B' : 'rgba(237,224,196,0.5)' }]}>
-                        {temp?.toUpperCase()}
+                        {temp?.toUpperCase()} {seat?.score != null ? `· ${seat.score}/100` : ''}
                       </Text>
+                      {temp && <SeatThermometer score={seat?.score} temperature={temp} />}
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <Text style={[s.fieldLabel, { marginBottom: 4 }]}>STREAK</Text>
                       <Text style={s.fieldValue}>{streak}</Text>
                     </View>
+                  </View>
+                )}
+                {jokerId === '00-00' && seat && (
+                  <View style={[s.fieldBlock, { backgroundColor: 'rgba(0,0,0,0.28)', padding: 12, borderRadius: 8 }]}>
+                    <Text style={s.fieldLabel}>ACTIVITY SUMMARY</Text>
+                    <Text style={s.fieldValue}>Logins {seat.categoryCounts.login} · Conversations {seat.categoryCounts.conversation}</Text>
+                    <Text style={s.fieldValue}>Participation {seat.categoryCounts.participation} · Deal/SUITS {seat.categoryCounts.deal_suits}</Text>
                   </View>
                 )}
 
