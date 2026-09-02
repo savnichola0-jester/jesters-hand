@@ -24,6 +24,16 @@ import { routeNotification } from './notificationRouting';
 const ANDROID_CHANNEL_ID = 'dispatches';
 let nativeListenersAttached = false;
 
+export type PushRegistrationResult =
+  | { status: 'registered' }
+  | { status: 'web-attempted' }
+  | { status: 'muted' }
+  | { status: 'unsupported-device' }
+  | { status: 'permission-denied'; canAskAgain: boolean }
+  | { status: 'missing-project-id' }
+  | { status: 'token-unavailable' }
+  | { status: 'failed'; reason: string };
+
 /** Configure foreground presentation and notification-tap routing once. */
 export async function configureNativePushNotifications(): Promise<() => void> {
   if (Platform.OS === 'web' || nativeListenersAttached) return () => {};
@@ -57,28 +67,32 @@ export async function configureNativePushNotifications(): Promise<() => void> {
 export async function registerPushToken(
   uid: string,
   opts: { interactive?: boolean } = {},
-): Promise<void> {
+): Promise<PushRegistrationResult> {
   try {
     // Respect the member's saved preference (System screen): if they turned
     // alerts off on purpose, sign-in must not silently re-enable them.
     const snap = await getDoc(doc(db, 'users', uid));
-    if (snap.exists() && snap.data().alertsMuted === true) return;
+    if (snap.exists() && snap.data().alertsMuted === true) return { status: 'muted' };
 
     if (Platform.OS === 'web') {
       // Browser (Web Push): non-interactive calls only re-subscribe when
       // permission was already granted — no surprise permission prompts.
       await registerWebPush(uid, { interactive: opts.interactive === true });
-      return;
+      return { status: 'web-attempted' };
     }
     const Notifications = await import('expo-notifications');
     const Device = await import('expo-device');
-    if (!Device.isDevice) return; // simulators can't receive pushes
+    if (!Device.isDevice) return { status: 'unsupported-device' }; // simulators can't receive pushes
 
-    let { status } = await Notifications.getPermissionsAsync();
+    let permission = await Notifications.getPermissionsAsync();
+    let { status } = permission;
     if (status !== 'granted') {
-      status = (await Notifications.requestPermissionsAsync()).status;
+      permission = await Notifications.requestPermissionsAsync();
+      status = permission.status;
     }
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+      return { status: 'permission-denied', canAskAgain: permission.canAskAgain };
+    }
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
@@ -93,15 +107,21 @@ export async function registerPushToken(
 
     const projectId: string | undefined =
       Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+    if (!projectId) return { status: 'missing-project-id' };
     const token = (
-      await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)
+      await Notifications.getExpoPushTokenAsync({ projectId })
     ).data;
-    if (!token) return;
+    if (!token) return { status: 'token-unavailable' };
 
     await updateDoc(doc(db, 'users', uid), { expoPushToken: token });
+    return { status: 'registered' };
   } catch (err) {
     // Expo Go on Android (SDK 53+) doesn't support remote push — never fatal.
     console.warn('[push] token registration skipped:', err);
+    return {
+      status: 'failed',
+      reason: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 

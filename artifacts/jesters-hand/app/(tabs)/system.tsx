@@ -10,7 +10,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Platform, Image, ActivityIndicator, TextInput, Alert,
+  Platform, Image, ActivityIndicator, TextInput, Alert, Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -86,7 +86,7 @@ export default function SystemScreen() {
       if (next) {
         // Clear the saved opt-out first — registerPushToken honors it.
         await updateDoc(doc(db, 'users', user.uid), { alertsMuted: deleteField() });
-        await registerPushToken(user.uid, { interactive: true });
+        const result = await registerPushToken(user.uid, { interactive: true });
         // registerPushToken no-ops silently if permission was denied or push
         // is unavailable — re-read the doc so the switch reflects the truth.
         const snap = await getDoc(doc(db, 'users', user.uid));
@@ -94,12 +94,43 @@ export default function SystemScreen() {
         const on = !!d?.expoPushToken || Object.keys(d?.webPushSubs ?? {}).length > 0;
         setAlertsOn(on);
         if (!on) {
-          const msg = Platform.OS === 'web'
-            ? 'Notifications are blocked for this site in your browser settings. On iPhone, save the app to your home screen and open it from there first.'
-            : 'Notifications are blocked for this app in your phone settings, or this device cannot receive them.';
+          let title = 'Alerts Unavailable';
+          let msg = 'This device could not register for alerts.';
+          let openSettings = false;
+          if (Platform.OS === 'web') {
+            msg = 'Notifications are blocked for this site in your browser settings. On iPhone, save the app to your home screen and open it from there first.';
+          } else if (result.status === 'permission-denied') {
+            title = 'Notification Permission Required';
+            msg = result.canAskAgain
+              ? 'Notification permission was not granted. Tap the bell again and allow notifications when Android asks.'
+              : 'Android is not allowing this app to ask again. Open this app’s notification settings and allow notifications.';
+            openSettings = !result.canAskAgain;
+          } else if (result.status === 'unsupported-device') {
+            msg = 'Remote alerts require a physical phone with Google Play services. Simulators cannot receive them.';
+          } else if (result.status === 'missing-project-id') {
+            msg = 'This app build is missing its Expo project identity. Install the latest native build.';
+          } else if (result.status === 'token-unavailable') {
+            msg = 'Expo did not issue a push token for this device. Install the latest native build and try again.';
+          } else if (result.status === 'muted') {
+            msg = 'Alerts are still marked as muted for this account. Turn them off, then on again.';
+          } else if (result.status === 'failed') {
+            const lower = result.reason.toLowerCase();
+            if (lower.includes('firebase') || lower.includes('fcm')) {
+              msg = 'This Android build is missing working Firebase push configuration. A new native build is required.';
+            } else {
+              msg = `Push registration failed: ${result.reason}`;
+            }
+          } else if (result.status === 'registered') {
+            msg = 'The device received a push token, but it could not be saved to your account. Check your connection and try again.';
+          }
           // Alert.alert is a silent no-op on web — use the browser dialog there.
           if (Platform.OS === 'web') window.alert(msg);
-          else Alert.alert('Alerts Unavailable', msg);
+          else Alert.alert(title, msg, openSettings
+            ? [
+                { text: 'Not Now', style: 'cancel' },
+                { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+              ]
+            : [{ text: 'OK' }]);
         }
       } else {
         // Persisted opt-out: survives app restarts — sign-in checks this flag
