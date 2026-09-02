@@ -321,7 +321,7 @@ export default function SystemScreen() {
           >
             {updateBusy
               ? <ActivityIndicator size="small" color={GOLD} />
-              : <Text style={s.goldBtnText}>CHECK FOR UPDATE</Text>}
+              : <Text style={s.goldBtnText}>UPDATE</Text>}
           </TouchableOpacity>
         </View>
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, ImageBackground } from 'react-native';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -14,6 +14,7 @@ import { useLiveDeal } from '@/components/deal/useLiveDeal';
 const { width: SW } = appWindow();
 const CREAM = '#EDE0C4';
 const GOLD = '#D4A853';
+const CARD_BACK = require('../../assets/images/card_back.png');
 
 export default function DealMemberView() {
   const { user } = useAuth();
@@ -88,14 +89,16 @@ export default function DealMemberView() {
           const done = current >= task.targetCount;
           return (
             <View key={task.id} style={[s.card, done && s.cardDone]}>
-              <View style={s.cardInner}>
-                <Text style={s.cardType}>{task.type.replace('_', ' ').toUpperCase()}</Text>
-                <Text style={s.cardLabel}>{task.label}</Text>
-                <View style={s.cardFooter}>
-                  <Text style={s.cardCount}>{current} / {task.targetCount}</Text>
-                  {done && <Feather name="check" size={16} color={GOLD} />}
+              <ImageBackground source={CARD_BACK} style={s.cardBack} imageStyle={s.cardBackImage} resizeMode="cover">
+                <View style={s.cardInner}>
+                  <Text style={s.cardType}>{task.type.replace('_', ' ').toUpperCase()}</Text>
+                  <Text style={s.cardLabel}>{task.label}</Text>
+                  <View style={s.cardFooter}>
+                    <Text style={s.cardCount}>{current} / {task.targetCount}</Text>
+                    {done && <Feather name="check" size={16} color={GOLD} />}
+                  </View>
                 </View>
-              </View>
+              </ImageBackground>
             </View>
           );
         })}
@@ -170,10 +173,13 @@ const s = StyleSheet.create({
   card: {
     width: SW * 0.65, height: SW * 0.9, backgroundColor: '#050505',
     borderRadius: 12, borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)',
+    overflow: 'hidden',
     shadowColor: '#000', shadowOpacity: 0.8, shadowRadius: 10, shadowOffset: { width: 4, height: 4 }, elevation: 8,
   },
-  cardDone: { borderColor: GOLD, backgroundColor: '#0a0805' },
-  cardInner: { flex: 1, padding: 16, justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(237,224,196,0.05)', borderRadius: 10, margin: 4 },
+  cardDone: { borderColor: GOLD },
+  cardBack: { flex: 1 },
+  cardBackImage: { borderRadius: 11 },
+  cardInner: { flex: 1, padding: 16, justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(237,224,196,0.12)', borderRadius: 10, margin: 4, backgroundColor: 'rgba(0,0,0,0.22)' },
   cardType: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 2, textAlign: 'center' },
   cardLabel: { color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 16, textAlign: 'center', lineHeight: 24 },
   cardFooter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
