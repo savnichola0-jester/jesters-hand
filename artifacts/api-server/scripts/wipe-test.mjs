@@ -118,6 +118,12 @@ await put(`dealMemberStats/${UID}`, { uid: s(UID), currentStreak: int(3), bestSt
 await put(`deals/d1`, { title: s("Deal"), status: s("published"), createdBy: s("jester"), createdAt: now, publishedAt: now });
 await put(`dealCompletions/d1/members/${UID}`, { uid: s(UID), taskCounts: map({ t1: int(1) }), completedTaskIds: arr("t1"), completedAt: now, updatedAt: now });
 await put(`dealCompletions/d1/members/${OTHER}`, { uid: s(OTHER), taskCounts: map({}), completedTaskIds: arr(), updatedAt: now });
+await put(`suitAssignments/${UID}`, { pips: arr("spade"), streaks: map({ spade: int(3) }), completed: map({}) });
+await put(`suitAssignments/${OTHER}`, { pips: arr("heart"), streaks: map({ heart: int(1) }), completed: map({}) });
+await put(`activityEvents/victim-event`, { uid: s(UID), action: s("SUITS completion"), section: s("SUITS"), occurredAt: now });
+await put(`activityEvents/other-event`, { uid: s(OTHER), action: s("Deal completion"), section: s("Jester's Deal"), occurredAt: now });
+await put(`investigationEvents/victim-event`, { uid: s(UID), action: s("SUITS completion"), context: s("private context"), occurredAt: now });
+await put(`investigationEvents/other-event`, { uid: s(OTHER), action: s("Deal completion"), context: s("other context"), occurredAt: now });
 await put(`agreements/${UID}`, { uid: s(UID), jokerId: s("J-013"), name: s("Wraith"), signedDate: s("08/04/2026"), signedAt: now });
 await put(`agreements/${OTHER}`, { uid: s(OTHER), jokerId: s("J-007"), name: s("Ace"), signedDate: s("08/04/2026"), signedAt: now });
 await put(`archives/arch1`, {
@@ -262,6 +268,15 @@ await test("Deal activity, progress, stats, and awards are wiped owner-only", as
   assert(await getDocRest(`dealCompletions/d1/members/${OTHER}`), "other deal completion lost");
 });
 
+await test("SUITS assignments and audit streams are wiped owner-only", async () => {
+  assert(!(await getDocRest(`suitAssignments/${UID}`)), "victim SUITS assignment remains");
+  assert(await getDocRest(`suitAssignments/${OTHER}`), "other SUITS assignment lost");
+  assert(!(await getDocRest("activityEvents/victim-event")), "victim Activity event remains");
+  assert(await getDocRest("activityEvents/other-event"), "other Activity event lost");
+  assert(!(await getDocRest("investigationEvents/victim-event")), "victim Investigation event remains");
+  assert(await getDocRest("investigationEvents/other-event"), "other Investigation event lost");
+});
+
 await test("own ticket + its comments deleted; other users' tickets survive", async () => {
   assert(!(await getDocRest("targetTickets/ownTicket")), "ownTicket remains");
   assert((await listRest("targetTickets/ownTicket/comments")).length === 0, "ownTicket comments remain");
@@ -369,7 +384,8 @@ await test("global sweep: no document anywhere still references the uid", async 
     "users", "notifications", "blackBook", "issuedItems", "targetTickets",
     "conversations", "tableMessages", "vaultActivity", "sessions",
     "voicePresence", "vault", "bookReviews", "dealActivity", "dealAwards",
-    "dealMemberStats", "dealCompletions", "deals",
+    "dealMemberStats", "dealCompletions", "deals", "suitAssignments",
+    "activityEvents", "investigationEvents",
   ];
   const queue = roots.map((r) => r);
   const subMap = {

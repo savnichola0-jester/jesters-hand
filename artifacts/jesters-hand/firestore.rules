@@ -7,6 +7,8 @@ service cloud.firestore {
     }
 
     function isDealAdmin() {
+      // Both server-provisioned identity fields must agree. Other admin roles
+      // never inherit the permanent 00-00 seat's authority.
       return isAdmin()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId == '00-00';
     }
@@ -101,7 +103,10 @@ service cloud.firestore {
       allow read:   if request.auth != null
         && (request.auth.uid == userId || !isSuspended());
       allow create: if activeUser() && request.auth.uid == userId
-        && request.resource.data.get('isAdmin', false) == false;
+        && request.resource.data.get('isAdmin', false) == false
+        // The permanent Jester is provisioned out-of-band; a client-created
+        // profile may never claim that seat.
+        && request.resource.data.get('jokerId', null) != '00-00';
       // Dead push-token cleanup: any signed-in member may REMOVE another
       // user's expoPushToken (Expo reported it DeviceNotRegistered after a
       // send). Strictly deletion-only, touching nothing else — worst case a
@@ -109,6 +114,10 @@ service cloud.firestore {
       // Suspension carve-out #2: the deletion-only expoPushToken branch stays
       // open to suspended members so sign-out can remove their own token.
       allow update: if request.auth != null
+        // Identity is immutable on every client update path, including own
+        // profile edits and the suspended push-token cleanup carve-out.
+        && request.resource.data.get('jokerId', null)
+           == resource.data.get('jokerId', null)
         && (
           (
             !isSuspended()
@@ -155,30 +164,63 @@ service cloud.firestore {
     // The Contract wording — single doc contract/current, amended only by
     // the Jester. Every amendment must bump the version by exactly 1 (the
     // bundled app wording counts as version 1, so the first amendment is 2).
+    function validContractWording(wording) {
+      return wording.keys().hasOnly(
+               ['version', 'heading', 'sections', 'acknowledgement'])
+        && wording.keys().hasAll(
+             ['version', 'heading', 'sections', 'acknowledgement'])
+        && wording.version is int
+        && wording.heading is string
+        && wording.heading.size() > 0
+        && wording.sections is list
+        && wording.sections.size() > 0
+        && wording.acknowledgement is string
+        && wording.acknowledgement.size() > 0;
+    }
+
     match /contract/{docId} {
       allow read: if activeUser();
       allow create: if activeUser() && isAdmin()
         && docId == 'current'
         && request.resource.data.keys().hasOnly(
-             ['version', 'heading', 'sections', 'acknowledgement', 'updatedAt'])
-        && request.resource.data.version is int
+             ['version', 'heading', 'sections', 'acknowledgement', 'previous',
+              'updatedAt'])
+        && request.resource.data.keys().hasAll(
+             ['version', 'heading', 'sections', 'acknowledgement', 'previous',
+              'updatedAt'])
+        && validContractWording({
+             'version': request.resource.data.version,
+             'heading': request.resource.data.heading,
+             'sections': request.resource.data.sections,
+             'acknowledgement': request.resource.data.acknowledgement
+           })
         && request.resource.data.version >= 2
-        && request.resource.data.heading is string
-        && request.resource.data.heading.size() > 0
-        && request.resource.data.sections is list
-        && request.resource.data.sections.size() > 0
-        && request.resource.data.acknowledgement is string
+        && request.resource.data.previous is map
+        && validContractWording(request.resource.data.previous)
+        && request.resource.data.previous.version
+           == request.resource.data.version - 1
         && request.resource.data.updatedAt == request.time;
       allow update: if activeUser() && isAdmin()
         && request.resource.data.keys().hasOnly(
-             ['version', 'heading', 'sections', 'acknowledgement', 'updatedAt'])
-        && request.resource.data.version is int
+             ['version', 'heading', 'sections', 'acknowledgement', 'previous',
+              'updatedAt'])
+        && request.resource.data.keys().hasAll(
+             ['version', 'heading', 'sections', 'acknowledgement', 'previous',
+              'updatedAt'])
+        && validContractWording({
+             'version': request.resource.data.version,
+             'heading': request.resource.data.heading,
+             'sections': request.resource.data.sections,
+             'acknowledgement': request.resource.data.acknowledgement
+           })
         && request.resource.data.version == resource.data.version + 1
-        && request.resource.data.heading is string
-        && request.resource.data.heading.size() > 0
-        && request.resource.data.sections is list
-        && request.resource.data.sections.size() > 0
-        && request.resource.data.acknowledgement is string
+        && request.resource.data.previous is map
+        && validContractWording(request.resource.data.previous)
+        && request.resource.data.previous.version == resource.data.version
+        && request.resource.data.previous.heading == resource.data.heading
+        && request.resource.data.previous.sections == resource.data.sections
+        && request.resource.data.previous.acknowledgement
+           == resource.data.acknowledgement
         && request.resource.data.updatedAt == request.time;
       allow delete: if false;
     }
@@ -707,6 +749,32 @@ service cloud.firestore {
     match /dealActivity/{userId}/events/{eventId} {
       allow read: if activeUser()
         && (request.auth.uid == userId || isDealAdmin());
+      allow create, update, delete: if false;
+    }
+
+    // Immutable cross-feature audit streams. Only the permanent 00-00 Jester
+    // may inspect them; all writes come from the authenticated API server.
+    match /activityEvents/{eventId} {
+      allow read: if activeUser() && isDealAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /investigationEvents/{eventId} {
+      allow read: if activeUser() && isDealAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // SUITS assignment/configuration is also server-authoritative. Members may
+    // inspect their own assignment and the live task board, while 00-00 may
+    // inspect every assignment. No client can forge a pip, streak, or stamp.
+    match /suitAssignments/{userId} {
+      allow read: if activeUser()
+        && (request.auth.uid == userId || isDealAdmin());
+      allow create, update, delete: if false;
+    }
+
+    match /suitConfig/{configId} {
+      allow read: if activeUser();
       allow create, update, delete: if false;
     }
 

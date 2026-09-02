@@ -192,7 +192,7 @@ export default function ContractScreen() {
         await broadcastNotification(user.uid, uids, {
           type: 'contract_update',
           fromUid: user.uid,
-          text: 'The contract has been amended. Review the rules and sign again.',
+          text: 'Your blood is dry.',
         });
       } catch { /* notification fan-out is best-effort */ }
       Alert.alert('Amended', `The contract is now version ${newVersion}. Members will re-sign on their next visit.`);
@@ -338,6 +338,19 @@ export default function ContractScreen() {
               </View>
             )}
 
+            {signed && needsContract && contract.previous && (
+              <View style={s.previousWording}>
+                <Text style={s.previousLabel}>YOUR PREVIOUSLY SIGNED WORDING · v{contract.previous.version}</Text>
+                <Text style={s.previousHeading}>{contract.previous.heading}</Text>
+                {contract.previous.sections.map(sec => (
+                  <View key={`old-${sec.title}`} style={s.previousSection}>
+                    <Text style={s.previousTitle}>{sec.title}</Text>
+                    {sec.lines.map((line, i) => <Text key={i} style={s.previousLine}>{line}</Text>)}
+                  </View>
+                ))}
+                <Text style={s.currentLabel}>AMENDED WORDING · v{contract.version}</Text>
+              </View>
+            )}
             {contract.sections.map(sec => (
               <View key={sec.title} style={s.section}>
                 <View style={s.sectionHead}>
@@ -520,7 +533,7 @@ export default function ContractScreen() {
                       {filing
                         ? <ActivityIndicator size="small" color={GOLD} />
                         : <Text style={s.goldBtnText}>
-                            {signed ? 'SIGN THE AMENDED CONTRACT' : 'SIGN & ENTER THE HAND'}
+                            {signed ? 'SIGN IN BLOOD' : 'SUBMIT'}
                           </Text>}
                     </TouchableOpacity>
                   </View>
@@ -569,6 +582,13 @@ const s = StyleSheet.create({
                   backgroundColor: 'rgba(255,215,0,0.07)', marginBottom: 10 },
   updateText:   { ...MARBLE_TEXT_SHADOW, flex: 1, color: '#FFD700', fontFamily: 'Inter_500Medium', fontSize: 12,
                   lineHeight: 17 },
+  previousWording: { marginTop: 8, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(237,224,196,0.22)', backgroundColor: 'rgba(0,0,0,0.32)' },
+  previousLabel: { color: 'rgba(237,224,196,0.58)', fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.4, marginBottom: 8 },
+  previousHeading: { ...MARBLE_TEXT_SHADOW, color: 'rgba(237,224,196,0.72)', fontFamily: 'Cinzel_600SemiBold', fontSize: 13, marginBottom: 8 },
+  previousSection: { marginBottom: 7 },
+  previousTitle: { color: 'rgba(212,168,83,0.72)', fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.4, marginBottom: 3 },
+  previousLine: { color: 'rgba(237,224,196,0.58)', fontFamily: 'Inter_400Regular', fontSize: 11, lineHeight: 16, marginBottom: 3 },
+  currentLabel: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.8, marginTop: 4 },
 
   sealedBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
                  gap: 6, marginBottom: 8 },

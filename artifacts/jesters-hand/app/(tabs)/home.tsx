@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { appWindow } from '@/lib/appWindow';
+import SuitsTile from '@/components/suits/SuitsTile';
 
 const { width: SW } = appWindow();
 const PAD    = 10;
@@ -15,21 +16,23 @@ const NAV_H  = 52;
 
 const MARBLE   = require('../../assets/images/lace_bg.png');
 
-// All 12 tiles — index 11 (tile_12) is the Jester's Hand admin-only tile
+// This is the public table order. Keep it deliberately explicit: the art is
+// part of the navigation language, not an alphabetised application launcher.
 const ALL_TILES = [
   { src: require('../../assets/images/tile_ticket.png'),        route: '/(tabs)/ticket', adminOnly: false },
   { src: require('../../assets/images/tile_the_hand.png'),      route: '/(tabs)/hand',   adminOnly: false },
-  { src: require('../../assets/images/tile_jesters_table.png'), route: '/(tabs)/table',  adminOnly: false },
-  { src: require('../../assets/images/tile_ante.png'),          route: '/(tabs)/ante',   adminOnly: false },
-  { src: require('../../assets/images/tile_target_ticket.png'), route: '/(tabs)/target-ticket', adminOnly: false },
   { src: require('../../assets/images/tile_6.png'),             route: '/(tabs)/street-art', adminOnly: false },
+  { src: require('../../assets/images/icon_jesters_deal.png'),  route: '/(tabs)/jesters-deal', adminOnly: false },
+  { suits: true,                                                 route: '/(tabs)/suits', adminOnly: false },
+  { src: require('../../assets/images/tile_ante.png'),          route: '/(tabs)/ante',   adminOnly: false },
+  { src: require('../../assets/images/tile_jesters_table.png'), route: '/(tabs)/table',  adminOnly: false },
+  { src: require('../../assets/images/tile_target_ticket.png'), route: '/(tabs)/target-ticket', adminOnly: false },
+  { src: require('../../assets/images/tile_9.png'),             route: '/(tabs)/recruit', adminOnly: false },
   { src: require('../../assets/images/tile_7.png'),             route: '/(tabs)/vault',  adminOnly: false },
   { src: require('../../assets/images/tile_8.png'),             route: '/(tabs)/chamber', adminOnly: false },
-  { src: require('../../assets/images/tile_9.png'),             route: '/(tabs)/recruit', adminOnly: false },
-  { src: require('../../assets/images/tile_10.png'),            route: '/(tabs)/uniform', adminOnly: false },
   { src: require('../../assets/images/tile_11.png'),            route: '/(tabs)/system', adminOnly: false },
-  { src: require('../../assets/images/icon_jesters_deal.png'),  route: '/(tabs)/jesters-deal', adminOnly: false },
-  { src: require('../../assets/images/tile_12.png'),            route: '/(tabs)/jesters-hand', adminOnly: true }, // Jester's Hand — admin only
+  { src: require('../../assets/images/tile_10.png'),            route: '/(tabs)/uniform', adminOnly: false },
+  { src: require('../../assets/images/tile_12.png'),            route: '/(tabs)/jesters-hand', adminOnly: true },
 ];
 
 export default function HomeScreen() {
@@ -37,10 +40,10 @@ export default function HomeScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
   const { navigateTo } = useFileTransition();
-  const { isAdmin } = useAuth();
+  const { jokerId } = useAuth();
 
   // Filter out admin-only tiles for regular jokers
-  const tiles = ALL_TILES.filter(t => !t.adminOnly || isAdmin);
+  const tiles = ALL_TILES.filter(t => !t.adminOnly || jokerId === '00-00');
 
   return (
     <View style={styles.root}>
@@ -64,7 +67,7 @@ export default function HomeScreen() {
             onPress={() => tile.route && navigateTo(tile.route)}
             activeOpacity={tile.route ? 0.85 : 1}
           >
-            <Image source={tile.src} style={{ width: TILE_W, height: TILE_W }} resizeMode="contain" />
+            {tile.suits ? <SuitsTile size={TILE_W} /> : <Image source={tile.src!} style={{ width: TILE_W, height: TILE_W }} resizeMode="contain" />}
           </TouchableOpacity>
         ))}
       </ScrollView>

@@ -4,7 +4,9 @@ import { adminConfigured, firestoreBase, getAccessToken } from "../lib/firestore
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
-const TASK_TYPES = new Set(["mark", "black_book", "target_whisper", "vault_mark"]);
+// Legacy evidence types remain supported. Named table tasks are intentionally
+// accepted as definitions but cannot complete until an evidence verifier exists.
+const TASK_TYPES = new Set(["mark", "black_book", "target_whisper", "vault_mark", "ticket", "the_hand", "street_art", "jesters_deal", "suits", "ante", "jesters_table", "target_ticket", "vault", "chamber", "recruit", "uniform", "system", "website", "facebook", "instagram", "x", "tiktok", "twitch", "suno"]);
 type WireFields = Record<string, any>;
 type Instant = { timestampValue: string };
 
@@ -54,6 +56,17 @@ function eventId(dealId: string, type: string, source: string): string {
   let hash = 2166136261;
   for (const c of `${dealId}\0${type}\0${source}`) hash = Math.imul(hash ^ c.charCodeAt(0), 16777619);
   return `${type}-${(hash >>> 0).toString(36)}`;
+}
+/** Append-only, deterministic audit records; failures never affect evidence/progress. */
+async function auditDeal(projectId: string, token: string, id: string, uid: string, action: string, context: Record<string, unknown>): Promise<void> {
+  try {
+    const base = firestoreBase(projectId); const r = documentRoot(projectId);
+    const writes = [
+      { update: { name: `${r}/activityEvents/${pathPart(`deal-${id}`)}`, fields: documentFields({ uid, action, section: "deal" }) }, updateTransforms: [{ fieldPath: "occurredAt", setToServerValue: "REQUEST_TIME" }], currentDocument: { exists: false } },
+      { update: { name: `${r}/investigationEvents/${pathPart(`deal-${id}`)}`, fields: documentFields({ uid, action, section: "deal", context }) }, updateTransforms: [{ fieldPath: "occurredAt", setToServerValue: "REQUEST_TIME" }], currentDocument: { exists: false } },
+    ];
+    await firestoreFetch(`${base}:commit`, token, { writes });
+  } catch (err) { logger.warn({ err, id }, "deal audit write failed"); }
 }
 
 async function firestoreFetch(url: string, token: string, body?: unknown): Promise<Response> {
@@ -129,7 +142,7 @@ function activeDeal(docs: any[]): ActiveDeal | null {
     const expiresAt = data.expiresAt === null ? null : time(data.expiresAt);
     const tasks = Array.isArray(data.tasks) ? data.tasks : [];
     if (data.status !== "published" || !publishedAt || (expiresAt && Date.parse(expiresAt) <= now) ||
-      !tasks.length || tasks.length > 5 || !tasks.every(t => t && typeof t.id === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(t.id) && TASK_TYPES.has(t.type) && Number.isInteger(t.targetCount) && t.targetCount >= 1 && t.targetCount <= 100)) return null;
+      !tasks.length || tasks.length > 20 || !tasks.every(t => t && typeof t.id === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(t.id) && TASK_TYPES.has(t.type) && Number.isInteger(t.targetCount) && t.targetCount >= 1 && t.targetCount <= 100)) return null;
     return { id, tasks, previousDealId: typeof data.previousDealId === "string" ? data.previousDealId : null, publishedAt, expiresAt } as ActiveDeal;
   }).filter((x): x is ActiveDeal => x !== null);
   return candidates.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0] ?? null;
@@ -175,6 +188,7 @@ router.post("/deal/activity", async (req, res) => {
     }] });
     // ALREADY_EXISTS is the expected result for a deterministic retry.
     if (!commit.ok && commit.status !== 409 && commit.status !== 412) throw new Error(`Firestore activity commit failed (${commit.status})`);
+    void auditDeal(projectId, accessToken, eventId(deal.id, body.type, canonicalSource), uid, "verified_evidence", { dealId: deal.id, type: body.type });
     // Rebuild counters from the immutable event immediately.  Reuse the same
     // trusted reconciliation path exposed for screen-entry repair; its result
     // is intentionally not allowed to turn a successful real action into a
@@ -272,6 +286,7 @@ async function reconcileHandler(req: any, res: any): Promise<void> {
       const commitTime = ((await commit.json()) as { commitTime?: string }).commitTime;
       if (!commitTime || !Number.isFinite(Date.parse(commitTime))) throw new Error("Firestore commit returned no timestamp");
       const result: Completion = { uid, taskCounts, completedTaskIds, completedAt: complete ? (completion?.completedAt ?? commitTime) : null, updatedAt: commitTime };
+      if (newCompletionTime) void auditDeal(projectId, accessToken, `completion-${deal.id}-${uid}`, uid, "deal_completed", { dealId: deal.id, taskCount: deal.tasks.length });
       if (outputStats) {
         if (complete && !completion?.completedAt) outputStats.lastCompletedAt = commitTime;
       }

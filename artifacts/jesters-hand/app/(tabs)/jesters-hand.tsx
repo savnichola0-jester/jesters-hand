@@ -28,7 +28,7 @@ import {
   setReportStatus, deleteReport,
 } from '@/lib/reportService';
 import {
-  fetchInvestigation, resolveJokerId, ActivityItem, InvestigationResult,
+  fetchActivityLog, fetchInvestigation, resolveInvestigationTarget, ActivityItem, InvestigationResult,
 } from '@/lib/investigationService';
 import { formatDuration } from '@/lib/sessionService';
 import {
@@ -64,8 +64,8 @@ const SECTIONS: { id: SectionId; suit: string; suitColor: string; label: string 
 const EMPTY_COPY: Record<SectionId, string> = {
   hand:           '',
   reports:        'No cards have been filed.\nWhen a member files The Card from a Pocket conversation,\nthe report lands here — visible only to you.',
-  investigations: 'Search any Joker ID (01-54 … 54-54) to see their complete\npublic activity and login history in one timeline.\nPocket conversations stay private — they never appear here.',
-  activity:       'Search any Joker ID (01-54 … 54-54) to see a high-level log of\nwhat they did, where, and when — plus login and logout times.\nNo content is shown here; open Investigations for the full context.',
+  investigations: 'Search a name, street name, or Joker ID to see their complete\nfile: messages, comments, intel, Deal, SUITS, Hidden records, and reports.\nPocket conversations stay private — they never appear here.',
+  activity:       'Search a name, street name, or Joker ID for a high-level log of\nlogins and actions across the Hand. No message, comment, or intel body is shown.',
   archive:        'The archive is empty.\nAnything deleted anywhere in the app lands here first,\nso you can review it, restore it, or erase it for good.',
 };
 
@@ -105,11 +105,14 @@ export default function JestersHandScreen() {
   const insets    = useSafeAreaInsets();
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
-  const { user, isAdmin, isVaultKeeper } = useAuth();
+  const { user, jokerId, isVaultKeeper } = useAuth();
+  // This console belongs to the Jester's permanent 00-00 seat only. Other
+  // administrative roles never receive the route or its data collectors.
+  const isJester = jokerId === '00-00';
 
   useEffect(() => { if (user === null) router.replace('/'); }, [user]);
-  // Admin-only screen: bounce anyone who isn't 00-00.
-  useEffect(() => { if (user && !isAdmin) router.replace('/(tabs)/home'); }, [user, isAdmin]);
+  // Jester-only screen: bounce anyone who isn't 00-00.
+  useEffect(() => { if (user && !isJester) router.replace('/(tabs)/home'); }, [user, isJester]);
 
   const [section, setSection] = useState<SectionId>('hand');
 
@@ -123,9 +126,9 @@ export default function JestersHandScreen() {
   // ── The Hand roster ──
   const [slots, setSlots] = useState<RosterSlot[] | null>(null);
   useEffect(() => {
-    if (!user || !isAdmin) return;
+    if (!user || !isJester) return;
     return listenRoster(setSlots);
-  }, [user, isAdmin]);
+  }, [user, isJester]);
 
   const [action, setAction] = useState<PendingAction | null>(null);
   const [cipher, setCipher] = useState('');
@@ -148,9 +151,9 @@ export default function JestersHandScreen() {
   // ── Reports ("Cards") ──
   const [reports, setReports] = useState<Report[] | null>(null);
   useEffect(() => {
-    if (!user || !isAdmin || section !== 'reports') return;
+    if (!user || !isJester || section !== 'reports') return;
     return listenReports(setReports);
-  }, [user, isAdmin, section]);
+  }, [user, isJester, section]);
 
   const [openReport, setOpenReport]     = useState<Report | null>(null);
   const [evidence, setEvidence]         = useState<(string | null)[] | null>(null);
@@ -243,26 +246,30 @@ export default function JestersHandScreen() {
       error: (e: string | null) => void;
       result: (r: InvestigationResult | null) => void;
     },
+    load: (uid: string, jokerId: string) => Promise<InvestigationResult>,
   ) => {
     const q = raw.trim();
-    if (!/^\d{2}-\d{2}$/.test(q)) {
-      set.error('Enter a Joker ID like 07-54.');
+    if (!q) {
+      set.error('Enter a name, street name, or Joker ID.');
       return;
     }
-    if (q === '00-00') {
+    if (q === '00-00' || q.toLowerCase() === 'jester') {
       set.error('That is your own Joker ID.');
       return;
     }
     set.busy(true); set.error(null); set.result(null);
     try {
       // The roster listener already maps every slot; fall back to a lookup.
-      const fromRoster = slots?.find(sl => sl.member?.jokerId === q)?.member;
-      const uid = fromRoster?.uid ?? (await resolveJokerId(q))?.uid;
-      if (!uid) {
-        set.error(`No member currently holds ${q}.`);
+      const target = await resolveInvestigationTarget(q);
+      if (!target) {
+        set.error(`No member matches "${q}".`);
         return;
       }
-      set.result(await fetchInvestigation(uid, q));
+      if (target.jokerId === '00-00') {
+        set.error('That is your own Joker ID.');
+        return;
+      }
+      set.result(await load(target.uid, target.jokerId));
     } catch (err: any) {
       set.error(err?.message ?? 'The lookup failed. Try again.');
     } finally {
@@ -271,9 +278,9 @@ export default function JestersHandScreen() {
   };
 
   const runInvestigation = () =>
-    runLookup(invQuery, { busy: setInvBusy, error: setInvError, result: setInvResult });
+    runLookup(invQuery, { busy: setInvBusy, error: setInvError, result: setInvResult }, fetchInvestigation);
   const runActivity = () =>
-    runLookup(actQuery, { busy: setActBusy, error: setActError, result: setActResult });
+    runLookup(actQuery, { busy: setActBusy, error: setActError, result: setActResult }, fetchActivityLog);
 
   // ── Archives ──
   const [archives, setArchives]         = useState<ArchiveRecord[] | null>(null);
@@ -286,11 +293,11 @@ export default function JestersHandScreen() {
   const [purgeArmed, setPurgeArmed]     = useState(false);
 
   useEffect(() => {
-    if (!isAdmin || section !== 'archive') return;
+    if (!isJester || section !== 'archive') return;
     const stop = listenArchives(setArchives, () =>
       setArchListError('The archive could not be loaded. Try again.'));
     return stop;
-  }, [isAdmin, section]);
+  }, [isJester, section]);
 
   const filteredArchives = useMemo(() => {
     if (!archives) return null;
@@ -371,7 +378,7 @@ export default function JestersHandScreen() {
     }
   };
 
-  if (!user || !isAdmin) return <View style={st.root} />;
+  if (!user || !isJester) return <View style={st.root} />;
 
   const activeMeta = SECTIONS.find(s => s.id === section)!;
 
@@ -624,14 +631,12 @@ export default function JestersHandScreen() {
               <View style={st.invSearchRow}>
                 <TextInput
                   style={st.invSearchInput}
-                  placeholder="Search Joker ID"
+                  placeholder="Search name, street, or Joker ID"
                   placeholderTextColor="rgba(237,224,196,0.35)"
                   value={actQuery}
                   onChangeText={t => { setActQuery(t); setActError(null); }}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={5}
                   editable={!actBusy}
                   onSubmitEditing={runActivity}
                   returnKeyType="search"
@@ -733,14 +738,12 @@ export default function JestersHandScreen() {
               <View style={st.invSearchRow}>
                 <TextInput
                   style={st.invSearchInput}
-                  placeholder="Search Joker ID"
+                  placeholder="Search name, street, or Joker ID"
                   placeholderTextColor="rgba(237,224,196,0.35)"
                   value={invQuery}
                   onChangeText={t => { setInvQuery(t); setInvError(null); }}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={5}
                   editable={!invBusy}
                   onSubmitEditing={runInvestigation}
                   returnKeyType="search"

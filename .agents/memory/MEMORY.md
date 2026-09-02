@@ -27,3 +27,4 @@
 - [Phone-width web shell](phone-shell-web.md) — desktop web is a centered 430px column; use appWindow()/useAppDimensions, modals portal outside the shell and must re-cap; frames render at native 1.5 ratio
 - [Chamber decoder game](chamber-decoder.md) — decoderHash is a client-side GAME gate only, not access control; deliberate; pure-JS sha256 util for web+native parity
 - [Jester's Deal integrity](jesters-deal.md) — only server-verified app evidence may advance Deal progress, streaks, milestones, or Seat Temperature
+- [SUITS integrity](suits-integrity.md) — assignments, tasks, stamps, Royals, and both audit streams commit atomically; exact 00-00 authority requires pinned admin identity

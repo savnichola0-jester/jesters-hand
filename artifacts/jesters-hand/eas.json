@@ -20,6 +20,7 @@
       }
     },
     "preview": {
+      "channel": "preview",
       "distribution": "internal",
       "node": "20.18.0",
       "pnpm": "10.26.1",
@@ -38,7 +39,22 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "channel": "production",
+      "node": "20.18.0",
+      "pnpm": "10.26.1",
+      "android": {
+        "image": "sdk-54"
+      },
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "jestershand54atcomand.replit.app",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCh2TuQI2pTXqJtVc77xw4O0IHH1J3QjEE",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:920657050672:web:1bd9889f89db53316f81f5",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "jester-s-hand-3ee1d.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "920657050672",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "jester-s-hand-3ee1d",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "jester-s-hand-3ee1d.firebasestorage.app"
+      }
     }
   },
   "submit": {

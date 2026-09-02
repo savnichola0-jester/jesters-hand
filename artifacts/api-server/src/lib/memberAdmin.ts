@@ -463,6 +463,7 @@ export async function wipeUser(
   await deleteOwnedSubtree(projectId, token, `dealAwards/${uid}`, "items");
   await deleteByName(projectId, token, [
     docName(projectId, `dealMemberStats/${uid}`),
+    docName(projectId, `suitAssignments/${uid}`),
   ]);
 
   // Deal completion documents are member-owned but nested under each Deal.
@@ -631,6 +632,19 @@ export async function wipeUser(
       .filter((d) => d.fields && str(d.fields["uid"]) === uid)
       .map((d) => d.name),
   );
+
+  // 6a. Immutable body-free Activity and contextual Investigation records.
+  // Both are keyed globally, so remove every row whose subject is this member.
+  for (const collectionName of ["activityEvents", "investigationEvents"]) {
+    const events = await listDocs(projectId, token, collectionName);
+    await deleteByName(
+      projectId,
+      token,
+      events
+        .filter((d) => d.fields && str(d.fields["uid"]) === uid)
+        .map((d) => d.name),
+    );
+  }
 
   // 7. Storage objects owned by the member.
   await deleteStoragePrefix(bucket, token, `users/${uid}/`);

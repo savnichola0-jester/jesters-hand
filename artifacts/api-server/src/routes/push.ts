@@ -167,6 +167,8 @@ router.post("/push/send", async (req, res) => {
     title: string;
     body: string;
     sound: "default";
+    channelId: "dispatches";
+    priority: "high";
     data: Record<string, unknown>;
   }> = [];
   const webMessages: WebMessage[] = [];
@@ -178,6 +180,8 @@ router.post("/push/send", async (req, res) => {
         title,
         body,
         sound: "default" as const,
+        channelId: "dispatches" as const,
+        priority: "high" as const,
         data,
       });
     }

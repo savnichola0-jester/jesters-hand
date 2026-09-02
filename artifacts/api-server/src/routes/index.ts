@@ -6,6 +6,9 @@ import shopifyRouter from "./shopify";
 import agoraRouter from "./agora";
 import chatRouter from "./chat";
 import dealRouter from "./deal";
+import hiddenJestRouter from "./hiddenJest";
+import suitsRouter from "./suits";
+import auditRouter from "./audit";
 
 const router: IRouter = Router();
 
@@ -16,5 +19,8 @@ router.use(shopifyRouter);
 router.use(agoraRouter);
 router.use(chatRouter);
 router.use(dealRouter);
+router.use(hiddenJestRouter);
+router.use(suitsRouter);
+router.use(auditRouter);
 
 export default router;

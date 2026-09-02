@@ -21,7 +21,10 @@ export type DealTaskType =
   | 'mark'
   | 'black_book'
   | 'target_whisper'
-  | 'vault_mark';
+  | 'vault_mark'
+  | 'ticket' | 'the_hand' | 'street_art' | 'jesters_deal' | 'suits' | 'ante'
+  | 'jesters_table' | 'target_ticket' | 'vault' | 'chamber' | 'recruit' | 'uniform'
+  | 'system' | 'website' | 'facebook' | 'instagram' | 'x' | 'tiktok' | 'twitch' | 'suno';
 
 export interface DealTask {
   id: string;
@@ -86,11 +89,14 @@ export interface DealAward {
 
 const TASK_TYPES: DealTaskType[] = [
   'mark', 'black_book', 'target_whisper', 'vault_mark',
+  'ticket', 'the_hand', 'street_art', 'jesters_deal', 'suits', 'ante', 'jesters_table',
+  'target_ticket', 'vault', 'chamber', 'recruit', 'uniform', 'system', 'website',
+  'facebook', 'instagram', 'x', 'tiktok', 'twitch', 'suno',
 ];
 export const DEAL_MILESTONES = [3, 6, 9, 12, 15] as const;
 
 function cleanTasks(tasks: DealInput['tasks']): DealTask[] {
-  return tasks.slice(0, 5).map((task, index) => {
+  return tasks.slice(0, 20).map((task, index) => {
     if (!TASK_TYPES.includes(task.type)) throw new Error('Invalid Deal task type');
     const label = task.label.trim().slice(0, 200);
     if (!label) throw new Error('Every Deal task needs a label');

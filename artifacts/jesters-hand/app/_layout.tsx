@@ -39,6 +39,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { sweepVaultTempFiles } from '@/lib/vaultService';
 import { Platform, StyleSheet, View } from 'react-native';
 import { APP_MAX_W } from '@/lib/appWindow';
+import { configureNativePushNotifications } from '@/lib/pushService';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -129,6 +130,21 @@ export default function RootLayout() {
   // was killed while a protected artwork viewer was open. Best-effort, async.
   useEffect(() => {
     sweepVaultTempFiles();
+  }, []);
+
+  // Native Android/iOS: show remote pushes while the app is foregrounded and
+  // make tray/lock-screen taps follow the same path as the in-app bell.
+  useEffect(() => {
+    let disposed = false;
+    let cleanup: (() => void) | undefined;
+    void configureNativePushNotifications().then(off => {
+      if (disposed) off();
+      else cleanup = off;
+    });
+    return () => {
+      disposed = true;
+      cleanup?.();
+    };
   }, []);
 
   useEffect(() => {

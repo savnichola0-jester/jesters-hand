@@ -3,6 +3,9 @@
     "name": "Jester's Hand",
     "slug": "jesters-hand-native",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "jesters-hand",
@@ -24,6 +27,7 @@
       "package": "com.jestershand.app",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
@@ -44,11 +48,22 @@
       ],
       "expo-dev-client",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#0D0900",
+          "defaultChannel": "dispatches"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e69e8635-ec36-4fa0-b2e8-3acca6a5188f"
     },
     "extra": {
       "eas": {

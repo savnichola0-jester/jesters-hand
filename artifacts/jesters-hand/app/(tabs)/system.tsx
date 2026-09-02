@@ -15,6 +15,7 @@ import {
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
 import { deleteField, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { Feather } from '@/components/FIcon';
@@ -191,6 +192,31 @@ export default function SystemScreen() {
   }, [doSignOut]);
 
   const version = Constants?.expoConfig?.version ?? '1.0.0';
+  const [updateBusy, setUpdateBusy] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
+  const checkForUpdate = useCallback(async () => {
+    if (updateBusy) return;
+    if (!Updates.isEnabled) {
+      setUpdateMessage('Updates are available in the preview or production build.');
+      return;
+    }
+    setUpdateBusy(true);
+    setUpdateMessage(null);
+    try {
+      const result = await Updates.checkForUpdateAsync();
+      if (!result.isAvailable) {
+        setUpdateMessage('You are already on the current version.');
+        return;
+      }
+      await Updates.fetchUpdateAsync();
+      setUpdateMessage('Update ready. Restarting now…');
+      await Updates.reloadAsync();
+    } catch (error: unknown) {
+      setUpdateMessage(error instanceof Error ? error.message : 'Could not check for an update. Try again.');
+    } finally {
+      setUpdateBusy(false);
+    }
+  }, [updateBusy]);
 
   return (
     <View style={s.root}>
@@ -273,6 +299,30 @@ export default function SystemScreen() {
             <Text style={s.rowLabel}>App Version</Text>
             <Text style={s.rowValue}>{version}</Text>
           </View>
+        </View>
+
+        {/* ── Update ── */}
+        <View style={s.sectionHead}>
+          <Text style={s.sectionTitle}>UPDATE</Text>
+          <View style={s.sectionLine} />
+        </View>
+        <View style={s.panel}>
+          <Text style={s.rowLabel}>App update</Text>
+          <Text style={s.rowHint}>
+            Check for the latest Hand release and install it without leaving the app.
+          </Text>
+          {updateMessage ? <Text style={s.updateMessage}>{updateMessage}</Text> : null}
+          <TouchableOpacity
+            testID="system-update"
+            style={[s.goldBtn, updateBusy && { opacity: 0.6 }]}
+            onPress={() => void checkForUpdate()}
+            disabled={updateBusy}
+            activeOpacity={0.8}
+          >
+            {updateBusy
+              ? <ActivityIndicator size="small" color={GOLD} />
+              : <Text style={s.goldBtnText}>CHECK FOR UPDATE</Text>}
+          </TouchableOpacity>
         </View>
 
         {/* ── The Contract ── */}
@@ -484,6 +534,8 @@ const s = StyleSheet.create({
   goldBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
   panelFootnote: { color: 'rgba(237,224,196,0.4)', fontFamily: 'Inter_400Regular',
                    fontSize: 11, marginTop: 10, textAlign: 'center' },
+  updateMessage: { color: CREAM, fontFamily: 'Inter_400Regular', fontSize: 12,
+                   lineHeight: 17, marginTop: 10 },
 
   signOutBtn: {
     ...MARBLE_BTN_BACKING,

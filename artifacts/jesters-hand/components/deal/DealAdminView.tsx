@@ -14,7 +14,12 @@ import { useLiveDeal } from '@/components/deal/useLiveDeal';
 
 const CREAM = '#EDE0C4';
 const GOLD = '#D4A853';
-const TASK_TYPES: DealTaskType[] = ['mark', 'black_book', 'target_whisper', 'vault_mark'];
+const TASK_TYPES: DealTaskType[] = ['ticket', 'the_hand', 'street_art', 'jesters_deal', 'suits', 'ante', 'jesters_table', 'target_ticket', 'vault', 'chamber', 'recruit', 'uniform', 'system', 'website', 'facebook', 'instagram', 'x', 'tiktok', 'twitch', 'suno'];
+const TASK_CATALOG = [
+  'Ticket', 'The Hand', 'Street Art', "Jester's Deal", 'SUITS', 'Ante',
+  "Jester's Table", 'Target Ticket', 'Vault', 'Chamber', 'Recruit', 'Uniform',
+  'System', 'Website', 'Facebook', 'Instagram', 'X', 'TikTok', 'Twitch', 'Suno',
+];
 
 export default function DealAdminView() {
   const { user } = useAuth();
@@ -73,8 +78,8 @@ export default function DealAdminView() {
   };
 
   const addTask = () => {
-    if (tasks.length >= 5) return;
-    setTasks(ts => [...ts, { type: 'mark', label: '', targetCount: '1' }]);
+    if (tasks.length >= TASK_CATALOG.length) return;
+    setTasks(ts => [...ts, { type: TASK_TYPES[ts.length], label: TASK_CATALOG[ts.length], targetCount: '1' }]);
   };
   const removeTask = (idx: number) => setTasks(ts => ts.filter((_, i) => i !== idx));
 
@@ -152,7 +157,7 @@ export default function DealAdminView() {
                 </View>
               ))}
 
-              {tasks.length < 5 && (
+              {tasks.length < TASK_CATALOG.length && (
                 <TouchableOpacity style={s.addBtn} onPress={addTask}><Text style={s.addBtnText}>+ ADD TASK</Text></TouchableOpacity>
               )}
               

@@ -36,6 +36,7 @@ import ManuscriptScanner, {
   type ManuscriptScannerHandle,
 } from '@/components/vault/ManuscriptScanner';
 import { isManuscriptScanTooLargeError } from '@/lib/manuscriptScanLimits';
+import { reportHiddenJestFound } from '@/lib/hiddenJestService';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -216,7 +217,10 @@ export default function VaultFolderScreen({ config }: { config: FolderConfig }) 
     }
     setDecoded(prev => ({ ...prev, [decoderFor.id]: true }));
     // Persist the unlock on the member's own user doc (best-effort).
-    updateDoc(doc(db, 'users', user.uid), { [`decodedJests.${decoderFor.id}`]: true }).catch(() => {});
+    // Persist before reporting: the server independently verifies this flag
+    // and the locked Chamber entry before it notifies the Jester.
+    await updateDoc(doc(db, 'users', user.uid), { [`decodedJests.${decoderFor.id}`]: true });
+    void reportHiddenJestFound(decoderFor.id).catch(() => {});
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     const e = decoderFor;
     setDecoderFor(null); setDecoderTry(''); setDecoderWrong(false);

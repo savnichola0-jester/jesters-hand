@@ -1327,6 +1327,25 @@ await test('member cannot grant themselves isAdmin (create or update)', async ()
     { tab: 'royals', title: 'Fake honor', createdBy: 'mallory', createdAt: new Date() }));
 });
 
+await test('member cannot create their profile as the permanent 00-00 Jester', async () => {
+  await seedBlackBook();
+  await assertFails(setDoc(doc(mallory(), 'users/mallory'), {
+    jokerId: '00-00', name: 'Not the Jester',
+  }));
+  await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), {
+    jokerId: '13-13', name: 'Mallory',
+  }));
+});
+
+await test('member cannot change jokerId, alone or with an allowed profile field', async () => {
+  await seedBlackBook();
+  await assertFails(updateDoc(doc(alice(), 'users/alice'), { jokerId: '13-13' }));
+  await assertFails(updateDoc(doc(alice(), 'users/alice'), {
+    jokerId: '13-13', coffee: 'Black',
+  }));
+  await assertSucceeds(updateDoc(doc(alice(), 'users/alice'), { coffee: 'Black' }));
+});
+
 await test('member can still update own profile without touching isAdmin', async () => {
   await seedBlackBook();
   await assertSucceeds(setDoc(doc(alice(), 'users/alice'),
@@ -2479,22 +2498,47 @@ await test('re-sign allowed only at a strictly newer version, full payload', asy
 
 await test('contract wording: members read, only admin amends with +1 version bump', async () => {
   await seedAgreements();
-  const wording = (version, extra = {}) => ({
+  const bundled = {
+    version: 1, heading: 'ORIGINAL', sections: [{ title: 'CORE RULES', lines: ['Stay sharp.'] }],
+    acknowledgement: 'I first agree.',
+  };
+  const wording = (version, previous, extra = {}) => ({
     version, heading: 'WELCOME', sections: [{ title: 'CORE RULES', lines: ['Be sharp.'] }],
-    acknowledgement: 'I agree.', updatedAt: serverTimestamp(), ...extra,
+    acknowledgement: 'I agree.', previous, updatedAt: serverTimestamp(), ...extra,
   });
   // Member cannot create/amend the wording.
-  await assertFails(setDoc(doc(alice(), 'contract/current'), wording(2)));
+  await assertFails(setDoc(doc(alice(), 'contract/current'), wording(2, bundled)));
   // Admin first amendment must be version >= 2 with server timestamp.
-  await assertFails(setDoc(doc(admin(), 'contract/current'), wording(1)));
-  await assertFails(setDoc(doc(admin(), 'contract/current'), wording(2, { updatedAt: new Date() })));
-  await assertSucceeds(setDoc(doc(admin(), 'contract/current'), wording(2)));
+  await assertFails(setDoc(doc(admin(), 'contract/current'), wording(1, bundled)));
+  await assertFails(setDoc(doc(admin(), 'contract/current'),
+    wording(2, bundled, { updatedAt: new Date() })));
+  // `previous` is required, exact, one version behind, and fully shaped.
+  const omittedPrevious = wording(2, bundled);
+  delete omittedPrevious.previous;
+  await assertFails(setDoc(doc(admin(), 'contract/current'), omittedPrevious));
+  await assertFails(setDoc(doc(admin(), 'contract/current'),
+    wording(2, { ...bundled, version: 7 })));
+  await assertFails(setDoc(doc(admin(), 'contract/current'),
+    wording(2, { ...bundled, sneaky: true })));
+  await assertFails(setDoc(doc(admin(), 'contract/current'),
+    wording(2, { ...bundled, acknowledgement: '' })));
+  await assertSucceeds(setDoc(doc(admin(), 'contract/current'), wording(2, bundled)));
   // Members can read it; signed-out cannot.
   await assertSucceeds(getDoc(doc(alice(), 'contract/current')));
   await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'contract/current')));
-  // Next amendment must bump by exactly 1; nobody deletes.
-  await assertFails(setDoc(doc(admin(), 'contract/current'), wording(4)));
-  await assertSucceeds(setDoc(doc(admin(), 'contract/current'), wording(3)));
+  const version2 = {
+    version: 2, heading: 'WELCOME', sections: [{ title: 'CORE RULES', lines: ['Be sharp.'] }],
+    acknowledgement: 'I agree.',
+  };
+  // Updates must bump exactly one and carry the exact prior wording.
+  await assertFails(setDoc(doc(admin(), 'contract/current'), wording(4, version2)));
+  await assertFails(setDoc(doc(admin(), 'contract/current'),
+    wording(3, { ...version2, heading: 'FORGED PRIOR HEADING' })));
+  await assertFails(setDoc(doc(admin(), 'contract/current'),
+    wording(3, { ...version2, sections: [{ title: 'CORE RULES', lines: ['Forged.'] }] })));
+  await assertFails(setDoc(doc(admin(), 'contract/current'),
+    wording(3, { ...version2, acknowledgement: 'Forged prior acknowledgement.' })));
+  await assertSucceeds(setDoc(doc(admin(), 'contract/current'), wording(3, version2)));
   await assertFails(deleteDoc(doc(admin(), 'contract/current')));
 });
 
@@ -2856,6 +2900,54 @@ await test('only admin awards valid milestones; member reads own awards only', a
   const bob = env.authenticatedContext('bob').firestore();
   await assertFails(getDoc(doc(bob, 'dealAwards/alice/items/a1')));
   await assertSucceeds(getDocs(collection(admin(), 'dealAwards/alice/items')));
+});
+
+await test('SUITS state is server-write-only with owner and exact-00-00 reads', async () => {
+  await seedDealAccess();
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'suitAssignments/alice'), {
+      pips: ['spade'], streaks: { spade: 3 }, completed: {},
+    });
+    await setDoc(doc(db, 'suitConfig/current'), {
+      inPlay: { spade: { active: true, title: 'Table task', destination: 'table' } },
+    });
+  });
+  await assertSucceeds(getDoc(doc(alice(), 'suitAssignments/alice')));
+  await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), 'suitAssignments/alice')));
+  await assertSucceeds(getDoc(doc(admin(), 'suitAssignments/alice')));
+  await assertSucceeds(getDoc(doc(alice(), 'suitConfig/current')));
+  await assertFails(setDoc(doc(alice(), 'suitAssignments/alice'), {
+    pips: ['heart'], streaks: { heart: 99 }, completed: {},
+  }));
+  await assertFails(updateDoc(doc(admin(), 'suitAssignments/alice'), {
+    streaks: { spade: 999 },
+  }));
+  await assertFails(setDoc(doc(admin(), 'suitConfig/current'), {
+    inPlay: { club: { active: true, title: 'Forged' } },
+  }));
+});
+
+await test('only exact 00-00 reads immutable Activity and Investigation events', async () => {
+  await seedDealAccess();
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'activityEvents/e1'), {
+      uid: 'alice', action: 'Logged in', section: 'Session', occurredAt: new Date(),
+    });
+    await setDoc(doc(db, 'investigationEvents/e1'), {
+      uid: 'alice', action: 'Hidden Jest found', entryTitle: 'The Cut', occurredAt: new Date(),
+    });
+  });
+  const deputy = env.authenticatedContext('deputy').firestore();
+  await assertSucceeds(getDoc(doc(admin(), 'activityEvents/e1')));
+  await assertSucceeds(getDocs(query(collection(admin(), 'investigationEvents'), where('uid', '==', 'alice'))));
+  await assertFails(getDoc(doc(alice(), 'activityEvents/e1')));
+  await assertFails(getDoc(doc(deputy, 'investigationEvents/e1')));
+  await assertFails(setDoc(doc(admin(), 'activityEvents/forged'), {
+    uid: 'alice', action: 'Forged', section: 'SUITS', occurredAt: serverTimestamp(),
+  }));
+  await assertFails(updateDoc(doc(admin(), 'investigationEvents/e1'), { action: 'Changed' }));
 });
 
 await env.cleanup();

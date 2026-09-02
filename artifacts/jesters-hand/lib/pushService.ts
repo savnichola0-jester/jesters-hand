@@ -19,6 +19,33 @@ import { auth, db } from './firebase';
 import type { AppNotificationType } from './notificationService';
 import { notificationText, notificationTitle } from './notificationCatalog';
 import { registerWebPush, unregisterWebPush } from './webPush';
+import { routeNotification } from './notificationRouting';
+
+const ANDROID_CHANNEL_ID = 'dispatches';
+let nativeListenersAttached = false;
+
+/** Configure foreground presentation and notification-tap routing once. */
+export async function configureNativePushNotifications(): Promise<() => void> {
+  if (Platform.OS === 'web' || nativeListenersAttached) return () => {};
+  const Notifications = await import('expo-notifications');
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+  nativeListenersAttached = true;
+  const response = Notifications.addNotificationResponseReceivedListener(event => {
+    const data = event.notification.request.content.data;
+    if (typeof data?.type === 'string') routeNotification(data as any);
+  });
+  return () => {
+    nativeListenersAttached = false;
+    response.remove();
+  };
+}
 
 // ── Token registration ────────────────────────────────────────────────────────
 
@@ -54,11 +81,13 @@ export async function registerPushToken(
     if (status !== 'granted') return;
 
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
+      await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
         name: 'Dispatches',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#D4A853',
+        sound: 'default',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
     }
 

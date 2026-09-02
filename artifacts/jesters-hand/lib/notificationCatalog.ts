@@ -16,7 +16,7 @@ export const NOTIFICATION_TITLES: Record<AppNotificationType, string> = {
   target_reaction: 'Someone has noticed.',
   royals_honor:    'Someone has noticed.',
   issued_item:     'Ante up or bleed out.',
-  contract_update: 'The rules have changed.',
+  contract_update: 'Your blood is dry.',
   vault_comment:   'Someone has noticed.',
   vault_review:    'Someone has noticed.',
 };

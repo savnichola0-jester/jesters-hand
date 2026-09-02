@@ -12,3 +12,9 @@ Firestore + Storage rules gate all club data on `activeUser()` / `signedIn()` = 
 2. The deletion-only expoPushToken update branch stays open to suspended members so sign-out can remove their token.
 
 **How to apply:** any NEW Firestore match block or storage path must use `activeUser()` / `signedIn()` — not raw `request.auth != null` — or suspended members regain access there.
+
+API routes that use owner-level Firestore REST access must perform the same user-document suspension check explicitly after ID-token verification.
+
+**Why:** Administrative REST credentials bypass Firestore rules, so checking only the token would let a suspended member keep using server routes until that token expires.
+
+**How to apply:** before any member or privileged API read/write, require an existing `users/{uid}` record whose `suspended` flag is not true. Privileged 00-00 routes must also verify both pinned identity fields.
