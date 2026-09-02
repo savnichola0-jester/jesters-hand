@@ -19,6 +19,7 @@ type Auth = {
 };
 const UID = /^[A-Za-z0-9:_-]{1,128}$/;
 const DAY = 86_400_000;
+const VOICE_PRESENCE_STALE_MS = 3 * 60_000;
 
 const val = (v?: Value): string | number | boolean | null =>
   typeof v?.stringValue === "string" ? v.stringValue
@@ -118,7 +119,7 @@ router.get(["/activity/summary", "/activity/summary/:uid"], async (req, res) => 
     if (target !== a.uid && !a.handAdmin) return void res.status(403).json({ error: "activity is private" });
     const events: Array<{ category: Category; at: number }> = [];
     const bySender = { where: { fieldFilter: { field: { fieldPath: "senderUid" }, op: "EQUAL", value: { stringValue: target } } }, limit: 150 };
-    const [generic, sessions, blackbook, user, deal, messages, antePosts, comments, targets] = await Promise.all([
+    const [generic, sessions, blackbook, user, deal, messages, antePosts, comments, targets, recruitPosts, voiceMembers] = await Promise.all([
       safeQuery(a, "server audit", "", { from: [{ collectionId: "activityEvents" }], where: { fieldFilter: { field: { fieldPath: "uid" }, op: "EQUAL", value: { stringValue: target } } }, limit: 500 }),
       safeQuery(a, "sessions", `/sessions/${encodeURIComponent(target)}`, { from: [{ collectionId: "logs" }], orderBy: [{ field: { fieldPath: "startedAt" }, direction: "DESCENDING" }], limit: 100 }),
       safeQuery(a, "black book", `/blackBook/${encodeURIComponent(target)}`, { from: [{ collectionId: "entries" }], orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }], limit: 100 }),
@@ -128,6 +129,12 @@ router.get(["/activity/summary", "/activity/summary/:uid"], async (req, res) => 
       safeQuery(a, "ante posts", "", { ...bySender, from: [{ collectionId: "posts", allDescendants: true }] }),
       safeQuery(a, "comments", "", { ...bySender, from: [{ collectionId: "comments", allDescendants: true }] }),
       safeQuery(a, "target tickets", "", { ...bySender, from: [{ collectionId: "targetTickets" }] }),
+      safeQuery(a, "recruit and verdict posts", "", {
+        from: [{ collectionId: "recruitPosts" }],
+        where: { fieldFilter: { field: { fieldPath: "createdBy" }, op: "EQUAL", value: { stringValue: target } } },
+        limit: 100,
+      }),
+      safeQuery(a, "voice presence", "", { from: [{ collectionId: "members", allDescendants: true }], limit: 200 }),
     ]);
     generic.forEach(doc => { const d = fields(doc); if (String(d.section ?? "").toLowerCase() === "suits") push(events, "deal_suits", d.occurredAt ?? d.at ?? d.createdAt ?? d.timestamp); });
     sessions.forEach(doc => push(events, "login", fields(doc).startedAt));
@@ -138,6 +145,19 @@ router.get(["/activity/summary", "/activity/summary/:uid"], async (req, res) => 
     antePosts.forEach(doc => push(events, "participation", fields(doc).createdAt));
     comments.forEach(doc => push(events, "participation", fields(doc).createdAt));
     targets.forEach(doc => push(events, "participation", fields(doc).createdAt ?? fields(doc).updatedAt));
+    recruitPosts.forEach(doc => {
+      const d = fields(doc);
+      if (d.section === "verdict" && d.status === "published") {
+        push(events, "participation", d.updatedAt ?? d.createdAt);
+      }
+    });
+    voiceMembers.forEach(doc => {
+      if (!doc.name?.includes("/voicePresence/") || !doc.name.endsWith(`/members/${target}`)) return;
+      const lastActiveAt = date(fields(doc).lastActiveAt);
+      if (lastActiveAt && lastActiveAt > Date.now() - VOICE_PRESENCE_STALE_MS) {
+        push(events, "conversation", lastActiveAt);
+      }
+    });
     const { score, temperature, counts, timestamps } = scoreSeatEvents(events);
     const latest = events.reduce((m, e) => Math.max(m, e.at), 0);
     const mayInspectActivity = target === a.uid || a.jester;
