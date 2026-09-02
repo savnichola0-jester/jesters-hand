@@ -309,6 +309,18 @@ export default function HandTicketScreen() {
                     {uploading && (
                       <View style={s.cardBusy}><ActivityIndicator size="small" color={GOLD} /></View>
                     )}
+                    {jokerId === '00-00' && !uploading && (
+                      <View
+                        pointerEvents="none"
+                        style={{
+                          position: 'absolute', top: 8, right: 8, width: 28, height: 28,
+                          borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: GOLD, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+                        }}
+                      >
+                        <Feather name="edit-2" size={14} color="#0A0A0A" />
+                      </View>
+                    )}
                   </TouchableOpacity>
                 </View>
 

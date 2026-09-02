@@ -162,33 +162,62 @@ export default function TicketScreen() {
     });
   }, [save]);
 
-  // ── Pick + upload mug photo (the admin portrait is the Jester's alone) ───
+  // ── Pick + upload a card photo ───────────────────────────────────────────
   const pickPhoto = useCallback(async (target: 'user' | 'admin') => {
-    if (target !== 'user') return; // admin card is set only by 00-00 via The Hand
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.85,
-    });
-    if (res.canceled || !res.assets[0]) return;
-    const localUri = res.assets[0].uri;
-
-    if (!user) {
-      // No auth yet — just show locally
-      setUserPhoto(localUri);
+    if (!user || uploading) return;
+    if (target === 'admin' && jokerId !== '00-00') {
+      Alert.alert('Admin card locked', 'Only the 00-00 login can change this card.');
       return;
     }
 
-    setUploading(true);
-    setUploadPct(0);
     try {
-      const url = await uploadMug(user.uid, localUri, p => setUploadPct(Math.round(p * 100)));
-      setUserPhoto(url);
-      await saveTicket(user.uid, { mugUrl: url });
-    } catch {
-      Alert.alert('Upload failed', 'Photo could not be saved. Try again.');
+      let permission = await ImagePicker.getMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      }
+      if (!permission.granted) {
+        Alert.alert(
+          'Photo access needed',
+          'Allow Jester’s Hand to access photos in your device settings, then tap the card again.',
+        );
+        return;
+      }
+
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+      if (res.canceled || !res.assets[0]) return;
+      if ((res.assets[0].fileSize ?? 0) > 10 * 1024 * 1024) {
+        Alert.alert('Image too large', 'Choose an image smaller than 10 MB.');
+        return;
+      }
+
+      setUploading(true);
+      setUploadPct(0);
+      const progress = (p: number) => setUploadPct(Math.round(p * 100));
+      if (target === 'admin') {
+        const url = await uploadAdminPhoto(user.uid, res.assets[0].uri, progress);
+        await saveTicket(user.uid, { adminPhotoUrl: url });
+        setAdminPhoto(url);
+      } else {
+        const url = await uploadMug(user.uid, res.assets[0].uri, progress);
+        await saveTicket(user.uid, { mugUrl: url });
+        setUserPhoto(url);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      const code = String(error?.code ?? '');
+      Alert.alert(
+        'Upload failed',
+        code.includes('unauthorized') || code.includes('permission-denied')
+          ? `The server rejected this upload${code ? ` (${code})` : ''}.`
+          : `Photo could not be saved${code ? ` (${code})` : ''}. Check your connection and try again.`,
+      );
     } finally {
       setUploading(false);
     }
-  }, [user]);
+  }, [jokerId, uploading, user]);
 
   // ── Go Dark ──────────────────────────────────────────────────────────────
   const goDark = useCallback(async () => {
@@ -333,16 +362,27 @@ export default function TicketScreen() {
                 }
               </TouchableOpacity>
 
-              {/* Card 2 — placed by 00-00 only, via The Hand */}
-              <View style={[s.card, { width: CARD_W, height: CARD_H }]}>
+              {/* Card 2 — the 00-00 login may place it on its own Ticket too */}
+              <TouchableOpacity
+                style={[s.card, { width: CARD_W, height: CARD_H }]}
+                onPress={() => void pickPhoto('admin')}
+                disabled={jokerId !== '00-00' || uploading}
+                activeOpacity={0.82}
+              >
                 {adminPhoto
                   ? <Image source={{ uri: adminPhoto }} style={StyleSheet.absoluteFill} resizeMode="cover" />
                   : <View style={s.cardEmpty}>
                       <Feather name="lock" size={20} color="rgba(237,224,196,0.28)" />
                       <Text style={[s.cardLabel, { opacity: 0.4 }]}>Admin</Text>
+                      {jokerId === '00-00' && <Text style={s.adminCardHint}>Tap to upload</Text>}
                     </View>
                 }
-              </View>
+                {jokerId === '00-00' && (
+                  <View pointerEvents="none" style={s.adminEditBadge}>
+                    <Feather name="edit-2" size={14} color="#0A0A0A" />
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
 
             {/* ── Upload progress ── */}
@@ -500,6 +540,12 @@ const s = StyleSheet.create({
   },
   cardEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   cardLabel: { color: 'rgba(237,224,196,0.4)', fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
+  adminCardHint: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 9, letterSpacing: 0.8 },
+  adminEditBadge: {
+    position: 'absolute', top: 8, right: 8, width: 28, height: 28,
+    borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: GOLD, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+  },
 
   cardBtns: { flexDirection: 'row', gap: GAP, marginBottom: SIDE },
   darkBtn:  { flex: 1, height: 38, borderRadius: 8, backgroundColor: 'rgba(80,0,0,0.45)',
