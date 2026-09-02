@@ -14,7 +14,7 @@ import { useLiveDeal } from '@/components/deal/useLiveDeal';
 const { width: SW } = appWindow();
 const CREAM = '#EDE0C4';
 const GOLD = '#D4A853';
-const CARD_BACK = require('../../assets/images/card_back.png');
+const CARD_BACK = require('../../assets/images/black_card.png');
 
 export default function DealMemberView() {
   const { user } = useAuth();

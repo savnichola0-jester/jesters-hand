@@ -10,11 +10,24 @@ export type SuitKey = typeof SUITS[number]['key'];
 export interface SuitState {
   pips: SuitKey[];
   streaks: Partial<Record<SuitKey, number>>;
+  notes: Partial<Record<SuitKey, string>>;
   inPlay: Partial<Record<SuitKey, SuitTask>>;
   completed: Partial<Record<SuitKey, string>>;
 }
-export interface SuitTask { active: boolean; title: string; instruction?: string; destination?: 'table'|'jesters-deal'|'uniform'|'recruit'|'target-ticket'|'chamber'|'social'|'discovery'; social?: string; }
-export interface SuitHolder { uid: string; jokerId: string; pips: SuitKey[]; }
+export interface SuitTask {
+  active: boolean;
+  title: string;
+  instruction?: string;
+  destination?: 'table'|'jesters-deal'|'uniform'|'recruit'|'target-ticket'|'chamber'|'social'|'discovery';
+  social?: string;
+  milestoneNotes?: Partial<Record<'3' | '6' | '9', string>>;
+}
+export interface SuitHolder {
+  uid: string;
+  jokerId: string;
+  pips: SuitKey[];
+  streaks?: Partial<Record<SuitKey, number>>;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
