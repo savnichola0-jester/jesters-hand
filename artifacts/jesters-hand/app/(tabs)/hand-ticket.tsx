@@ -53,7 +53,7 @@ export default function HandTicketScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, isAdmin, isHandAdmin } = useAuth();
+  const { user, jokerId, isAdmin, isHandAdmin } = useAuth();
   const { uid } = useLocalSearchParams<{ uid: string }>();
   const canSeeAllSeats = isHandAdmin;
 
@@ -127,22 +127,50 @@ export default function HandTicketScreen() {
 
   const pickAdminPhoto = useCallback(async () => {
     if (!uid || uploading) return;
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.85,
-    });
-    if (res.canceled || !res.assets[0]) return;
-    setUploading(true);
     setSaveMsg(null);
+    if (jokerId !== '00-00') {
+      setSaveMsg('Only 00-00 can place the admin card.');
+      return;
+    }
+
     try {
+      let permission = await ImagePicker.getMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      }
+      if (!permission.granted) {
+        setSaveMsg('Allow photo access in your device settings, then tap the admin card again.');
+        return;
+      }
+
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+      if (res.canceled || !res.assets[0]) return;
+      if ((res.assets[0].fileSize ?? 0) > 10 * 1024 * 1024) {
+        setSaveMsg('That image is larger than 10 MB. Choose a smaller image.');
+        return;
+      }
+
+      setUploading(true);
       const url = await uploadAdminPhoto(uid, res.assets[0].uri);
       await saveTicket(uid, { adminPhotoUrl: url });
       setTicket(t => (t ? { ...t, adminPhotoUrl: url } : t));
-    } catch {
-      setSaveMsg('Photo upload failed — try again.');
+      setSaveMsg('Admin card updated.');
+    } catch (error: any) {
+      const code = String(error?.code ?? '');
+      setSaveMsg(
+        code.includes('unauthorized') || code.includes('permission-denied')
+          ? '00-00 authorization was rejected. Close and reopen the app, then try again.'
+          : code.includes('canceled')
+            ? 'The upload was canceled. Tap the admin card to try again.'
+            : `Admin card upload failed${code ? ` (${code})` : ''}. Check your connection and try again.`,
+      );
     } finally {
       setUploading(false);
     }
-  }, [uid, uploading]);
+  }, [uid, uploading, jokerId]);
 
   // ── Admin: mark the member's suit on their ticket ─────────────────────────
   const [suitBusy, setSuitBusy] = useState(false);
@@ -265,7 +293,7 @@ export default function HandTicketScreen() {
                   {/* Admin photo — the Jester's card to place */}
                   <TouchableOpacity
                     style={[s.card, { width: CARD_W, height: CARD_H }]}
-                    disabled={!isAdmin || uploading}
+                    disabled={jokerId !== '00-00' || uploading}
                     onPress={() => void pickAdminPhoto()}
                     activeOpacity={0.8}
                   >
@@ -275,7 +303,7 @@ export default function HandTicketScreen() {
                       <View style={s.cardEmpty}>
                         <Feather name="lock" size={20} color="rgba(237,224,196,0.15)" />
                         <Text style={[s.cardLabel, { opacity: 0.3 }]}>Admin</Text>
-                        {isAdmin && <Text style={s.cardHint}>Tap to add</Text>}
+                        {jokerId === '00-00' && <Text style={s.cardHint}>Tap to add</Text>}
                       </View>
                     )}
                     {uploading && (

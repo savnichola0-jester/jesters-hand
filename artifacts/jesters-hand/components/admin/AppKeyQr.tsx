@@ -1,11 +1,10 @@
 // ── App Key QR (ADMIN ONLY) ──────────────────────────────────────────────────
-// A downloadable QR code that opens the web app itself. The Jester engraves
-// this on the physical "app access" poker-chip card keys. The code always
-// encodes the address the app is currently being served from, so once the
-// app is published the QR automatically points at the live link.
+// A downloadable QR code that opens the stable native-install route. The
+// Jester engraves this on the physical "app access" poker-chip card keys.
+// The stable route may redirect to a newer native build without re-engraving.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Image, Linking } from 'react-native';
 import QRCode from 'qrcode';
 import { SvgXml } from 'react-native-svg';
 
@@ -13,16 +12,11 @@ const CREAM = '#EDE0C4';
 const GOLD  = '#D4A853';
 
 const QR_SIZE = 168;
-
-/** The address the app is being served from (web); empty on native. */
-function appUrl(): string {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return '';
-  // Origin + base path (strips any in-app route so the QR lands on the door).
-  return window.location.origin + '/';
-}
+const NATIVE_INSTALL_URL = 'https://jestershand54atcomand.replit.app/install';
+const QR_DOWNLOAD_URL = 'https://jestershand54atcomand.replit.app/native-install-qr.png';
 
 export default function AppKeyQr() {
-  const url = useMemo(appUrl, []);
+  const url = useMemo(() => NATIVE_INSTALL_URL, []);
   const [svg, setSvg] = useState<string | null>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -44,16 +38,17 @@ export default function AppKeyQr() {
     return () => { alive = false; };
   }, [url]);
 
-  if (!url) return null;
-
-  const download = () => {
-    if (!dataUrl || typeof document === 'undefined') return;
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = 'jesters-hand-app-key.png';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  const download = async () => {
+    if (Platform.OS === 'web' && dataUrl && typeof document !== 'undefined') {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'jesters-hand-native-install-qr.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      await Linking.openURL(QR_DOWNLOAD_URL);
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -62,7 +57,7 @@ export default function AppKeyQr() {
     <View style={st.card}>
       <Text style={st.title}>APP KEY</Text>
       <Text style={st.sub}>
-        Scanning this code opens the app at{'\n'}{url}
+        Scanning this code opens the native Android install at{'\n'}{url}
       </Text>
       <View style={st.qrBox}>
         {svg ? (
@@ -73,11 +68,9 @@ export default function AppKeyQr() {
           )
         ) : null}
       </View>
-      {Platform.OS === 'web' ? (
-        <TouchableOpacity style={st.btn} onPress={download} activeOpacity={0.8}>
-          <Text style={st.btnText}>{saved ? 'SAVED' : 'DOWNLOAD QR CODE'}</Text>
-        </TouchableOpacity>
-      ) : null}
+      <TouchableOpacity style={st.btn} onPress={() => void download()} activeOpacity={0.8}>
+        <Text style={st.btnText}>{saved ? 'OPENED' : 'DOWNLOAD QR CODE'}</Text>
+      </TouchableOpacity>
     </View>
   );
 }

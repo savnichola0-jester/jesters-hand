@@ -16,6 +16,9 @@ const path = require('path');
 const STATIC_ROOT = path.resolve(__dirname, '..', 'static-build');
 const WEB_ROOT = path.join(STATIC_ROOT, 'web');
 const TEMPLATE_PATH = path.resolve(__dirname, 'templates', 'landing-page.html');
+const NATIVE_QR_PATH = path.resolve(__dirname, 'assets', 'jesters-hand-native-install-qr.png');
+const EXPO_ANDROID_BUILD_URL =
+  'https://expo.dev/accounts/00-00/projects/jesters-hand-native/builds/7e459da9-7f41-4d4d-ad71-40930aa2402b';
 const basePath = (process.env.BASE_PATH || '/').replace(/\/+$/, '');
 
 const MIME_TYPES = {
@@ -152,9 +155,20 @@ const server = http.createServer((req, res) => {
     }
   }
 
-  // Expo Go QR landing page, kept for native preview at a dedicated path.
-  if (pathname === '/expo-go') {
-    return serveLandingPage(req, res, landingPageTemplate, appName);
+  // Stable, engravable native-install route. Keep the public URL permanent;
+  // only this redirect target needs to change after a future native build.
+  if (pathname === '/install' || pathname === '/expo-go') {
+    res.writeHead(302, {
+      location: EXPO_ANDROID_BUILD_URL,
+      'cache-control': 'no-cache',
+    });
+    return res.end();
+  }
+
+  if (pathname === '/native-install-qr.png') {
+    if (fs.existsSync(NATIVE_QR_PATH)) return sendFile(NATIVE_QR_PATH, res);
+    res.writeHead(404);
+    return res.end('QR code not found');
   }
 
   // Browsers hitting the root get the actual web app.
