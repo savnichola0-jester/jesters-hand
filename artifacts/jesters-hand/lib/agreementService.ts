@@ -10,6 +10,7 @@
  *   sigWidth       : number   (signature pad size, for faithful re-rendering)
  *   sigHeight      : number
  *   version        : number   (contract wording version signed)
+ *   wording        : immutable snapshot of the exact wording signed
  *   signedAt       : Timestamp (server time)
  *
  * Rules allow exactly two writes: the first signing, and a re-sign that
@@ -17,13 +18,16 @@
  * A signed contract can never be edited in place or deleted from the app.
  *
  * The Jester reviews signings (including the drawn signature) on The
- * Contract screen — signings are living records, not deleted content, so
- * they deliberately do NOT go into the archives.
+ * Contract screen. Each filing is also copied to the read-only Contracts
+ * Archives tab; it is a permanent record, not deleted content.
  */
 import {
   collection, doc, getDoc, getDocFromServer, getDocs, onSnapshot, serverTimestamp, Timestamp, writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import {
+  BUNDLED_CONTRACT, ContractDoc, ContractWording, contractWording, parseContract,
+} from './contractService';
 
 export interface Agreement {
   uid:            string;
@@ -34,7 +38,34 @@ export interface Agreement {
   sigWidth:       number;
   sigHeight:      number;
   version:        number;
+  /** Missing only on agreements filed before immutable snapshots existed. */
+  wording?:       ContractWording;
   signedAt:       Timestamp | null;
+}
+
+function parseAgreement(uid: string, d: Record<string, any>): Agreement {
+  const rawWording = d.wording;
+  const wording = rawWording && typeof rawWording === 'object'
+    && typeof rawWording.version === 'number'
+    && typeof rawWording.heading === 'string'
+    && Array.isArray(rawWording.sections)
+    && typeof rawWording.acknowledgement === 'string'
+    ? contractWording(parseContract(rawWording))
+    : undefined;
+  return {
+    uid: d.uid ?? uid, jokerId: d.jokerId ?? '', name: d.name ?? '',
+    signedDate: d.signedDate ?? '', signaturePaths: d.signaturePaths ?? [],
+    sigWidth: d.sigWidth ?? 0, sigHeight: d.sigHeight ?? 0,
+    version: d.version ?? 1, wording, signedAt: d.signedAt ?? null,
+  };
+}
+
+/** Resolve the wording a signer read, including safe legacy fallbacks. */
+export function wordingForAgreement(agreement: Agreement, current: ContractDoc): ContractWording | null {
+  if (agreement.wording?.version === agreement.version) return agreement.wording;
+  if (agreement.version === BUNDLED_CONTRACT.version) return contractWording(BUNDLED_CONTRACT);
+  if (current.previous?.version === agreement.version) return current.previous;
+  return null;
 }
 
 /** Fetch a member's signed agreement, or null if they haven't signed. */
@@ -42,17 +73,7 @@ export async function getAgreement(uid: string): Promise<Agreement | null> {
   const snap = await getDoc(doc(db, 'agreements', uid));
   if (!snap.exists()) return null;
   const d = snap.data();
-  return {
-    uid:            d.uid            ?? uid,
-    jokerId:        d.jokerId        ?? '',
-    name:           d.name           ?? '',
-    signedDate:     d.signedDate     ?? '',
-    signaturePaths: d.signaturePaths ?? [],
-    sigWidth:       d.sigWidth       ?? 0,
-    sigHeight:      d.sigHeight      ?? 0,
-    version:        d.version        ?? 1,
-    signedAt:       d.signedAt       ?? null,
-  };
+  return parseAgreement(uid, d);
 }
 
 /** List every member's signed agreement (admin only per rules). */
@@ -61,17 +82,7 @@ export async function listAgreements(): Promise<Agreement[]> {
   const out: Agreement[] = [];
   snap.forEach(docSnap => {
     const d = docSnap.data();
-    out.push({
-      uid:            d.uid            ?? docSnap.id,
-      jokerId:        d.jokerId        ?? '',
-      name:           d.name           ?? '',
-      signedDate:     d.signedDate     ?? '',
-      signaturePaths: d.signaturePaths ?? [],
-      sigWidth:       d.sigWidth       ?? 0,
-      sigHeight:      d.sigHeight      ?? 0,
-      version:        d.version        ?? 1,
-      signedAt:       d.signedAt       ?? null,
-    });
+    out.push(parseAgreement(docSnap.id, d));
   });
   // Newest signings first; blank jokerIds sink to the end.
   out.sort((a, b) => (b.signedAt?.toMillis?.() ?? 0) - (a.signedAt?.toMillis?.() ?? 0));
@@ -87,17 +98,7 @@ export function listenAgreements(
     const out: Agreement[] = [];
     snap.forEach(docSnap => {
       const d = docSnap.data();
-      out.push({
-        uid:            d.uid            ?? docSnap.id,
-        jokerId:        d.jokerId        ?? '',
-        name:           d.name           ?? '',
-        signedDate:     d.signedDate     ?? '',
-        signaturePaths: d.signaturePaths ?? [],
-        sigWidth:       d.sigWidth       ?? 0,
-        sigHeight:      d.sigHeight      ?? 0,
-        version:        d.version        ?? 1,
-        signedAt:       d.signedAt       ?? null,
-      });
+      out.push(parseAgreement(docSnap.id, d));
     });
     out.sort((a, b) => (b.signedAt?.toMillis?.() ?? 0) - (a.signedAt?.toMillis?.() ?? 0));
     onList(out);
@@ -130,29 +131,60 @@ export async function signAgreement(
     throw new Error('The current contract version is invalid.');
   }
 
-  const agreementRef = doc(db, 'agreements', uid);
-  const archiveRef = doc(collection(db, 'archives'));
-  const batch = writeBatch(db);
-  batch.set(agreementRef, {
-    uid,
-    ...data,
-    version: liveVersion,
-    signedAt: serverTimestamp(),
-  });
-  batch.set(archiveRef, {
+  const wording = contractWording(
+    contractSnap.exists() ? parseContract(contractSnap.data()) : BUNDLED_CONTRACT,
+  );
+  if (wording.version !== liveVersion) {
+    throw new Error('The current contract wording is invalid.');
+  }
+
+  const commit = async (includeWording: boolean) => {
+    const agreementRef = doc(db, 'agreements', uid);
+    const archiveRef = doc(collection(db, 'archives'));
+    const batch = writeBatch(db);
+    batch.set(agreementRef, {
+      uid,
+      ...data,
+      version: liveVersion,
+      ...(includeWording ? { wording } : {}),
+      signedAt: serverTimestamp(),
+    });
+    batch.set(archiveRef, {
     type: 'contract_signed',
     section: 'The Contract',
     title: `${data.jokerId} signed the contract (v${liveVersion})`,
     ownerUid: uid,
     ownerJokerId: data.jokerId,
     restorePath: `agreements/${uid}`,
-    payload: { name: data.name, version: liveVersion },
+    // Contracts are a dedicated, read-only Archives ledger. Keep the complete
+    // signed block so authorized viewers can inspect exactly what was filed.
+    payload: {
+      uid,
+      jokerId: data.jokerId,
+      name: data.name,
+      signedDate: data.signedDate,
+      signaturePaths: data.signaturePaths,
+      sigWidth: data.sigWidth,
+      sigHeight: data.sigHeight,
+      version: liveVersion,
+      wording,
+    },
     comments: [],
     storagePaths: [],
     createdAtOriginal: null,
     deletedAt: serverTimestamp(),
     deletedByUid: uid,
-  });
-  await batch.commit();
+    });
+    await batch.commit();
+  };
+
+  try {
+    await commit(true);
+  } catch (error: any) {
+    // Production may still use pre-snapshot rules. Retry its legacy agreement
+    // shape until the owner authorizes deploying the new rules.
+    if (error?.code !== 'permission-denied') throw error;
+    await commit(false);
+  }
   return liveVersion;
 }

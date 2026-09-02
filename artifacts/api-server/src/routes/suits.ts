@@ -25,14 +25,15 @@ async function authenticate(req: Request): Promise<Auth | null> {
   const token = uid && adminConfigured() ? await getAccessToken() : null;
   return project && uid && token ? { project, uid, token } : null;
 }
-async function caller(req: Request, jesterOnly = false): Promise<Auth | null> {
+async function caller(req: Request, role: "member" | "dealer" | "jester" = "member"): Promise<Auth | null> {
   const a = await authenticate(req); if (!a) return null;
   const userDoc = await getDoc(a, `users/${enc(a.uid)}`);
   if (!userDoc) return null;
   const u = read(userDoc);
   if (
     u.suspended === true ||
-    (jesterOnly && (u.jokerId !== "00-00" || u.isAdmin !== true))
+    (role === "dealer" && (u.isAdmin !== true || !["00-00", "01-54"].includes(u.jokerId))) ||
+    (role === "jester" && (u.isAdmin !== true || u.jokerId !== "00-00"))
   ) return null;
   return a;
 }
@@ -68,11 +69,11 @@ async function notifyHolders(a: Auth, pip: string) {
 
 router.get("/suits/me", async (req, res) => { try { const a = await caller(req); if (!a) return void res.status(403).json({ error: "active member required" }); const [x, c] = await Promise.all([assignment(a, a.uid), getDoc(a, "suitConfig/current")]); const config = read(c); res.json({ state: { pips: x.data.pips ?? [], streaks: x.data.streaks ?? {}, notes: x.data.notes ?? {}, completed: x.data.completed ?? {}, inPlay: config.inPlay ?? {} } }); } catch (err) { logger.error({ err }, "suits me failed"); res.status(500).json({ error: "SUITS unavailable" }); } });
 router.get("/suits/lookup/:jokerId", async (req, res) => { try { const a = await caller(req); if (!a) return void res.status(403).json({ error: "active member required" }); const id = String(req.params.jokerId); if (!/^\d{2}-\d{2}$/.test(id)) return void res.status(400).json({ error: "use a Joker ID" }); const r = await api(`${firestoreBase(a.project)}:runQuery`, a.token, { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "users" }], where: { fieldFilter: { field: { fieldPath: "jokerId" }, op: "EQUAL", value: { stringValue: id } } }, limit: 1 } }) }); const d = r.ok ? (await r.json() as Array<{ document?: Doc }>).find(x => x.document)?.document : null; if (!d) return void res.json({ holder: null }); const uid = d.name!.split("/").pop()!; const x = await assignment(a, uid); res.json({ holder: { uid, jokerId: id, pips: x.data.pips ?? [], streaks: x.data.streaks ?? {} } }); } catch { res.status(500).json({ error: "lookup unavailable" }); } });
-router.get("/suits/admin", async (req, res) => { const a = await caller(req, true); if (!a) return void res.status(403).json({ error: "active Jester 00-00 only" }); try { const c = read(await getDoc(a, "suitConfig/current")); res.json({ holders: await holders(a), inPlay: c.inPlay ?? {} }); } catch (err) { logger.error({ err }, "suits admin read failed"); res.status(500).json({ error: "SUITS unavailable" }); } });
+router.get("/suits/admin", async (req, res) => { const a = await caller(req, "dealer"); if (!a) return void res.status(403).json({ error: "dealer seat required" }); try { const c = read(await getDoc(a, "suitConfig/current")); res.json({ holders: await holders(a), inPlay: c.inPlay ?? {} }); } catch (err) { logger.error({ err }, "suits admin read failed"); res.status(500).json({ error: "SUITS unavailable" }); } });
 
 router.post("/suits/assignment", async (req, res) => {
-  const a = await caller(req, true), b = req.body;
-  if (!a) return void res.status(403).json({ error: "active Jester 00-00 only" });
+  const a = await caller(req, "dealer"), b = req.body;
+  if (!a) return void res.status(403).json({ error: "dealer seat required" });
   if (!b || typeof b.targetUid !== "string" || !PIPS.has(b.pip) || typeof b.assigned !== "boolean") return void res.status(400).json({ error: "invalid assignment" });
   try {
     if (!await getDoc(a, `users/${enc(b.targetUid)}`)) return void res.status(404).json({ error: "member not found" });
@@ -92,8 +93,8 @@ router.post("/suits/assignment", async (req, res) => {
 });
 
 router.post("/suits/in-play", async (req, res) => {
-  const a = await caller(req, true), b = req.body, task = b?.task;
-  if (!a) return void res.status(403).json({ error: "active Jester 00-00 only" });
+  const a = await caller(req, "dealer"), b = req.body, task = b?.task;
+  if (!a) return void res.status(403).json({ error: "dealer seat required" });
   if (!b || !PIPS.has(b.pip) || !task || typeof task.active !== "boolean" || typeof task.title !== "string" || !task.title.trim() || task.title.length > 160 || (task.destination && !DESTINATIONS.has(task.destination))) return void res.status(400).json({ error: "invalid suit task" });
   const milestoneNotes = task.milestoneNotes && typeof task.milestoneNotes === "object"
     ? Object.fromEntries(["3", "6", "9"].flatMap(day => typeof task.milestoneNotes[day] === "string" && task.milestoneNotes[day].trim() ? [[day, task.milestoneNotes[day].trim().slice(0, 280)]] : []))
@@ -114,8 +115,8 @@ router.post("/suits/in-play", async (req, res) => {
 });
 
 router.post("/suits/stamp", async (req, res) => {
-  const a = await caller(req, true), b = req.body;
-  if (!a) return void res.status(403).json({ error: "active Jester 00-00 only" });
+  const a = await caller(req, "jester"), b = req.body;
+  if (!a) return void res.status(403).json({ error: "Jester 00-00 required" });
   if (!b || typeof b.targetUid !== "string" || !PIPS.has(b.pip)) return void res.status(400).json({ error: "invalid stamp" });
   try {
     const today = new Date().toISOString().slice(0, 10), id = hashId("stamp", b.targetUid, b.pip, today), royalId = `suits-royal-${b.pip}-${today}`;

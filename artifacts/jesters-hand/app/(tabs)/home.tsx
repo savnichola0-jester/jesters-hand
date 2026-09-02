@@ -40,10 +40,10 @@ export default function HomeScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
   const { navigateTo } = useFileTransition();
-  const { jokerId } = useAuth();
+  const { isHandAdmin } = useAuth();
 
   // Filter out admin-only tiles for regular jokers
-  const tiles = ALL_TILES.filter(t => !t.adminOnly || jokerId === '00-00');
+  const tiles = ALL_TILES.filter(t => !t.adminOnly || isHandAdmin);
 
   return (
     <View style={styles.root}>

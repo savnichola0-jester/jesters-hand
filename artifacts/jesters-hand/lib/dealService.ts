@@ -283,7 +283,7 @@ export async function reconcileDealProgress(uid: string): Promise<DealCompletion
   };
 }
 
-export type SeatTemperature = 'Hot' | 'Warm' | 'Cooling' | 'Cold';
+export type SeatTemperature = 'Hot' | 'Warm' | 'Cold';
 
 /** Pure, clock-sensitive classification; callers can recalculate on any render/timer. */
 export function seatTemperature(
@@ -299,7 +299,7 @@ export function seatTemperature(
   const ratio = Math.max(0, Math.min(1, progress > 1 ? progress / 100 : progress));
   if (ageHours <= 24 && ratio >= 0.75) return 'Hot';
   if (ageHours <= 72 && ratio >= 0.4) return 'Warm';
-  if (ageHours <= 168 || ratio >= 0.75) return 'Cooling';
+  if (ageHours <= 168 || ratio >= 0.75) return 'Warm';
   return 'Cold';
 }
 

@@ -53,8 +53,9 @@ export default function HandTicketScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isHandAdmin } = useAuth();
   const { uid } = useLocalSearchParams<{ uid: string }>();
+  const canSeeAllSeats = isHandAdmin;
 
   // Auth guard
   useEffect(() => {
@@ -72,22 +73,22 @@ export default function HandTicketScreen() {
 
   useEffect(() => {
     if (!user || !uid) return;
-    if (user.uid !== uid && !isAdmin) return;
+    if (user.uid !== uid && !canSeeAllSeats) return;
     return listenOwnStats(uid, (s) => setStats(s));
-  }, [user, uid, isAdmin]);
+  }, [user, uid, canSeeAllSeats]);
 
   useEffect(() => {
     if (!user || !uid) return;
-    if (user.uid !== uid && !isAdmin) return;
+    if (user.uid !== uid && !canSeeAllSeats) return;
     return listenPublishedDeals(setDeals);
-  }, [user, uid, isAdmin]);
+  }, [user, uid, canSeeAllSeats]);
 
   useEffect(() => {
     if (!activeDeal || !uid || !user) {
       setProgress(0);
       return;
     }
-    if (user.uid !== uid && !isAdmin) return;
+    if (user.uid !== uid && !canSeeAllSeats) return;
     return listenOwnCompletion(activeDeal.id, uid, comp => {
       if (comp && activeDeal.tasks.length > 0) {
         setProgress(comp.completedTaskIds.length / activeDeal.tasks.length);
@@ -95,9 +96,9 @@ export default function HandTicketScreen() {
         setProgress(0);
       }
     });
-  }, [activeDeal, uid, user, isAdmin]);
+  }, [activeDeal, uid, user, canSeeAllSeats]);
 
-  const canSeeTemp = !!user && (user.uid === uid || isAdmin);
+  const canSeeTemp = !!user && (user.uid === uid || canSeeAllSeats);
   const temp = canSeeTemp ? seatTemperature(stats?.lastActivityAt, progress) : null;
   const streak = stats?.currentStreak ?? 0;
 
@@ -287,7 +288,7 @@ export default function HandTicketScreen() {
                   <View style={[s.fieldBlock, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.35)', padding: 14, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(237,224,196,0.1)' }]}>
                     <View>
                       <Text style={[s.fieldLabel, { marginBottom: 4 }]}>SEAT TEMPERATURE</Text>
-                      <Text style={[s.fieldValue, { color: temp === 'Hot' ? '#FF6B6B' : temp === 'Warm' ? '#FFA06B' : temp === 'Cooling' ? '#6B90FF' : 'rgba(237,224,196,0.5)' }]}>
+                      <Text style={[s.fieldValue, { color: temp === 'Hot' ? '#FF6B6B' : temp === 'Warm' ? '#FFA06B' : 'rgba(237,224,196,0.5)' }]}>
                         {temp?.toUpperCase()}
                       </Text>
                     </View>

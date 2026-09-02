@@ -26,7 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   ContractDoc, ContractSection, BUNDLED_CONTRACT, listenContract, publishContract,
 } from '@/lib/contractService';
-import { Agreement, listenAgreements, signAgreement } from '@/lib/agreementService';
+import { Agreement, listenAgreements, signAgreement, wordingForAgreement } from '@/lib/agreementService';
 import { broadcastToActiveMembers } from '@/lib/notificationService';
 import SignaturePad, { SignatureView } from '@/components/SignaturePad';
 import PawPrints from '@/components/PawPrints';
@@ -64,6 +64,9 @@ export default function ContractScreen() {
   const topInset = Platform.OS === 'web' ? 50 : insets.top;
 
   const { user, jokerId, isJester, agreement, refreshAgreement, needsContract } = useAuth();
+  // Amendment authority is deliberately narrower than generic admin access:
+  // only the authenticated, provisioned 00-00 Jester seat may edit wording.
+  const canAmend = isJester && jokerId === '00-00';
 
   // Current wording — live subscription so an amendment published while this
   // screen is open updates the text and version before anyone signs.
@@ -73,6 +76,10 @@ export default function ContractScreen() {
   // Signed & current → read-only. Signed but outdated → sign again.
   const signed   = !!agreement;
   const viewOnly = isJester || (signed && !needsContract);
+  const previouslySignedWording = useMemo(
+    () => agreement ? wordingForAgreement(agreement, contract) : null,
+    [agreement, contract],
+  );
 
   // Auth guard: members only.
   useEffect(() => {
@@ -143,11 +150,11 @@ export default function ContractScreen() {
   const [publishing, setPublishing] = useState(false);
 
   const startEdit = useCallback(() => {
-    if (!isJester) return;
+    if (!canAmend) return;
     setDraftHead(contract.heading);
     setDrafts(toDraft(contract.sections));
     setEditing(true);
-  }, [contract, isJester]);
+  }, [contract, canAmend]);
 
   const publish = useCallback(() => {
     const sections = fromDraft(drafts);
@@ -171,7 +178,7 @@ export default function ContractScreen() {
   }, [drafts, draftHead, contract.version]);
 
   const doPublish = useCallback(async (sections: ContractSection[]) => {
-    if (!user || !isJester || publishing) return;
+    if (!user || !canAmend || publishing) return;
     setPublishing(true);
     try {
       const newVersion = await publishContract(
@@ -187,6 +194,7 @@ export default function ContractScreen() {
       // Tell every member the rules changed without holding the saved screen open.
       void broadcastToActiveMembers(user.uid, {
           type: 'contract_update',
+          title: 'Go sign in blood.',
           fromUid: user.uid,
           text: 'Your blood is dry.',
         }).catch(() => { /* notification fan-out is best-effort */ });
@@ -202,7 +210,7 @@ export default function ContractScreen() {
     } finally {
       setPublishing(false);
     }
-  }, [user, isJester, publishing, draftHead, contract.acknowledgement, contract.version]);
+  }, [user, canAmend, publishing, draftHead, contract.acknowledgement, contract.version]);
 
   // ── Jester: signings ledger (who signed, with the actual signature) ──────
   const [signings, setSignings]         = useState<Agreement[] | null>(null);
@@ -240,7 +248,7 @@ export default function ContractScreen() {
           </TouchableOpacity>
         )}
 
-        {editing && isJester ? (
+        {editing && canAmend ? (
           /* ── Jester: amend mode ── */
           <View>
             <Text style={s.sectionTitle}>HEADING</Text>
@@ -314,7 +322,7 @@ export default function ContractScreen() {
               ))}
             </Text>
 
-            {isJester && (
+            {canAmend && (
               <View style={s.jesterRow}>
                 <Text style={s.jesterNote}>Version {contract.version} — the Jester signs nothing.</Text>
                 <TouchableOpacity onPress={startEdit} activeOpacity={0.75} style={s.amendBtn}>
@@ -339,11 +347,11 @@ export default function ContractScreen() {
               </View>
             )}
 
-            {signed && needsContract && contract.previous && (
+            {signed && needsContract && previouslySignedWording && (
               <View style={s.previousWording}>
-                <Text style={s.previousLabel}>YOUR PREVIOUSLY SIGNED WORDING · v{contract.previous.version}</Text>
-                <Text style={s.previousHeading}>{contract.previous.heading}</Text>
-                {contract.previous.sections.map(sec => (
+                <Text style={s.previousLabel}>YOUR PREVIOUSLY SIGNED WORDING · v{previouslySignedWording.version}</Text>
+                <Text style={s.previousHeading}>{previouslySignedWording.heading}</Text>
+                {previouslySignedWording.sections.map(sec => (
                   <View key={`old-${sec.title}`} style={s.previousSection}>
                     <Text style={s.previousTitle}>{sec.title}</Text>
                     {sec.lines.map((line, i) => <Text key={i} style={s.previousLine}>{line}</Text>)}

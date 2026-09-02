@@ -15,6 +15,8 @@ interface AuthContextType {
   user: User | null;
   jokerId: string | null;
   isAdmin: boolean;
+  /** Either explicitly provisioned Hand seat (00-00 or 01-54). */
+  isHandAdmin: boolean;
   /** Authenticated permanent owner seat. Admin authority alone is not enough. */
   isJester: boolean;
   /** Admin who may also curate Vault/Chamber documents (00-00). The second
@@ -34,6 +36,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   jokerId: null,
   isAdmin: false,
+  isHandAdmin: false,
   isJester: false,
   isVaultKeeper: false,
   loading: true,
@@ -46,12 +49,14 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser]       = useState<User | null>(null);
   const [jokerId, setJokerId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminFlag, setAdminFlag] = useState(false);
   const [isVaultKeeper, setIsVaultKeeper] = useState(false);
   const [loading, setLoading] = useState(true);
   const [agreement, setAgreement] = useState<Agreement | false | null>(null);
   const [contractVersion, setContractVersion] = useState(BUNDLED_CONTRACT.version);
-  const isJester = !!user && isAdmin && jokerId === '00-00';
+  const isAdmin = !!user && adminFlag && jokerId === '00-00';
+  const isJester = isAdmin;
+  const isHandAdmin = !!user && adminFlag && (jokerId === '00-00' || jokerId === '01-54');
 
   // Live contract version — when the Jester amends the rules, members whose
   // signature is older than the current version get gated to re-sign.
@@ -108,13 +113,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return;
             }
             setJokerId(data?.jokerId ?? null);
-            setIsAdmin(data?.isAdmin === true);
-            setIsVaultKeeper(data?.isAdmin === true && data?.vaultKeeper !== false);
+            setAdminFlag(data?.isAdmin === true);
+            // Privileged capabilities always require both the server-pinned
+            // flag and the exact seat. Unknown admin flags fail closed.
+            setIsVaultKeeper(data?.isAdmin === true && data?.jokerId === '00-00');
             setLoading(false);
           },
           () => {
             setJokerId(null);
-            setIsAdmin(false);
+            setAdminFlag(false);
             setIsVaultKeeper(false);
             setLoading(false);
           }
@@ -127,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         void startSession(u.uid);
       } else {
         setJokerId(null);
-        setIsAdmin(false);
+        setAdminFlag(false);
         setIsVaultKeeper(false);
         setAgreement(null);
         setLoading(false);
@@ -159,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, jokerId, isAdmin, isJester, isVaultKeeper, loading, agreement, refreshAgreement,
+      user, jokerId, isAdmin, isHandAdmin, isJester, isVaultKeeper, loading, agreement, refreshAgreement,
       contractVersion,
       // The Jester (00-00) never signs. Members are gated when they have no
       // signature, or when their signature predates the current wording.

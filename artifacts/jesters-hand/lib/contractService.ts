@@ -27,6 +27,17 @@ export interface ContractDoc {
   /** Wording immediately before the latest amendment, retained for re-signers. */
   previous?: Omit<ContractDoc, 'previous'>;
 }
+/** The immutable, signable portion of a contract (without amendment history). */
+export type ContractWording = Omit<ContractDoc, 'previous'>;
+
+export function contractWording(contract: ContractDoc): ContractWording {
+  return {
+    version: contract.version,
+    heading: contract.heading,
+    sections: contract.sections,
+    acknowledgement: contract.acknowledgement,
+  };
+}
 
 export const BUNDLED_CONTRACT: ContractDoc = {
   version:         CONTRACT_VERSION,
@@ -113,7 +124,7 @@ async function fetchWithDeadline(url: string, init: RequestInit): Promise<Respon
   }
 }
 
-function parse(d: Record<string, unknown> | undefined): ContractDoc {
+export function parseContract(d: Record<string, unknown> | undefined): ContractDoc {
   if (!d) return BUNDLED_CONTRACT;
   const raw = Array.isArray(d.sections) ? d.sections : [];
   const parsed: ContractDoc = {
@@ -148,7 +159,7 @@ function parse(d: Record<string, unknown> | undefined): ContractDoc {
 export async function getContract(): Promise<ContractDoc> {
   try {
     const snap = await getDoc(REF());
-    return snap.exists() ? parse(snap.data()) : BUNDLED_CONTRACT;
+    return snap.exists() ? parseContract(snap.data()) : BUNDLED_CONTRACT;
   } catch {
     return BUNDLED_CONTRACT;
   }
@@ -162,7 +173,7 @@ export async function getContract(): Promise<ContractDoc> {
 export function listenContract(cb: (c: ContractDoc) => void): () => void {
   return onSnapshot(
     REF(),
-    snap => cb(snap.exists() ? parse(snap.data()) : BUNDLED_CONTRACT),
+    snap => cb(snap.exists() ? parseContract(snap.data()) : BUNDLED_CONTRACT),
     ()   => cb(BUNDLED_CONTRACT),
   );
 }
@@ -191,7 +202,7 @@ export async function publishContract(
         updateTime?: string;
       }
     : null;
-  const current = existing ? parse(decodeFields(existing.fields)) : BUNDLED_CONTRACT;
+  const current = existing ? parseContract(decodeFields(existing.fields)) : BUNDLED_CONTRACT;
   if (current.version !== currentVersion) throw new Error('contract changed');
   const version = currentVersion + 1;
   const commitUrl =

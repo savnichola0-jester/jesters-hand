@@ -8,6 +8,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { getAllMembers, TicketData } from '@/lib/ticketService';
 import { getRoyalsCounts } from '@/lib/blackBookService';
+import {
+  Deal, DealCompletion, DealMemberStats, listenAllDealCompletions,
+  listenAllDealStats, listenPublishedDeals, seatTemperature,
+} from '@/lib/dealService';
+import { useLiveDeal } from '@/components/deal/useLiveDeal';
 import { useAuth } from '@/contexts/AuthContext';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
@@ -32,7 +37,8 @@ export default function HandScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user } = useAuth();
+  const { user, isHandAdmin } = useAuth();
+  const canSeeAllSeats = isHandAdmin;
 
   // Auth guard
   useEffect(() => {
@@ -43,6 +49,10 @@ export default function HandScreen() {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
   const [royals,   setRoyals]   = useState<Record<string, number>>({});
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [stats, setStats] = useState<DealMemberStats[]>([]);
+  const [completions, setCompletions] = useState<Array<DealCompletion & { dealId: string }>>([]);
+  const activeDeal = useLiveDeal(deals);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,6 +74,23 @@ export default function HandScreen() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!canSeeAllSeats) {
+      setDeals([]);
+      setStats([]);
+      setCompletions([]);
+      return;
+    }
+    const offDeals = listenPublishedDeals(setDeals);
+    const offStats = listenAllDealStats(setStats);
+    const offCompletions = listenAllDealCompletions(setCompletions);
+    return () => {
+      offDeals();
+      offStats();
+      offCompletions();
+    };
+  }, [canSeeAllSeats]);
 
   return (
     <View style={s.root}>
@@ -125,6 +152,12 @@ export default function HandScreen() {
               key={m.uid}
               member={m}
               royalsCount={royals[m.uid] ?? 0}
+              temperature={canSeeAllSeats ? seatTemperature(
+                stats.find(item => item.uid === m.uid)?.lastActivityAt,
+                activeDeal?.tasks.length
+                  ? (completions.find(item => item.dealId === activeDeal.id && item.uid === m.uid)?.completedTaskIds.length ?? 0) / activeDeal.tasks.length
+                  : 0,
+              ) : null}
               onPress={() =>
                 router.push({ pathname: '/(tabs)/hand-ticket', params: { uid: m.uid } })
               }
@@ -137,9 +170,10 @@ export default function HandScreen() {
 }
 
 // ── Member card ───────────────────────────────────────────────────────────────
-function MemberCard({ member, royalsCount, onPress }: {
+function MemberCard({ member, royalsCount, temperature, onPress }: {
   member: Member;
   royalsCount: number;
+  temperature: ReturnType<typeof seatTemperature> | null;
   onPress: () => void;
 }) {
   const hasMug   = !!member.mugUrl;
@@ -189,6 +223,17 @@ function MemberCard({ member, royalsCount, onPress }: {
             <View style={s.royalsBadge}>
               <Feather name="award" size={10} color={GOLD} />
               <Text style={s.royalsText}>{royalsCount}</Text>
+            </View>
+          ) : null}
+          {temperature ? (
+            <View style={s.seatBadge}>
+              <Text style={[
+                s.seatText,
+                temperature === 'Hot' && { color: '#FF6B6B' },
+                temperature === 'Warm' && { color: '#FFA06B' },
+              ]}>
+                {temperature}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -260,6 +305,12 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(212,168,83,0.1)',
   },
   royalsText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1 },
+  seatBadge: {
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8,
+    borderWidth: 1, borderColor: 'rgba(237,224,196,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  seatText: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1 },
   filedBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8,

@@ -366,7 +366,7 @@ export default function TicketScreen() {
             <View style={[s.fieldBlock, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.35)', padding: 14, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(237,224,196,0.1)' }]}>
               <View>
                 <Text style={[s.fieldLabel, { marginBottom: 4 }]}>SEAT TEMPERATURE</Text>
-                <Text style={[s.fieldValue, { color: temp === 'Hot' ? '#FF6B6B' : temp === 'Warm' ? '#FFA06B' : temp === 'Cooling' ? '#6B90FF' : 'rgba(237,224,196,0.5)' }]}>
+                <Text style={[s.fieldValue, { color: temp === 'Hot' ? '#FF6B6B' : temp === 'Warm' ? '#FFA06B' : 'rgba(237,224,196,0.5)' }]}>
                   {temp?.toUpperCase()}
                 </Text>
               </View>

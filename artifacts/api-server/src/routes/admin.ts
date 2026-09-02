@@ -51,7 +51,10 @@ async function requireAdmin(
     const isAdmin =
       (doc?.fields?.["isAdmin"] as { booleanValue?: boolean } | undefined)
         ?.booleanValue === true;
-    if (!isAdmin) return { error: "forbidden", status: 403 };
+    const jokerId =
+      (doc?.fields?.["jokerId"] as { stringValue?: string } | undefined)
+        ?.stringValue;
+    if (!isAdmin || jokerId !== "00-00") return { error: "forbidden", status: 403 };
   } catch {
     return { error: "admin check failed", status: 500 };
   }

@@ -37,6 +37,7 @@ import {
 } from '@/lib/archiveService';
 import { fetchProtectedDataUri } from '@/lib/vaultService';
 import AppKeyQr from '@/components/admin/AppKeyQr';
+import { SignatureView } from '@/components/SignaturePad';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
 
@@ -105,14 +106,18 @@ export default function JestersHandScreen() {
   const insets    = useSafeAreaInsets();
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
-  const { user, jokerId, isVaultKeeper } = useAuth();
+  const { user, jokerId, isAdmin, isHandAdmin, isVaultKeeper } = useAuth();
   // This console belongs to the Jester's permanent 00-00 seat only. Other
   // administrative roles never receive the route or its data collectors.
-  const isJester = jokerId === '00-00';
+  const isJester = isAdmin && jokerId === '00-00';
+  const isArchiveViewer = isHandAdmin;
 
   useEffect(() => { if (user === null) router.replace('/'); }, [user]);
-  // Jester-only screen: bounce anyone who isn't 00-00.
-  useEffect(() => { if (user && !isJester) router.replace('/(tabs)/home'); }, [user, isJester]);
+  // 01-54 receives the read-only seat roster and Archives; every other
+  // non-Jester is bounced home.
+  useEffect(() => {
+    if (user && !isJester && !isArchiveViewer) router.replace('/(tabs)/home');
+  }, [user, isJester, isArchiveViewer]);
 
   const [section, setSection] = useState<SectionId>('hand');
 
@@ -120,15 +125,20 @@ export default function JestersHandScreen() {
   const params = useLocalSearchParams<{ section?: string }>();
   useEffect(() => {
     const s = params.section;
-    if (s && SECTIONS.some(t => t.id === s)) setSection(s as SectionId);
-  }, [params.section]);
+    if (jokerId === '01-54') {
+      if (s === 'archive' || s === 'hand') setSection(s);
+      else setSection('hand');
+    } else if (s && SECTIONS.some(t => t.id === s)) {
+      setSection(s as SectionId);
+    }
+  }, [params.section, jokerId]);
 
   // ── The Hand roster ──
   const [slots, setSlots] = useState<RosterSlot[] | null>(null);
   useEffect(() => {
-    if (!user || !isJester) return;
+    if (!user || !isArchiveViewer) return;
     return listenRoster(setSlots);
-  }, [user, isJester]);
+  }, [user, isArchiveViewer]);
 
   const [action, setAction] = useState<PendingAction | null>(null);
   const [cipher, setCipher] = useState('');
@@ -286,6 +296,7 @@ export default function JestersHandScreen() {
   const [archives, setArchives]         = useState<ArchiveRecord[] | null>(null);
   const [archListError, setArchListError] = useState<string | null>(null);
   const [archQuery, setArchQuery]       = useState('');
+  const [archiveTab, setArchiveTab]     = useState<'deleted' | 'contracts'>('deleted');
   const [openArch, setOpenArch]         = useState<ArchiveRecord | null>(null);
   const [archImages, setArchImages]     = useState<(string | null)[] | null>(null);
   const [archBusy, setArchBusy]         = useState(false);
@@ -293,19 +304,23 @@ export default function JestersHandScreen() {
   const [purgeArmed, setPurgeArmed]     = useState(false);
 
   useEffect(() => {
-    if (!isJester || section !== 'archive') return;
+    if (!isArchiveViewer || section !== 'archive') return;
     const stop = listenArchives(setArchives, () =>
-      setArchListError('The archive could not be loaded. Try again.'));
+      setArchListError('The archive could not be loaded. Try again.'), !isJester);
     return stop;
-  }, [isJester, section]);
+  }, [isArchiveViewer, section]);
 
   const filteredArchives = useMemo(() => {
     if (!archives) return null;
+    const byTab = archives.filter(a =>
+      archiveTab === 'contracts'
+        ? a.type === 'contract_signed'
+        : a.type !== 'contract_signed');
     const q = archQuery.trim().toLowerCase();
-    if (!q) return archives;
-    return archives.filter(a =>
+    if (!q) return byTab;
+    return byTab.filter(a =>
       a.title.toLowerCase().includes(q) || a.ownerJokerId.toLowerCase().includes(q));
-  }, [archives, archQuery]);
+  }, [archives, archQuery, archiveTab]);
 
   // Load image previews when an archived item is opened.
   useEffect(() => {
@@ -378,7 +393,7 @@ export default function JestersHandScreen() {
     }
   };
 
-  if (!user || !isJester) return <View style={st.root} />;
+  if (!user || !isArchiveViewer) return <View style={st.root} />;
 
   const activeMeta = SECTIONS.find(s => s.id === section)!;
 
@@ -395,7 +410,7 @@ export default function JestersHandScreen() {
           </Text>
           <Text style={[st.rowStatus, { color: statusColor }]}>{status}</Text>
         </View>
-        {m ? (
+        {m && isJester ? (
           <View style={st.rowBtns}>
             <TouchableOpacity
               style={[st.actBtn, m.suspended && st.actBtnActive]}
@@ -448,7 +463,7 @@ export default function JestersHandScreen() {
       {/* ── Folder ── */}
       <View style={[st.folderWrap, { top: navBottom + 42 }]}>
         <View style={st.tabsRow}>
-          {SECTIONS.map(s => {
+          {(isJester ? SECTIONS : SECTIONS.filter(s => s.id === 'hand' || s.id === 'archive')).map(s => {
             const active = s.id === section;
             return (
               <TouchableOpacity
@@ -566,6 +581,20 @@ export default function JestersHandScreen() {
             })()
           ) : section === 'archive' ? (
             <>
+              <View style={st.archiveTabs}>
+                {(['deleted', 'contracts'] as const).map(tab => (
+                  <TouchableOpacity
+                    key={tab}
+                    style={[st.archiveTab, archiveTab === tab && st.archiveTabActive]}
+                    onPress={() => setArchiveTab(tab)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[st.archiveTabText, archiveTab === tab && st.archiveTabTextActive]}>
+                      {tab === 'deleted' ? 'DELETED' : 'CONTRACTS'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <View style={st.invSearchRow}>
                 <TextInput
                   style={st.invSearchInput}
@@ -590,7 +619,9 @@ export default function JestersHandScreen() {
                   <Text style={st.emptyText}>
                     {archQuery.trim()
                       ? 'Nothing in the archive matches that search.'
-                      : EMPTY_COPY.archive}
+                      : archiveTab === 'contracts'
+                        ? 'No signed contracts have been filed.'
+                        : EMPTY_COPY.archive}
                   </Text>
                 </View>
               ) : (
@@ -1152,15 +1183,21 @@ export default function JestersHandScreen() {
                         <Text style={st.reportMetaLabel}>CREATED</Text>
                         <Text style={st.reportMetaValue}>{cre.date}{cre.time ? ` at ${cre.time}` : ''}</Text>
                       </View>
-                      <View style={st.reportMetaRow}>
-                        <Text style={st.reportMetaLabel}>DELETED</Text>
-                        <Text style={[st.reportMetaValue, { color: RED }]}>{del.date} at {del.time}</Text>
-                      </View>
+                       <View style={st.reportMetaRow}>
+                         <Text style={st.reportMetaLabel}>
+                           {openArch.type === 'contract_signed' ? 'SIGNED' : 'DELETED'}
+                         </Text>
+                         <Text style={[st.reportMetaValue, { color: openArch.type === 'contract_signed' ? GOLD : RED }]}>
+                           {del.date} at {del.time}
+                         </Text>
+                       </View>
                     </View>
                   );
                 })()}
 
-                <Text style={st.reportSectionLabel}>DELETED CONTENT</Text>
+                <Text style={st.reportSectionLabel}>
+                  {openArch.type === 'contract_signed' ? 'SIGNED CONTRACT' : 'DELETED CONTENT'}
+                </Text>
                 {(() => {
                   const p = openArch.payload;
                   const FIELD_LABELS: [string, string][] = [
@@ -1168,7 +1205,8 @@ export default function JestersHandScreen() {
                     ['text', 'Text'], ['description', 'Description'], ['notes', 'Notes'],
                     ['location', 'Location'], ['date', 'Date'], ['price', 'Price'],
                     ['category', 'Category'], ['tab', 'Tab'], ['mode', 'Mode'],
-                    ['status', 'Status'], ['suit', 'Suit'],
+                    ['status', 'Status'], ['suit', 'Suit'], ['jokerId', 'Joker ID'],
+                    ['signedDate', 'Date Signed'], ['version', 'Contract Version'],
                   ];
                   const rows = FIELD_LABELS
                     .filter(([k]) => (typeof p[k] === 'string' && p[k].trim()) || typeof p[k] === 'number')
@@ -1182,6 +1220,24 @@ export default function JestersHandScreen() {
                     ? rows
                     : <Text style={st.reportBody}>This item has no text content — see the images or files below.</Text>;
                 })()}
+
+                {openArch.type === 'contract_signed'
+                  && Array.isArray(openArch.payload.signaturePaths)
+                  && openArch.payload.signaturePaths.length > 0
+                  && Number(openArch.payload.sigWidth) > 0
+                  && Number(openArch.payload.sigHeight) > 0 ? (
+                    <>
+                      <Text style={st.reportSectionLabel}>SIGNATURE</Text>
+                      <View style={st.contractSignature}>
+                        <SignatureView
+                          paths={openArch.payload.signaturePaths}
+                          sourceWidth={Number(openArch.payload.sigWidth)}
+                          sourceHeight={Number(openArch.payload.sigHeight)}
+                          displayWidth={Math.min(appWindow().width - 64, 440)}
+                        />
+                      </View>
+                    </>
+                  ) : null}
 
                 {openArch.comments.length > 0 ? (
                   <>
@@ -1215,7 +1271,15 @@ export default function JestersHandScreen() {
                     purging them is Vault/Chamber curation, which the second
                     Hand does not hold. */}
                 <View style={st.reportActions}>
-                  {openArch.type === 'vault_entry' && !isVaultKeeper ? (
+                  {openArch.type === 'contract_signed' ? (
+                    <Text style={st.reportBody}>
+                      Signed contracts are permanent records and cannot be restored or deleted.
+                    </Text>
+                  ) : !isJester ? (
+                    <Text style={st.reportBody}>
+                      Only the Jester can restore or permanently delete archived items.
+                    </Text>
+                  ) : openArch.type === 'vault_entry' && !isVaultKeeper ? (
                     <Text style={st.reportBody}>
                       Only the Jester can restore or permanently delete archived Vault documents.
                     </Text>
@@ -1350,6 +1414,27 @@ const st = StyleSheet.create({
 
   folderWrap: { position: 'absolute', left: SIDE, right: SIDE, bottom: SIDE },
   tabsRow: { flexDirection: 'row', gap: 4 },
+  archiveTabs: {
+    flexDirection: 'row', gap: 8, marginBottom: 10,
+  },
+  archiveTab: {
+    flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 7,
+    borderWidth: 1, borderColor: 'rgba(200,165,60,0.22)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  archiveTabActive: {
+    borderColor: GOLD, backgroundColor: 'rgba(200,165,60,0.12)',
+  },
+  archiveTabText: {
+    color: 'rgba(237,224,196,0.45)', fontFamily: 'Cinzel_700Bold',
+    fontSize: 10, letterSpacing: 2,
+  },
+  archiveTabTextActive: { color: GOLD },
+  contractSignature: {
+    alignItems: 'center', overflow: 'hidden', borderRadius: 8, padding: 8,
+    borderWidth: 1, borderColor: 'rgba(200,165,60,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
   tab: {
     flex: 1, height: TAB_H,
     backgroundColor: '#080808',

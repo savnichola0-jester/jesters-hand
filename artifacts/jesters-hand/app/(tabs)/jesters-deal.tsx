@@ -23,7 +23,7 @@ export default function JestersDealScreen() {
   const topInset = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, isAdmin, jokerId } = useAuth();
+  const { user, isHandAdmin } = useAuth();
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
@@ -41,8 +41,6 @@ export default function JestersDealScreen() {
       </View>
     );
   }
-
-  const is00 = isAdmin && jokerId === '00-00';
 
   return (
     <View style={s.root}>
@@ -68,7 +66,7 @@ export default function JestersDealScreen() {
       </View>
 
       <View style={{ flex: 1, marginTop: navBottom }}>
-        {is00 ? <DealAdminView /> : <DealMemberView />}
+        {isHandAdmin ? <DealAdminView /> : <DealMemberView />}
       </View>
     </View>
   );

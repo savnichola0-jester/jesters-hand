@@ -393,7 +393,7 @@ async function seedTicket(commentIds = [], extra = {}) {
         senderUid: 'alice', text: 'hi', reactions: {}, createdAt: new Date(),
       });
     }
-    await setDoc(doc(db, 'users/admin'), { isAdmin: true });
+    await setDoc(doc(db, 'users/admin'), { isAdmin: true, jokerId: '00-00' });
   });
 }
 
@@ -560,7 +560,7 @@ async function seedConvWithMsg() {
     await setDoc(doc(db, 'conversations/conv1/messages/m1'), {
       senderUid: 'alice', text: 'hi', sentAt: new Date(), reactions: {},
     });
-    await setDoc(doc(db, 'users/admin'), { isAdmin: true });
+    await setDoc(doc(db, 'users/admin'), { isAdmin: true, jokerId: '00-00' });
   });
 }
 
@@ -664,7 +664,7 @@ await test('admin member can delete another member\'s message', async () => {
     await setDoc(doc(db, 'conversations/conv2/messages/m1'), {
       senderUid: 'alice', text: 'hi', sentAt: new Date(), reactions: {},
     });
-    await setDoc(doc(db, 'users/admin'), { isAdmin: true });
+    await setDoc(doc(db, 'users/admin'), { isAdmin: true, jokerId: '00-00' });
   });
   await assertSucceeds(deleteDoc(doc(admin(), 'conversations/conv2/messages/m1')));
 });
@@ -739,7 +739,7 @@ async function seedTable() {
     await setDoc(doc(db, 'tableMessages/verdict/messages/v1'), {
       senderUid: 'admin', text: 'verdict is in', sentAt: new Date(), reactions: {},
     });
-    await setDoc(doc(db, 'users/admin'), { isAdmin: true });
+    await setDoc(doc(db, 'users/admin'), { isAdmin: true, jokerId: '00-00' });
   });
 }
 
@@ -1451,7 +1451,7 @@ await test('signed-out users cannot read the vault at all', async () => {
   await assertFails(getDoc(doc(anon, 'vault/pub1')));
 });
 
-await test('second Hand (admin, vaultKeeper:false): no vault curation, recruit/verdict posting OK, cannot lift own limit', async () => {
+await test('second Hand has no Vault, Recruit, ticket-admin, or purge authority', async () => {
   await seedVault();
   await env.withSecurityRulesDisabled(async ctx => {
     await setDoc(doc(ctx.firestore(), 'users/deputy'), { isAdmin: true, vaultKeeper: false, jokerId: '01-54' });
@@ -1461,30 +1461,28 @@ await test('second Hand (admin, vaultKeeper:false): no vault curation, recruit/v
   await assertFails(setDoc(doc(deputy(), 'vault/dnew'), vaultEntry({ createdBy: 'deputy' })));
   await assertFails(updateDoc(doc(deputy(), 'vault/hid1'), { status: 'published' }));
   await assertFails(deleteDoc(doc(deputy(), 'vault/arc1')));
-  // …but still an admin reader.
-  await assertSucceeds(getDoc(doc(deputy(), 'vault/hid1')));
-  // Verdict/Recruit posting stays open.
-  await assertSucceeds(setDoc(doc(deputy(), 'recruitPosts/dpost'), {
+  // Hidden Vault records and Verdict/Recruit posting are full-admin only.
+  await assertFails(getDoc(doc(deputy(), 'vault/hid1')));
+  await assertFails(setDoc(doc(deputy(), 'recruitPosts/dpost'), {
     section: 'verdict', status: 'published', title: 'By the second Hand',
     design: '[]', createdBy: 'deputy', createdAt: new Date(), updatedAt: new Date(),
   }));
-  // Ticket suits (reading genre): any joker sets their own; admins can also
+  // Ticket suits (reading genre): any joker sets their own; only 00-00 can
   // mark another member's ticket alongside the admin portrait.
   await assertSucceeds(updateDoc(doc(alice(), 'users/alice'), { suit: 'Spade' }));
-  await assertSucceeds(updateDoc(doc(deputy(), 'users/alice'), { suit: 'Heart' }));
+  await assertFails(updateDoc(doc(deputy(), 'users/alice'), { suit: 'Heart' }));
   await assertSucceeds(updateDoc(doc(admin(), 'users/alice'), { suit: 'Club' }));
   // …but only the four real suits are accepted from the owner.
   await assertFails(updateDoc(doc(alice(), 'users/alice'), { suit: 'Joker' }));
   // The limit flag is pinned: the deputy cannot lift it themselves.
   await assertFails(updateDoc(doc(deputy(), 'users/deputy'), { vaultKeeper: true }));
-  // Archive purge side door is closed: vault-entry archive records survive
-  // the deputy, while other archive types remain purgeable by any admin.
+  // Archive access is read-only for the second Hand.
   await env.withSecurityRulesDisabled(async ctx => {
     await setDoc(doc(ctx.firestore(), 'archives/varch'), { type: 'vault_entry', title: 'Old doc' });
     await setDoc(doc(ctx.firestore(), 'archives/tarch'), { type: 'table_message', title: 'Old msg' });
   });
   await assertFails(deleteDoc(doc(deputy(), 'archives/varch')));
-  await assertSucceeds(deleteDoc(doc(deputy(), 'archives/tarch')));
+  await assertFails(deleteDoc(doc(deputy(), 'archives/tarch')));
   await assertSucceeds(deleteDoc(doc(admin(), 'archives/varch')));
   // The full-keeper admin is unaffected.
   await assertSucceeds(setDoc(doc(admin(), 'vault/knew'), vaultEntry()));
@@ -1924,7 +1922,7 @@ async function seedIssued() {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();
-    await setDoc(doc(db, 'users/admin'), { isAdmin: true });
+    await setDoc(doc(db, 'users/admin'), { isAdmin: true, jokerId: '00-00' });
     await setDoc(doc(db, 'issuedItems/alice/records/r1'), issuedRecord());
   });
 }
@@ -2023,7 +2021,7 @@ async function seedArmory() {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();
-    await setDoc(doc(db, 'users/admin'), { isAdmin: true });
+    await setDoc(doc(db, 'users/admin'), { isAdmin: true, jokerId: '00-00' });
     await setDoc(doc(db, 'armoryProducts/prod1'), armoryProduct());
   });
 }
@@ -2435,11 +2433,21 @@ async function seedAgreements() {
   });
 }
 
-const validAgreement = (uid, extra = {}) => ({
-  uid, jokerId: '07-54', name: 'Alice A.', signedDate: '08/04/2026',
-  signaturePaths: ['M1 1 L50 40 L90 10'], sigWidth: 320, sigHeight: 180,
-  version: 1, signedAt: serverTimestamp(), ...extra,
-});
+const validAgreement = (uid, extra = {}) => {
+  const version = extra.version ?? 1;
+  return {
+    uid, jokerId: '07-54', name: 'Alice A.', signedDate: '08/04/2026',
+    signaturePaths: ['M1 1 L50 40 L90 10'], sigWidth: 320, sigHeight: 180,
+    // This v1 snapshot is the UI's legacy-safe bundled-wording fallback.
+    version,
+    wording: {
+      version, heading: 'ORIGINAL',
+      sections: [{ title: 'CORE RULES', lines: ['Stay sharp.'] }],
+      acknowledgement: 'I first agree.',
+    },
+    signedAt: serverTimestamp(), ...extra,
+  };
+};
 
 await test('member signs own contract; forgeries rejected', async () => {
   await seedAgreements();
@@ -2451,6 +2459,12 @@ await test('member signs own contract; forgeries rejected', async () => {
   await assertFails(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice', { name: '' })));
   await assertFails(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice', { signedAt: new Date() })));
   await assertFails(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice', { sneaky: true })));
+  await assertFails(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice', {
+    wording: {
+      version: 2, heading: 'FORGED', sections: [{ title: 'NO', lines: ['No.'] }],
+      acknowledgement: 'Forged.',
+    },
+  })));
   // The real thing
   await assertSucceeds(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice')));
 });
@@ -2470,6 +2484,10 @@ await test('signed contract is immutable — no edits, overwrites, or deletes', 
 
 await test('re-sign allowed only at a strictly newer version, full payload', async () => {
   await seedAgreements();
+  const version2Wording = {
+    version: 2, heading: 'WELCOME', sections: [{ title: 'CORE RULES', lines: ['Be sharp.'] }],
+    acknowledgement: 'I agree.',
+  };
   await env.withSecurityRulesDisabled(async ctx => {
     await setDoc(doc(ctx.firestore(), 'agreements/alice'),
       { ...validAgreement('alice'), version: 1, signedAt: new Date() });
@@ -2489,11 +2507,18 @@ await test('re-sign allowed only at a strictly newer version, full payload', asy
     });
   });
   // Signing past the version in force → rejected (can't dodge future gates).
-  await assertFails(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice', { version: 3 })));
+  await assertFails(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice', {
+    version: 3,
+    wording: { ...version2Wording, version: 3 },
+  })));
   // Someone else can't re-sign for them, even with a valid payload.
-  await assertFails(setDoc(doc(mallory(), 'agreements/alice'), validAgreement('alice', { version: 2 })));
+  await assertFails(setDoc(doc(mallory(), 'agreements/alice'), validAgreement('alice', {
+    version: 2, wording: version2Wording,
+  })));
   // Full re-sign at exactly the current version succeeds.
-  await assertSucceeds(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice', { version: 2 })));
+  await assertSucceeds(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice', {
+    version: 2, wording: version2Wording,
+  })));
 });
 
 await test('contract wording: members read, only admin amends with +1 version bump', async () => {
@@ -2548,7 +2573,10 @@ await test('signing files an archives record for own uid only, with a real agree
     type: 'contract_signed', section: 'The Contract',
     title: `${ownerUid} signed the contract (v1)`, ownerUid, ownerJokerId: '07-54',
     restorePath: `agreements/${ownerUid}`,
-    payload: { name: 'Alice A.', version: 1 }, comments: [], storagePaths: [],
+    payload: {
+      name: 'Alice A.', version: 1,
+      wording: validAgreement(ownerUid).wording,
+    }, comments: [], storagePaths: [],
     createdAtOriginal: null, deletedAt: serverTimestamp(), deletedByUid: deleterDb, ...extra,
   });
   // Signing batch: agreement + archive record together succeeds.
@@ -2787,28 +2815,24 @@ async function seedDealAccess({ published = true, suspended = false } = {}) {
   });
 }
 
-await test('Deal creation is admin-only and strictly shaped', async () => {
+await test('Deal creation is dealer-only and strictly shaped', async () => {
   await seedDealAccess();
   await assertFails(setDoc(doc(alice(), 'deals/member-deal'), dealFields({ createdBy: 'alice' })));
   const deputy = env.authenticatedContext('deputy').firestore();
-  await assertFails(setDoc(doc(deputy, 'deals/deputy-deal'), dealFields({ createdBy: 'deputy' })));
+  await assertSucceeds(setDoc(doc(deputy, 'deals/deputy-deal'), dealFields({ createdBy: 'deputy' })));
   await assertFails(setDoc(doc(admin(), 'deals/bad-deal'), {
     ...dealFields(), privilege: true,
   }));
   await assertSucceeds(setDoc(doc(admin(), 'deals/admin-deal'), dealFields()));
 });
 
-await test('only admin publishes a Deal and members read published only', async () => {
+await test('only dealer seats publish a Deal and members read published only', async () => {
   await seedDealAccess({ published: false });
   await assertFails(updateDoc(doc(alice(), 'deals/d1'), {
     status: 'published', publishedAt: serverTimestamp(), expiresAt: new Date(Date.now() + 86_400_000),
   }));
   const deputy = env.authenticatedContext('deputy').firestore();
-  await assertFails(updateDoc(doc(deputy, 'deals/d1'), {
-    status: 'published', publishedAt: serverTimestamp(), expiresAt: new Date(Date.now() + 86_400_000),
-  }));
-  await assertFails(getDoc(doc(alice(), 'deals/d1')));
-  await assertSucceeds(updateDoc(doc(admin(), 'deals/d1'), {
+  await assertSucceeds(updateDoc(doc(deputy, 'deals/d1'), {
     status: 'published', publishedAt: serverTimestamp(), expiresAt: new Date(Date.now() + 86_400_000),
   }));
   await assertSucceeds(getDoc(doc(alice(), 'deals/d1')));
@@ -2842,7 +2866,7 @@ await test('activity is server-write-only, owner-readable, and suspension-aware'
   }));
 });
 
-await test('progress and stats are client read-only; owner and exact Jester reads work', async () => {
+await test('progress and stats are client read-only; owner and dealer reads work', async () => {
   await seedDealAccess();
   const completion = {
     uid: 'alice', taskCounts: { m1: 1 }, completedTaskIds: ['m1'],
@@ -2876,10 +2900,11 @@ await test('progress and stats are client read-only; owner and exact Jester read
   await assertSucceeds(getDocs(collection(admin(), 'dealMemberStats')));
   await assertSucceeds(getDocs(collection(admin(), 'dealCompletions/d1/members')));
   const deputy = env.authenticatedContext('deputy').firestore();
-  await assertFails(getDoc(doc(deputy, 'dealMemberStats/alice')));
+  await assertSucceeds(getDoc(doc(deputy, 'dealMemberStats/alice')));
+  await assertSucceeds(getDocs(collection(deputy, 'dealMemberStats')));
 });
 
-await test('only admin awards valid milestones; member reads own awards only', async () => {
+await test('only dealer seats award valid milestones; member reads own awards only', async () => {
   await seedDealAccess();
   const award = {
     uid: 'alice', milestone: 3, message: 'Three Deals. The table noticed.',
@@ -2889,7 +2914,7 @@ await test('only admin awards valid milestones; member reads own awards only', a
     ...award, awardedBy: 'alice',
   }));
   const deputy = env.authenticatedContext('deputy').firestore();
-  await assertFails(setDoc(doc(deputy, 'dealAwards/alice/items/deputy-award'), {
+  await assertSucceeds(setDoc(doc(deputy, 'dealAwards/alice/items/deputy-award'), {
     ...award, awardedBy: 'deputy',
   }));
   await assertSucceeds(setDoc(doc(admin(), 'dealAwards/alice/items/a1'), award));
@@ -2902,7 +2927,7 @@ await test('only admin awards valid milestones; member reads own awards only', a
   await assertSucceeds(getDocs(collection(admin(), 'dealAwards/alice/items')));
 });
 
-await test('SUITS state is server-write-only with owner and exact-00-00 reads', async () => {
+await test('SUITS state is server-write-only with owner and dealer reads', async () => {
   await seedDealAccess();
   await env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();
@@ -2916,6 +2941,7 @@ await test('SUITS state is server-write-only with owner and exact-00-00 reads', 
   await assertSucceeds(getDoc(doc(alice(), 'suitAssignments/alice')));
   await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), 'suitAssignments/alice')));
   await assertSucceeds(getDoc(doc(admin(), 'suitAssignments/alice')));
+  await assertSucceeds(getDoc(doc(env.authenticatedContext('deputy').firestore(), 'suitAssignments/alice')));
   await assertSucceeds(getDoc(doc(alice(), 'suitConfig/current')));
   await assertFails(setDoc(doc(alice(), 'suitAssignments/alice'), {
     pips: ['heart'], streaks: { heart: 99 }, completed: {},

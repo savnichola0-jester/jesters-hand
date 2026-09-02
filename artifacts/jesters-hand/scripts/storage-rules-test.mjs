@@ -25,9 +25,8 @@ await env.clearFirestore();
 await env.clearStorage();
 await env.withSecurityRulesDisabled(async ctx => {
   const db = ctx.firestore();
-  await setDoc(doc(db, 'users/admin'), { isAdmin: true });
-  // The second Hand: full admin EXCEPT Vault/Chamber document curation.
-  await setDoc(doc(db, 'users/deputy'), { isAdmin: true, vaultKeeper: false });
+  await setDoc(doc(db, 'users/admin'), { isAdmin: true, jokerId: '00-00' });
+  await setDoc(doc(db, 'users/deputy'), { isAdmin: true, jokerId: '01-54' });
   await setDoc(doc(db, 'users/alice'), { isAdmin: false });
   await setDoc(doc(db, 'users/bob'), { isAdmin: false });
   await setDoc(doc(db, 'vault/pub1'), {
@@ -124,14 +123,13 @@ await test('admin can write vault file and cover', async () => {
   await assertSucceeds(uploadBytes(ref(admin(), 'vault/new1/cover'), bytes));
 });
 
-await test('second Hand (vaultKeeper:false) cannot write or delete vault files but writes recruit photos', async () => {
+await test('second Hand cannot read hidden, curate vault, or write recruit photos', async () => {
   await assertFails(uploadBytes(ref(deputy(), 'vault/newd/file'), bytes));
   await assertFails(uploadBytes(ref(deputy(), 'vault/pub1/cover'), bytes));
   await assertFails(deleteObject(ref(deputy(), 'vault/arc1/file')));
-  // Reads still work like any admin.
-  await assertSucceeds(getBytes(ref(deputy(), 'vault/hid1/file')));
-  // Verdict/Recruit photo uploads remain allowed.
-  await assertSucceeds(uploadBytes(ref(deputy(), 'recruitPosts/rdep/img_dep1'), bytes));
+  // In Vault/Chamber this seat has ordinary member read access only.
+  await assertFails(getBytes(ref(deputy(), 'vault/hid1/file')));
+  await assertFails(uploadBytes(ref(deputy(), 'recruitPosts/rdep/img_dep1'), bytes));
 });
 
 await test('member cannot write vault files (even for published entries)', async () => {

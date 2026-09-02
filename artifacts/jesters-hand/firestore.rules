@@ -3,14 +3,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId == '00-00';
     }
 
     function isDealAdmin() {
-      // Both server-provisioned identity fields must agree. Other admin roles
-      // never inherit the permanent 00-00 seat's authority.
-      return isAdmin()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId == '00-00';
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId in ['00-00', '01-54'];
+    }
+
+    function isArchiveViewer() {
+      // Archives are shared only by the two explicitly provisioned Hand
+      // seats. A stray isAdmin flag never grants access to deleted content or
+      // signed contracts.
+      return isDealAdmin();
     }
 
     // Vault curation tier: the second Hand (01-54) is a full admin EXCEPT
@@ -18,8 +26,7 @@ service cloud.firestore {
     // their user doc carries vaultKeeper: false (set only out-of-band; the
     // flag is pinned like isAdmin in the users rules below).
     function isKeeper() {
-      return isAdmin()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('vaultKeeper', true) == true;
+      return isAdmin();
     }
 
     // Suspension: a suspended member keeps a valid ID token for up to an
@@ -180,7 +187,7 @@ service cloud.firestore {
 
     match /contract/{docId} {
       allow read: if activeUser();
-      allow create: if activeUser() && isDealAdmin()
+      allow create: if activeUser() && isAdmin()
         && docId == 'current'
         && request.resource.data.keys().hasOnly(
              ['version', 'heading', 'sections', 'acknowledgement', 'previous',
@@ -200,7 +207,7 @@ service cloud.firestore {
         && request.resource.data.previous.version
            == request.resource.data.version - 1
         && request.resource.data.updatedAt == request.time;
-      allow update: if activeUser() && isDealAdmin()
+      allow update: if activeUser() && isAdmin()
         && request.resource.data.keys().hasOnly(
              ['version', 'heading', 'sections', 'acknowledgement', 'previous',
               'updatedAt'])
@@ -234,11 +241,63 @@ service cloud.firestore {
     }
 
     // Valid signed-agreement payload (first sign and re-sign share it).
+    function validSignedWording(wording) {
+      return wording is map
+        && wording.keys().hasOnly(['version', 'heading', 'sections', 'acknowledgement'])
+        && wording.keys().hasAll(['version', 'heading', 'sections', 'acknowledgement'])
+        && wording.version is int
+        && wording.version >= 1
+        && wording.heading is string
+        && wording.heading.size() > 0
+        && wording.heading.size() <= 500
+        && wording.sections is list
+        && wording.sections.size() > 0
+        && wording.sections.size() <= 25
+        && wording.sections[0] is map
+        && wording.sections[0].keys().hasOnly(['title', 'lines'])
+        && wording.sections[0].keys().hasAll(['title', 'lines'])
+        && wording.sections[0].title is string
+        && wording.sections[0].title.size() > 0
+        && wording.sections[0].title.size() <= 250
+        && wording.sections[0].lines is list
+        && wording.sections[0].lines.size() > 0
+        && wording.sections[0].lines.size() <= 100
+        && wording.sections[0].lines[0] is string
+        && wording.sections[0].lines[0].size() > 0
+        && wording.sections[0].lines[0].size() <= 5000
+        && wording.acknowledgement is string
+        && wording.acknowledgement.size() > 0
+        && wording.acknowledgement.size() <= 5000;
+    }
+
+    function wordingIsCurrent(wording) {
+      return wording.version == currentContractVersion()
+        && (
+          !exists(/databases/$(database)/documents/contract/current)
+          || (
+            wording.heading
+              == get(/databases/$(database)/documents/contract/current).data.heading
+            && wording.sections
+              == get(/databases/$(database)/documents/contract/current).data.sections
+            && wording.acknowledgement
+              == get(/databases/$(database)/documents/contract/current).data.acknowledgement
+          )
+        );
+    }
+
     function validAgreementPayload(userId) {
       return request.resource.data.uid == userId
+        // 00-00 never signs. This authoritative profile check cannot be
+        // bypassed by typing a different Joker ID into the client form.
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId != '00-00'
+        && request.resource.data.jokerId
+           == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId
         && request.resource.data.keys().hasOnly(
              ['uid', 'jokerId', 'name', 'signedDate', 'signaturePaths',
-              'sigWidth', 'sigHeight', 'version', 'signedAt'])
+               'sigWidth', 'sigHeight', 'version', 'wording', 'signedAt'])
+        && request.resource.data.keys().hasAll(
+              ['uid', 'jokerId', 'name', 'signedDate', 'signaturePaths',
+               'sigWidth', 'sigHeight', 'version', 'wording', 'signedAt'])
         && request.resource.data.jokerId is string
         && request.resource.data.jokerId.size() > 0
         && request.resource.data.name is string
@@ -256,7 +315,9 @@ service cloud.firestore {
         && request.resource.data.version is int
         // A signature only counts for the wording in force right now — a
         // member can't pre-sign a future version to dodge the re-sign gate.
-        && request.resource.data.version == currentContractVersion()
+        && validSignedWording(request.resource.data.wording)
+        && request.resource.data.wording.version == request.resource.data.version
+        && wordingIsCurrent(request.resource.data.wording)
         && request.resource.data.signedAt == request.time;
     }
 
@@ -755,12 +816,12 @@ service cloud.firestore {
     // Immutable cross-feature audit streams. Only the permanent 00-00 Jester
     // may inspect them; all writes come from the authenticated API server.
     match /activityEvents/{eventId} {
-      allow read: if activeUser() && isDealAdmin();
+      allow read: if activeUser() && isAdmin();
       allow create, update, delete: if false;
     }
 
     match /investigationEvents/{eventId} {
-      allow read: if activeUser() && isDealAdmin();
+      allow read: if activeUser() && isAdmin();
       allow create, update, delete: if false;
     }
 
@@ -1333,11 +1394,11 @@ service cloud.firestore {
     // Update deliberately uses request.auth (not activeUser): a member being
     // force-signed-out for suspension must still be able to close their
     // session (same carve-out as push-token cleanup).
-    // Archives — soft-deleted content, admin-only. Whoever performs a delete
-    // (owner or admin) files the copy; only 00-00 can ever read, restore, or
-    // permanently purge it. Records are immutable once filed.
+    // Archives — soft-deleted content plus the signed-contract ledger.
+    // Exactly the provisioned 00-00 and 01-54 Hand seats may read both tabs;
+    // only 00-00 may restore or permanently purge. Records are immutable.
     match /archives/{archiveId} {
-      allow read: if activeUser() && isAdmin();
+      allow read: if activeUser() && isArchiveViewer();
       allow create: if activeUser()
         && request.resource.data.keys().hasOnly(
              ['type', 'section', 'title', 'ownerUid', 'ownerJokerId',
@@ -1356,7 +1417,12 @@ service cloud.firestore {
           // uid, and only alongside a real signed agreement.
           || (request.resource.data.type == 'contract_signed'
               && request.resource.data.ownerUid == request.auth.uid
-              && existsAfter(/databases/$(database)/documents/agreements/$(request.auth.uid)))
+               && existsAfter(/databases/$(database)/documents/agreements/$(request.auth.uid))
+               // Keep the Archives contract ledger tied to the same immutable
+               // snapshot as the agreement filed in this atomic batch.
+               && request.resource.data.payload is map
+               && request.resource.data.payload.get('wording', null)
+                  == getAfter(/databases/$(database)/documents/agreements/$(request.auth.uid)).data.wording)
         );
       allow update: if false;
       // Purging a vault-entry archive destroys the only recovery record for
