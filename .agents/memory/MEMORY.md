@@ -32,3 +32,4 @@
 - [Native install QR](native-install-qr.md) — engraving QR targets a permanent owned-domain redirect, never a temporary APK or legacy web-app URL
 - [Ticket admin-card parity](ticket-admin-card-parity.md) — the personal Ticket and Hand member Ticket are separate surfaces; 00-00’s admin-card control must work on both
 - [Whole-app seat temperature](seat-temperature.md) — derive scores from canonical stored actions; never trust client-reported activity; 01-54 gets temperature only
+- [Social wall integrity](social-wall-integrity.md) — new themed walls must use own-UID marks, atomic comment counters, archive-safe children, and wipe-safe cleanup
