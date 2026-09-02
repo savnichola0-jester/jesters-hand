@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "920657050672",
+    "firebase_url": "https://jester-s-hand-3ee1d-default-rtdb.firebaseio.com",
+    "project_id": "jester-s-hand-3ee1d",
+    "storage_bucket": "jester-s-hand-3ee1d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:920657050672:android:a3d62e4dbe2670966f81f5",
+        "android_client_info": {
+          "package_name": "com.jestershand.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuphNXqXrHikc6KZ7BQCDTf--BG7w47mY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

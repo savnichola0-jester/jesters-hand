@@ -25,6 +25,7 @@
     },
     "android": {
       "package": "com.jestershand.app",
+      "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
