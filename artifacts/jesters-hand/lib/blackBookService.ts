@@ -6,7 +6,7 @@
 import {
   collection, doc, addDoc, updateDoc, deleteDoc, getDoc,
   onSnapshot, query, orderBy, where, serverTimestamp, deleteField,
-  getCountFromServer,
+  getCountFromServer, getDocs, writeBatch,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { broadcastToActiveMembers, writeNotification } from './notificationService';
@@ -39,6 +39,8 @@ export interface BlackBookEntry {
   createdAt?: any;
   /** uid of the writer (owner, or admin when awarding royals). */
   createdBy?: string;
+  reactions: Record<string, string[]>;
+  commentCount: number;
 }
 
 const entriesCol = (uid: string) => collection(db, 'blackBook', uid, 'entries');
@@ -51,7 +53,15 @@ export function listenBlackBookEntries(
 ): () => void {
   const q = query(entriesCol(uid), orderBy('createdAt', 'desc'));
   return onSnapshot(q, snap => {
-    const all = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<BlackBookEntry, 'id'>) }));
+    const all = snap.docs.map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        ...data,
+        reactions: data.reactions ?? {},
+        commentCount: data.commentCount ?? 0,
+      } as BlackBookEntry;
+    });
     cb(all.filter(e => e.tab === tab));
   }, () => cb([]));
 }
@@ -124,6 +134,8 @@ export async function addBlackBookEntry(
     tab,
     ...cleanInput(input, false),
     createdBy: writerUid,
+    reactions: {},
+    commentCount: 0,
     createdAt: serverTimestamp(),
   });
   // The entry is already durable; Deal bookkeeping must never block it.
@@ -166,7 +178,7 @@ export async function deleteBlackBookEntry(ownerUid: string, entryId: string): P
   const snap = await getDoc(eRef);
   if (snap.exists()) {
     const data = snap.data() as any;
-    const { archiveItem } = await import('./archiveService');
+    const { archiveItem, snapshotComments } = await import('./archiveService');
     await archiveItem({
       type: 'black_book',
       section: 'The Black Book',
@@ -175,9 +187,18 @@ export async function deleteBlackBookEntry(ownerUid: string, entryId: string): P
       deletedByUid: auth.currentUser?.uid ?? '',
       restorePath: `blackBook/${ownerUid}/entries/${entryId}`,
       payload: data,
+      comments: await snapshotComments(`blackBook/${ownerUid}/entries/${entryId}/comments`),
     });
   }
   await deleteDoc(eRef);
+  try {
+    const snap = await getDocs(collection(db, 'blackBook', ownerUid, 'entries', entryId, 'comments'));
+    for (let i = 0; i < snap.docs.length; i += 400) {
+      const batch = writeBatch(db);
+      snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+      await batch.commit().catch(() => {});
+    }
+  } catch { /* parent is already gone */ }
 }
 
 export function formatBlackBookTimestamp(ts: any): string {

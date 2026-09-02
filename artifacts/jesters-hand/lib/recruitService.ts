@@ -8,7 +8,7 @@
 
 import {
   collection, doc, onSnapshot, query, where,
-  setDoc, updateDoc, deleteDoc, getDoc, serverTimestamp, Timestamp,
+  setDoc, updateDoc, deleteDoc, getDoc, getDocs, serverTimestamp, Timestamp, writeBatch,
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
 import { db, storage, auth } from './firebase';
@@ -17,6 +17,7 @@ import { broadcastToActiveMembers } from './notificationService';
 
 export type RecruitSection = 'recruit' | 'verdict';
 export type RecruitStatus = 'draft' | 'published';
+export type RecruitRsvp = 'going' | 'maybe' | 'not_going';
 
 // ── Design elements ───────────────────────────────────────────────────────────
 // Coordinates are in template units: the design space is 1024 × 1536 (the
@@ -76,6 +77,8 @@ export interface RecruitPost {
   createdBy: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  reactions: Record<string, string[]>;
+  commentCount: number;
 }
 
 const num = (v: unknown, fallback: number, min: number, max: number): number =>
@@ -145,7 +148,15 @@ export function listenRecruitSection(
     ? query(base, where('section', '==', section))
     : query(base, where('section', '==', section), where('status', '==', 'published'));
   return onSnapshot(q, snap => {
-    const posts = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<RecruitPost, 'id'>) }));
+    const posts = snap.docs.map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        ...data,
+        reactions: data.reactions ?? {},
+        commentCount: data.commentCount ?? 0,
+      } as RecruitPost;
+    });
     posts.sort((a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0));
     onPosts(posts);
   }, e => onError?.(e));
@@ -176,6 +187,8 @@ export async function saveRecruitPost(
     title: title.trim() || (section === 'recruit' ? 'Untitled Recruit' : 'Untitled Verdict'),
     design: JSON.stringify(clean),
     createdBy: uid,
+    reactions: {},
+    commentCount: 0,
     updatedAt: serverTimestamp(),
     ...(isNew ? { createdAt: serverTimestamp() } : {}),
   };
@@ -216,7 +229,7 @@ export async function deleteRecruitPost(post: RecruitPost): Promise<void> {
   const snap = await getDoc(doc(db, 'recruitPosts', post.id));
   if (snap.exists()) {
     const data = snap.data() as any;
-    const { archiveItem } = await import('./archiveService');
+    const { archiveItem, snapshotComments } = await import('./archiveService');
     await archiveItem({
       type: 'recruit_post',
       section: 'Recruit',
@@ -225,9 +238,40 @@ export async function deleteRecruitPost(post: RecruitPost): Promise<void> {
       deletedByUid: auth.currentUser?.uid ?? '',
       restorePath: `recruitPosts/${post.id}`,
       payload: data,
+      comments: await snapshotComments(`recruitPosts/${post.id}/comments`),
+      rsvps: await snapshotComments(`recruitPosts/${post.id}/rsvps`),
     });
   }
   await deleteDoc(doc(db, 'recruitPosts', post.id));
+  for (const sub of ['comments', 'rsvps']) {
+    try {
+      const snap = await getDocs(collection(db, 'recruitPosts', post.id, sub));
+      for (let i = 0; i < snap.docs.length; i += 400) {
+        const batch = writeBatch(db);
+        snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+        await batch.commit().catch(() => {});
+      }
+    } catch { /* parent is already gone */ }
+  }
+}
+
+export function listenRecruitRsvp(
+  postId: string,
+  uid: string,
+  cb: (value: RecruitRsvp | null) => void,
+): () => void {
+  return onSnapshot(doc(db, 'recruitPosts', postId, 'rsvps', uid), snap => {
+    const value = snap.data()?.status;
+    cb(value === 'going' || value === 'maybe' || value === 'not_going' ? value : null);
+  }, () => cb(null));
+}
+
+export async function setRecruitRsvp(postId: string, uid: string, status: RecruitRsvp): Promise<void> {
+  await setDoc(doc(db, 'recruitPosts', postId, 'rsvps', uid), {
+    uid,
+    status,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 // ── Photos ────────────────────────────────────────────────────────────────────

@@ -456,6 +456,13 @@ export async function wipeUser(
 
   // 1. Per-user subtrees.
   await deleteOwnedSubtree(projectId, token, `notifications/${uid}`, "items");
+  // Black Book entries now carry social comments. Firestore never cascades
+  // subcollections, so remove each thread before deleting the member's book.
+  const ownBlackBookEntries = await listDocs(projectId, token, `blackBook/${uid}/entries`);
+  for (const entry of ownBlackBookEntries) {
+    const comments = await listDocs(projectId, token, `${relPath(entry.name)}/comments`);
+    await deleteByName(projectId, token, comments.map((c) => c.name));
+  }
   await deleteOwnedSubtree(projectId, token, `blackBook/${uid}`, "entries");
   await deleteOwnedSubtree(projectId, token, `issuedItems/${uid}`, "records");
   await deleteOwnedSubtree(projectId, token, `sessions/${uid}`, "logs");
@@ -512,6 +519,31 @@ export async function wipeUser(
   for (const board of ANTE_BOARDS) {
     await sweepPostsWithComments(projectId, token, `antePosts/${board}/posts`, "senderUid", uid);
   }
+
+  // 3a. Social traces in every member's Black Book. The wiped member's own
+  // book is already gone; this removes comments/marks they left in other books.
+  const blackBooks = await listDocs(projectId, token, "blackBook");
+  for (const book of blackBooks) {
+    const path = relPath(book.name);
+    if (path === `blackBook/${uid}`) continue;
+    await sweepPostsWithComments(
+      projectId, token, `${path}/entries`, "createdBy", uid, "comments", "senderUid",
+    );
+  }
+
+  // 3b. Recruit/Verdict comments, marks, and Recruit RSVP choices.
+  const recruitPosts = await listDocs(projectId, token, "recruitPosts");
+  for (const post of recruitPosts) {
+    const path = relPath(post.name);
+    const rsvps = await listDocs(projectId, token, `${path}/rsvps`);
+    const remove = post.fields && str(post.fields["createdBy"]) === uid
+      ? rsvps
+      : rsvps.filter((r) => r.fields && str(r.fields["uid"]) === uid);
+    await deleteByName(projectId, token, remove.map((r) => r.name));
+  }
+  await sweepPostsWithComments(
+    projectId, token, "recruitPosts", "createdBy", uid, "comments", "senderUid",
+  );
 
   // 4. Table channels — delete own messages, scrub reactions elsewhere.
   for (const ch of await listTableChannelIds(projectId, token)) {

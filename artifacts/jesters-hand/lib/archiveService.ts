@@ -59,6 +59,7 @@ export interface ArchiveRecord {
   comments: ArchivedComment[];   // child comments (posts/tickets/vault)
   reviews: ArchivedComment[];    // child reviews (vault entries)
   marks: ArchivedComment[];      // child per-user emoji marks (vault entries)
+  rsvps: ArchivedComment[];      // child attendance choices (Recruit posts)
   storagePaths: string[];        // files kept alive until permanent delete
   createdAtOriginal: Timestamp | null;
   deletedAt: Timestamp | null;
@@ -114,6 +115,7 @@ export async function archiveItem(input: {
   comments?: ArchivedComment[];
   reviews?: ArchivedComment[];
   marks?: ArchivedComment[];
+  rsvps?: ArchivedComment[];
 }): Promise<void> {
   const ownerJokerId = await lookupJokerId(input.ownerUid);
   await addDoc(collection(db, 'archives'), {
@@ -127,6 +129,7 @@ export async function archiveItem(input: {
     comments: input.comments ?? [],
     reviews: input.reviews ?? [],
     marks: input.marks ?? [],
+    rsvps: input.rsvps ?? [],
     storagePaths: extractStoragePaths({ p: input.payload, c: input.comments ?? [] }),
     createdAtOriginal: (input.payload as any).createdAt ?? null,
     deletedAt: serverTimestamp(),
@@ -165,6 +168,7 @@ export function listenArchives(
         payload: data.payload ?? {}, comments: data.comments ?? [],
         reviews: data.reviews ?? [],
         marks: data.marks ?? [],
+        rsvps: data.rsvps ?? [],
         storagePaths: data.storagePaths ?? [],
         createdAtOriginal: data.createdAtOriginal ?? null,
         deletedAt: data.deletedAt ?? null,
@@ -226,6 +230,9 @@ export async function restoreArchive(rec: ArchiveRecord): Promise<void> {
     }
     for (const m of rec.marks) {
       batch.set(doc(db, `${rec.restorePath}/marks/${m.id}`), m.fields);
+    }
+    for (const rsvp of rec.rsvps ?? []) {
+      batch.set(doc(db, `${rec.restorePath}/rsvps/${rsvp.id}`), rsvp.fields);
     }
     batch.delete(doc(db, 'archives', rec.id));
     await batch.commit();

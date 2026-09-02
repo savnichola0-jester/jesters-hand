@@ -19,6 +19,7 @@ import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { MARBLE_TEXT_SHADOW } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
+import SocialPostSheet from '@/components/SocialPostSheet';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -184,7 +185,7 @@ export default function StreetArtScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, jokerId } = useAuth();
 
   // ── Peek mode: viewing another member's book (read-only) ──
   const params = useLocalSearchParams<{ uid?: string; label?: string; tab?: string }>();
@@ -245,6 +246,7 @@ export default function StreetArtScreen() {
   // ── Entries ──
   const [entries, setEntries] = useState<BlackBookEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openEntryId, setOpenEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!bookUid) { setEntries([]); setLoading(false); return; }
@@ -255,6 +257,7 @@ export default function StreetArtScreen() {
     });
     return unsub;
   }, [bookUid, tabId]);
+  const openEntry = entries.find(e => e.id === openEntryId) ?? null;
 
   const switchTab = useCallback((id: BlackBookTab) => {
     if (id === tabId) return;
@@ -340,7 +343,7 @@ export default function StreetArtScreen() {
 
   // ── Renderers ──
   const renderEntry = ({ item }: { item: BlackBookEntry }) => (
-    <View style={s.entryCard}>
+    <TouchableOpacity style={s.entryCard} activeOpacity={0.82} onPress={() => setOpenEntryId(item.id)}>
       <View style={s.entryHead}>
         <Text style={s.entryTitle} numberOfLines={2}>{item.title}</Text>
         {canEdit && (
@@ -381,7 +384,13 @@ export default function StreetArtScreen() {
       ) : null}
       {item.notes ? <Text style={s.entryNotes}>{item.notes}</Text> : null}
       <Text style={s.entryDateStamp}>{formatBlackBookTimestamp(item.createdAt)}</Text>
-    </View>
+      <View style={s.socialSummary}>
+        <Text style={s.socialSummaryText}>
+          {Object.values(item.reactions).reduce((n, uids) => n + uids.length, 0)} MARKS
+        </Text>
+        <Text style={s.socialSummaryText}>{item.commentCount} COMMENTS</Text>
+      </View>
+    </TouchableOpacity>
   );
 
   const memberLabel = awardUid ? members.find(m => m.uid === awardUid)?.label : null;
@@ -614,6 +623,29 @@ export default function StreetArtScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      {openEntry && user && bookUid ? (
+        <SocialPostSheet
+          visible
+          onClose={() => setOpenEntryId(null)}
+          title={openEntry.title}
+          parentPath={`blackBook/${bookUid}/entries/${openEntry.id}`}
+          currentUid={user.uid}
+          currentJokerId={jokerId ?? ''}
+          reactions={openEntry.reactions}
+          commentCount={openEntry.commentCount}
+        >
+          <Text style={s.entryTitle}>{openEntry.title}</Text>
+          {(openEntry.date || openEntry.location) ? (
+            <Text style={s.entryMeta}>{[openEntry.date, openEntry.location].filter(Boolean).join('  ·  ')}</Text>
+          ) : null}
+          {openEntry.mode ? <Text style={s.entryMeta}>{openEntry.mode}</Text> : null}
+          {openEntry.price ? <Text style={s.entryMeta}>{openEntry.price}</Text> : null}
+          {openEntry.progress !== undefined ? <Text style={s.entryMeta}>{openEntry.progress}% COMPLETE</Text> : null}
+          {openEntry.suit ? <Text style={s.entryMeta}>{AWARD_SUIT_LABELS[openEntry.suit] ?? openEntry.suit}</Text> : null}
+          {openEntry.notes ? <Text style={s.entryNotes}>{openEntry.notes}</Text> : null}
+          <Text style={s.entryDateStamp}>{formatBlackBookTimestamp(openEntry.createdAt)}</Text>
+        </SocialPostSheet>
+      ) : null}
     </View>
   );
 }
@@ -702,6 +734,8 @@ const s = StyleSheet.create({
   entryMeta: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Cinzel_400Regular', fontSize: 11, marginTop: 5 },
   entryNotes: { color: 'rgba(237,224,196,0.85)', fontFamily: 'Cinzel_400Regular', fontSize: 12, lineHeight: 18, marginTop: 6 },
   entryDateStamp: { color: 'rgba(237,224,196,0.25)', fontFamily: 'Cinzel_400Regular', fontSize: 9, marginTop: 8 },
+  socialSummary: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  socialSummaryText: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 9, letterSpacing: 0.8 },
 
   modePill: {
     alignSelf: 'flex-start', marginTop: 6,

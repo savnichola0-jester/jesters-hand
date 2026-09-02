@@ -902,37 +902,69 @@ service cloud.firestore {
       allow create: if (activeUser() && isAdmin())
         || activeUser()
         && validBlackBookEntry()
+        && request.resource.data.get('reactions', {}).size() == 0
+        && request.resource.data.get('commentCount', 0) == 0
         && (
           // Owner logs their own recruit/uniform/turn entries.
           (request.auth.uid == userId && request.resource.data.tab != 'royals')
           // Admin awards royals to anyone, and may write any tab in their own book.
           || (isAdmin() && (request.resource.data.tab == 'royals' || request.auth.uid == userId))
         );
-      // tab is immutable after create; same permission split as create,
-      // judged on the EXISTING entry's tab. createdBy stays honest via
-      // validBlackBookEntry (updates may not reattribute the entry).
       allow update: if activeUser()
         && request.resource.data.tab == resource.data.tab
         && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.title is string
-        && request.resource.data.title.size() > 0
-        && request.resource.data.title.size() <= 200
-        && (!('date' in request.resource.data)     || (request.resource.data.date is string && request.resource.data.date.size() <= 200))
-        && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 200))
-        && (!('mode' in request.resource.data)     || (request.resource.data.mode is string && request.resource.data.mode.size() <= 40))
-        && (!('price' in request.resource.data)    || (request.resource.data.price is string && request.resource.data.price.size() <= 60))
-        && (!('notes' in request.resource.data)    || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000))
-        && (!('progress' in request.resource.data) || (request.resource.data.progress is number && request.resource.data.progress >= 0 && request.resource.data.progress <= 100))
-        && (!('suit' in request.resource.data)     || request.resource.data.suit in ['Spade', 'Diamond', 'Heart', 'Club'])
         && (
-          (request.auth.uid == userId && resource.data.tab != 'royals')
-          || (isAdmin() && (resource.data.tab == 'royals' || request.auth.uid == userId))
-        );
+          (
+            (
+              (request.auth.uid == userId && resource.data.tab != 'royals')
+              || (isAdmin() && (resource.data.tab == 'royals' || request.auth.uid == userId))
+            )
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['title', 'date', 'location', 'mode', 'price', 'notes', 'progress', 'suit'])
+            && request.resource.data.title is string
+            && request.resource.data.title.size() > 0
+            && request.resource.data.title.size() <= 200
+          )
+          || (
+            request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['reactions', 'commentCount', 'countedCommentId'])
+            && (
+              !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['commentCount', 'countedCommentId'])
+              || (
+                request.resource.data.commentCount == resource.data.get('commentCount', 0) + 1
+                && request.resource.data.countedCommentId is string
+                && !exists(/databases/$(database)/documents/blackBook/$(userId)/entries/$(entryId)/comments/$(request.resource.data.countedCommentId))
+                && existsAfter(/databases/$(database)/documents/blackBook/$(userId)/entries/$(entryId)/comments/$(request.resource.data.countedCommentId))
+              )
+            )
+          )
+        )
+        && reactionsUntouchedOrOwnToggle();
       allow delete: if activeUser()
         && (
           (request.auth.uid == userId && resource.data.tab != 'royals')
           || (isAdmin() && (resource.data.tab == 'royals' || request.auth.uid == userId))
         );
+
+      match /comments/{commentId} {
+        allow read: if activeUser();
+        allow create: if (activeUser() && isAdmin())
+          || activeUser()
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.senderJokerId is string
+          && request.resource.data.senderJokerId.size() <= 40
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.get('reactions', {}).size() == 0
+          && getAfter(/databases/$(database)/documents/blackBook/$(userId)/entries/$(entryId)).data.commentCount
+             == get(/databases/$(database)/documents/blackBook/$(userId)/entries/$(entryId)).data.get('commentCount', 0) + 1;
+        allow update: if activeUser()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          && reactionsDeltaOk();
+        allow delete: if false;
+      }
     }
 
     // Table channels — any authenticated user can read messages and create new ones,
@@ -1313,12 +1345,74 @@ service cloud.firestore {
         && (isAdmin() || resource.data.status == 'published');
       allow create: if activeUser() && isAdmin()
         && validRecruitPost(request.resource.data)
-        && request.resource.data.createdBy == request.auth.uid;
-      allow update: if activeUser() && isAdmin()
-        && validRecruitPost(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.get('reactions', {}).size() == 0
+        && request.resource.data.get('commentCount', 0) == 0;
+      allow update: if activeUser()
         && request.resource.data.section == resource.data.section
-        && request.resource.data.createdBy == resource.data.createdBy;
+        && request.resource.data.createdBy == resource.data.createdBy
+        && (
+          (
+            isAdmin()
+            && validRecruitPost(request.resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['status', 'title', 'design', 'updatedAt'])
+          )
+          || (
+            resource.data.status == 'published'
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['reactions', 'commentCount', 'countedCommentId'])
+            && (
+              !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['commentCount', 'countedCommentId'])
+              || (
+                request.resource.data.commentCount == resource.data.get('commentCount', 0) + 1
+                && request.resource.data.countedCommentId is string
+                && !exists(/databases/$(database)/documents/recruitPosts/$(postId)/comments/$(request.resource.data.countedCommentId))
+                && existsAfter(/databases/$(database)/documents/recruitPosts/$(postId)/comments/$(request.resource.data.countedCommentId))
+              )
+            )
+          )
+        )
+        && reactionsUntouchedOrOwnToggle();
       allow delete: if activeUser() && isAdmin();
+
+      match /comments/{commentId} {
+        allow read: if activeUser()
+          && (isAdmin() || get(/databases/$(database)/documents/recruitPosts/$(postId)).data.status == 'published');
+        allow create: if (activeUser() && isAdmin())
+          || activeUser()
+          && get(/databases/$(database)/documents/recruitPosts/$(postId)).data.status == 'published'
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.senderJokerId is string
+          && request.resource.data.senderJokerId.size() <= 40
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.get('reactions', {}).size() == 0
+          && getAfter(/databases/$(database)/documents/recruitPosts/$(postId)).data.commentCount
+             == get(/databases/$(database)/documents/recruitPosts/$(postId)).data.get('commentCount', 0) + 1;
+        allow update: if activeUser()
+          && get(/databases/$(database)/documents/recruitPosts/$(postId)).data.status == 'published'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          && reactionsDeltaOk();
+        allow delete: if false;
+      }
+
+      match /rsvps/{userId} {
+        allow read: if activeUser()
+          && (isAdmin() || get(/databases/$(database)/documents/recruitPosts/$(postId)).data.status == 'published');
+        allow create, update: if (activeUser() && isAdmin())
+          || activeUser()
+          && request.auth.uid == userId
+          && get(/databases/$(database)/documents/recruitPosts/$(postId)).data.section == 'recruit'
+          && get(/databases/$(database)/documents/recruitPosts/$(postId)).data.status == 'published'
+          && request.resource.data.keys().hasOnly(['uid', 'status', 'updatedAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.status in ['going', 'maybe', 'not_going']
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if activeUser() && (request.auth.uid == userId || isAdmin());
+      }
     }
 
     // Issue Locker — per-member record of everything officially issued, at
@@ -1402,7 +1496,7 @@ service cloud.firestore {
       allow create: if activeUser()
         && request.resource.data.keys().hasOnly(
              ['type', 'section', 'title', 'ownerUid', 'ownerJokerId',
-               'restorePath', 'payload', 'comments', 'reviews', 'marks', 'storagePaths',
+               'restorePath', 'payload', 'comments', 'reviews', 'marks', 'rsvps', 'storagePaths',
               'createdAtOriginal', 'deletedAt', 'deletedByUid'])
         && request.resource.data.deletedByUid == request.auth.uid
         && request.resource.data.deletedAt == request.time

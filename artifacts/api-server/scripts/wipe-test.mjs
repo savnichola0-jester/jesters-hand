@@ -107,7 +107,11 @@ await put(`users/${OTHER}`, { jokerId: s("J-007"), codename: s("Ace") });
 
 // 1. per-user subtrees
 await put(`notifications/${UID}/items/n1`, { type: s("message"), fromUid: s(OTHER), text: s("hi"), createdAt: now });
-await put(`blackBook/${UID}/entries/b1`, { title: s("grudge"), createdAt: now });
+await put(`blackBook/${UID}/entries/b1`, { title: s("grudge"), reactions: map({ "🔥": arr(UID, OTHER) }), createdAt: now });
+await put(`blackBook/${UID}/entries/b1/comments/c1`, { senderUid: s(OTHER), text: s("inside owned book"), reactions: map({ "🃏": arr(UID) }), createdAt: now });
+await put(`blackBook/${OTHER}/entries/b2`, { title: s("other book"), createdBy: s(OTHER), reactions: map({ "🔥": arr(UID, OTHER) }), createdAt: now });
+await put(`blackBook/${OTHER}/entries/b2/comments/vc`, { senderUid: s(UID), text: s("victim comment"), reactions: map({}), createdAt: now });
+await put(`blackBook/${OTHER}/entries/b2/comments/oc`, { senderUid: s(OTHER), text: s("other comment"), reactions: map({ "🃏": arr(UID, OTHER) }), createdAt: now });
 await put(`issuedItems/${UID}/records/r1`, { name: s("lockpick"), createdAt: now });
 await put(`sessions/${UID}/logs/s1`, { startedAt: now, lastActiveAt: now, endedAt: now });
 await put(`sessions/${OTHER}/logs/s1`, { startedAt: now, lastActiveAt: now, endedAt: now });
@@ -137,6 +141,11 @@ await put(`archives/arch2`, {
   deletedByUid: s(OTHER), deletedAt: now,
 });
 await put(`notifications/${OTHER}/items/n1`, { type: s("message"), fromUid: s(UID), text: s("hey"), createdAt: now });
+await put(`recruitPosts/otherPost`, { section: s("recruit"), status: s("published"), title: s("Call"), createdBy: s(OTHER), reactions: map({ "🔥": arr(UID, OTHER) }), createdAt: now });
+await put(`recruitPosts/otherPost/comments/vc`, { senderUid: s(UID), text: s("victim comment"), reactions: map({}), createdAt: now });
+await put(`recruitPosts/otherPost/comments/oc`, { senderUid: s(OTHER), text: s("other comment"), reactions: map({ "🃏": arr(UID, OTHER) }), createdAt: now });
+await put(`recruitPosts/otherPost/rsvps/${UID}`, { uid: s(UID), status: s("going"), updatedAt: now });
+await put(`recruitPosts/otherPost/rsvps/${OTHER}`, { uid: s(OTHER), status: s("maybe"), updatedAt: now });
 
 // 2. target tickets
 await put(`targetTickets/ownTicket`, { senderUid: s(UID), title: s("mine"), reactions: map({}), commentCount: int(1), mutedBy: arr(), createdAt: now });
@@ -295,6 +304,25 @@ await test("victim comment deleted, reactions/mutedBy scrubbed on other's ticket
   assert(fire?.arrayValue?.values?.some((v) => v.stringValue === OTHER), "other's reaction lost");
 });
 
+await test("Black Book and Recruit social traces are purged without harming others", async () => {
+  assert((await listRest(`blackBook/${UID}/entries/b1/comments`)).length === 0, "owned Black Book comments remain");
+  assert(!(await getDocRest(`blackBook/${OTHER}/entries/b2/comments/vc`)), "Black Book victim comment remains");
+  const bb = await getDocRest(`blackBook/${OTHER}/entries/b2`);
+  const bbc = await getDocRest(`blackBook/${OTHER}/entries/b2/comments/oc`);
+  assert(bb && bbc, "other member's Black Book content lost");
+  assert(!JSON.stringify(bb).includes(`"${UID}"`), "Black Book entry reaction still references victim");
+  assert(!JSON.stringify(bbc).includes(`"${UID}"`), "Black Book comment reaction still references victim");
+
+  assert(!(await getDocRest(`recruitPosts/otherPost/comments/vc`)), "Recruit victim comment remains");
+  assert(!(await getDocRest(`recruitPosts/otherPost/rsvps/${UID}`)), "Recruit RSVP remains");
+  const rp = await getDocRest(`recruitPosts/otherPost`);
+  const rc = await getDocRest(`recruitPosts/otherPost/comments/oc`);
+  const rr = await getDocRest(`recruitPosts/otherPost/rsvps/${OTHER}`);
+  assert(rp && rc && rr, "other member's Recruit interaction lost");
+  assert(!JSON.stringify(rp).includes(`"${UID}"`), "Recruit post reaction still references victim");
+  assert(!JSON.stringify(rc).includes(`"${UID}"`), "Recruit comment reaction still references victim");
+});
+
 await test("ante boards: own posts deleted, votes/reactions/comments scrubbed", async () => {
   for (const board of ["place", "raised"]) {
     assert(!(await getDocRest(`antePosts/${board}/posts/ownPost`)), `${board} ownPost remains`);
@@ -385,13 +413,14 @@ await test("global sweep: no document anywhere still references the uid", async 
     "conversations", "tableMessages", "vaultActivity", "sessions",
     "voicePresence", "vault", "bookReviews", "dealActivity", "dealAwards",
     "dealMemberStats", "dealCompletions", "deals", "suitAssignments",
-    "activityEvents", "investigationEvents",
+    "activityEvents", "investigationEvents", "recruitPosts",
   ];
   const queue = roots.map((r) => r);
   const subMap = {
     targetTickets: ["comments"], conversations: ["messages"],
     tableMessages: ["messages"], notifications: ["items"],
-    blackBook: ["entries"], issuedItems: ["records"], sessions: ["logs"],
+    blackBook: ["entries", "comments"], issuedItems: ["records"], sessions: ["logs"],
+    recruitPosts: ["comments", "rsvps"],
     voicePresence: ["members"],
     vault: ["comments", "reviews"],
     dealActivity: ["events"], dealAwards: ["items"], dealCompletions: ["members"],

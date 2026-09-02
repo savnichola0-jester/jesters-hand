@@ -1222,7 +1222,7 @@ async function seedBlackBook() {
     await setDoc(doc(db, 'blackBook/alice/entries/r1'),
       { tab: 'royals', title: 'Honor', createdBy: 'admin', createdAt: new Date() });
     await setDoc(doc(db, 'blackBook/alice/entries/e1'),
-      { tab: 'recruit', title: 'Event', createdBy: 'alice', createdAt: new Date() });
+      { tab: 'recruit', title: 'Event', createdBy: 'alice', reactions: {}, commentCount: 0, createdAt: new Date() });
   });
 }
 await test('member can create own recruit entry', async () => {
@@ -1265,6 +1265,30 @@ await test('any signed-in member can read another member\'s book (peek)', async 
   await seedBlackBook();
   await assertSucceeds(getDoc(doc(mallory(), 'blackBook/alice/entries/e1')));
   await assertSucceeds(getDoc(doc(mallory(), 'blackBook/alice/entries/r1')));
+});
+
+await test('black book marks are own-uid-only and comments require an atomic counter', async () => {
+  await seedBlackBook();
+  await assertSucceeds(updateDoc(doc(mallory(), 'blackBook/alice/entries/e1'), {
+    'reactions.🔥': ['mallory'],
+  }));
+  await assertFails(updateDoc(doc(mallory(), 'blackBook/alice/entries/e1'), {
+    'reactions.🔥': ['mallory', 'alice'],
+  }));
+  const db = mallory();
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'blackBook/alice/entries/e1/comments/c1'), {
+    senderUid: 'mallory', senderJokerId: '13-13', text: 'Seen.', reactions: {},
+    createdAt: serverTimestamp(),
+  });
+  batch.update(doc(db, 'blackBook/alice/entries/e1'), {
+    commentCount: increment(1), countedCommentId: 'c1',
+  });
+  await assertSucceeds(batch.commit());
+  await assertFails(setDoc(doc(mallory(), 'blackBook/alice/entries/e1/comments/c2'), {
+    senderUid: 'mallory', senderJokerId: '13-13', text: 'Forged.', reactions: {},
+    createdAt: serverTimestamp(),
+  }));
 });
 
 await test('unauthenticated users still cannot read black books', async () => {
@@ -1869,7 +1893,8 @@ await test('only admin reads activity records; records are immutable', async () 
 
 const recruitPost = (extra = {}) => ({
   section: 'recruit', status: 'published', title: 'Live Reading',
-  design: '[]', createdBy: 'admin', createdAt: new Date(), updatedAt: new Date(), ...extra,
+  design: '[]', createdBy: 'admin', reactions: {}, commentCount: 0,
+  createdAt: new Date(), updatedAt: new Date(), ...extra,
 });
 
 async function seedRecruit() {
@@ -1909,6 +1934,39 @@ await test('malformed recruit posts are rejected even for admin', async () => {
   await assertFails(setDoc(doc(admin(), 'recruitPosts/bad4'), recruitPost({ design: 42 })));
   // Section can never be flipped after create.
   await assertFails(updateDoc(doc(admin(), 'recruitPosts/pub1'), { section: 'verdict' }));
+});
+
+await test('published recruit posts accept secure marks, comments, and self-owned RSVP only', async () => {
+  await seedRecruit();
+  await assertSucceeds(updateDoc(doc(alice(), 'recruitPosts/pub1'), {
+    'reactions.🃏': ['alice'],
+  }));
+  await assertFails(updateDoc(doc(alice(), 'recruitPosts/pub1'), {
+    'reactions.🃏': ['alice', 'mallory'],
+  }));
+  const db = alice();
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'recruitPosts/pub1/comments/c1'), {
+    senderUid: 'alice', senderJokerId: '01-01', text: 'I am in.', reactions: {},
+    createdAt: serverTimestamp(),
+  });
+  batch.update(doc(db, 'recruitPosts/pub1'), {
+    commentCount: increment(1), countedCommentId: 'c1',
+  });
+  await assertSucceeds(batch.commit());
+  await assertSucceeds(setDoc(doc(alice(), 'recruitPosts/pub1/rsvps/alice'), {
+    uid: 'alice', status: 'going', updatedAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(alice(), 'recruitPosts/pub1/rsvps/mallory'), {
+    uid: 'mallory', status: 'going', updatedAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(alice(), 'recruitPosts/verd1/rsvps/alice'), {
+    uid: 'alice', status: 'going', updatedAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(alice(), 'recruitPosts/draft1/comments/c1'), {
+    senderUid: 'alice', senderJokerId: '01-01', text: 'No draft access.', reactions: {},
+    createdAt: serverTimestamp(),
+  }));
 });
 
 // ── Issue Locker rules (issuedItems/{uid}/records — admin writes, owner reads) ─

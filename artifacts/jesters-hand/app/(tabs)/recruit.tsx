@@ -21,11 +21,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   RecruitSection, RecruitPost, DesignElement,
   listenRecruitSection, saveRecruitPost, setRecruitStatus, deleteRecruitPost,
-  newPostId, parseDesign,
+  newPostId, parseDesign, RecruitRsvp, listenRecruitRsvp, setRecruitRsvp,
 } from '@/lib/recruitService';
 import PostCanvas from '@/components/recruit/PostCanvas';
-import RecruitViewer from '@/components/recruit/RecruitViewer';
 import RecruitEditor from '@/components/recruit/RecruitEditor';
+import SocialPostSheet from '@/components/SocialPostSheet';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { MARBLE_TEXT_SHADOW } from '@/lib/legibility';
@@ -68,6 +68,7 @@ interface ViewingState {
   elements: DesignElement[];
   template: 'blank' | 'example';
   title: string;
+  post?: RecruitPost;
   isReference?: boolean;
 }
 
@@ -92,6 +93,7 @@ export default function RecruitScreen() {
   const [viewing, setViewing] = useState<ViewingState | null>(null);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [rsvp, setRsvp] = useState<RecruitRsvp | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -106,6 +108,14 @@ export default function RecruitScreen() {
     const t = setTimeout(() => setSuccess(null), 2500);
     return () => clearTimeout(t);
   }, [success]);
+
+  useEffect(() => {
+    if (!user || viewing?.section !== 'recruit' || !viewing.post) {
+      setRsvp(null);
+      return;
+    }
+    return listenRecruitRsvp(viewing.post.id, user.uid, setRsvp);
+  }, [user, viewing?.section, viewing?.post?.id]);
 
   const meta = SECTION_META[section];
   const watermark = `${meta.watermarkPrefix} — ID ${jokerId ?? '??-??'}`;
@@ -178,6 +188,7 @@ export default function RecruitScreen() {
       style={st.card}
       onPress={() => setViewing({
         section, elements: parseDesign(p.design), template: 'blank', title: p.title,
+        post: p,
       })}
       onLongPress={isAdmin ? () => postMenu(p) : undefined}
     >
@@ -185,6 +196,14 @@ export default function RecruitScreen() {
         <PostCanvas section={section} elements={parseDesign(p.design)} width={CARD_W - 2} />
       </View>
       <Text style={st.cardTitle} numberOfLines={1}>{p.title}</Text>
+      {p.status === 'published' ? (
+        <View style={st.socialSummary}>
+          <Text style={st.socialSummaryText}>
+            {Object.values(p.reactions).reduce((n, uids) => n + uids.length, 0)} MARKS
+          </Text>
+          <Text style={st.socialSummaryText}>{p.commentCount} COMMENTS</Text>
+        </View>
+      ) : null}
       {isAdmin ? (
         <View style={st.cardBadgeRow}>
           <Text style={[st.badge, p.status === 'published' ? st.badgePub : st.badgeDraft]}>
@@ -301,17 +320,48 @@ export default function RecruitScreen() {
       </View>
 
       {/* ── Protected viewer ── */}
-      {viewing ? (
-        <RecruitViewer
+      {viewing?.post && user ? (
+        <SocialPostSheet
           visible
           onClose={() => setViewing(null)}
-          section={viewing.section}
-          elements={viewing.elements}
-          template={viewing.template}
           title={viewing.title}
-          watermark={watermark}
-          notice={viewing.isReference ? 'Reference example — cannot be edited or published' : meta.notice}
-        />
+          parentPath={`recruitPosts/${viewing.post.id}`}
+          currentUid={user.uid}
+          currentJokerId={jokerId ?? ''}
+          reactions={viewing.post.reactions}
+          commentCount={viewing.post.commentCount}
+          footer={viewing.section === 'recruit' ? (
+            <View style={st.rsvpWrap}>
+              <Text style={st.rsvpTitle}>RSVP</Text>
+              <View style={st.rsvpRow}>
+                {([
+                  ['going', 'GOING'],
+                  ['maybe', 'MAYBE'],
+                  ['not_going', 'CAN’T GO'],
+                ] as [RecruitRsvp, string][]).map(([value, label]) => (
+                  <TouchableOpacity
+                    key={value}
+                    style={[st.rsvpButton, rsvp === value && st.rsvpButtonOn]}
+                    onPress={() => setRecruitRsvp(viewing.post!.id, user.uid, value)}
+                  >
+                    <Text style={[st.rsvpText, rsvp === value && st.rsvpTextOn]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ) : undefined}
+        >
+          <View style={st.socialCanvas}>
+            <PostCanvas
+              section={viewing.section}
+              elements={viewing.elements}
+              width={Math.min(SW - 62, 320)}
+              template={viewing.template}
+            />
+            <Text style={st.watermark}>{watermark}</Text>
+          </View>
+          <Text style={st.protectedNotice}>{meta.notice}</Text>
+        </SocialPostSheet>
       ) : null}
 
       {/* ── Editor (admin only) ── */}
@@ -403,6 +453,8 @@ const st = StyleSheet.create({
     color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 10.5,
     letterSpacing: 0.6, marginTop: 6, textAlign: 'center',
   },
+  socialSummary: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  socialSummaryText: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 8, letterSpacing: 0.5 },
   cardBadgeRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginTop: 5, paddingHorizontal: 2,
@@ -410,6 +462,26 @@ const st = StyleSheet.create({
   badge: { fontFamily: 'Inter_600SemiBold', fontSize: 8.5, letterSpacing: 1 },
   badgePub: { color: '#7FB07F' },
   badgeDraft: { color: 'rgba(237,224,196,0.5)' },
+  socialCanvas: { alignItems: 'center', overflow: 'hidden' },
+  watermark: {
+    position: 'absolute', top: '48%', color: 'rgba(120,20,20,0.35)',
+    fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 1.5,
+    transform: [{ rotate: '-24deg' }],
+  },
+  protectedNotice: {
+    color: 'rgba(237,224,196,0.48)', fontFamily: 'Inter_400Regular',
+    fontSize: 10, textAlign: 'center', marginTop: 8,
+  },
+  rsvpWrap: { marginTop: 14 },
+  rsvpTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.5, marginBottom: 8 },
+  rsvpRow: { flexDirection: 'row', gap: 7 },
+  rsvpButton: {
+    flex: 1, minHeight: 38, borderRadius: 8, borderWidth: 1,
+    borderColor: 'rgba(212,168,83,0.3)', alignItems: 'center', justifyContent: 'center',
+  },
+  rsvpButtonOn: { borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.13)' },
+  rsvpText: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Cinzel_600SemiBold', fontSize: 9 },
+  rsvpTextOn: { color: GOLD },
 
   actionBtn: {
     marginTop: 10, borderRadius: 8,
