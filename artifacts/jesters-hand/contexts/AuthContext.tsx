@@ -15,6 +15,8 @@ interface AuthContextType {
   user: User | null;
   jokerId: string | null;
   isAdmin: boolean;
+  /** Authenticated permanent owner seat. Admin authority alone is not enough. */
+  isJester: boolean;
   /** Admin who may also curate Vault/Chamber documents (00-00). The second
    *  Hand has isAdmin without this. */
   isVaultKeeper: boolean;
@@ -32,6 +34,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   jokerId: null,
   isAdmin: false,
+  isJester: false,
   isVaultKeeper: false,
   loading: true,
   agreement: null,
@@ -48,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [agreement, setAgreement] = useState<Agreement | false | null>(null);
   const [contractVersion, setContractVersion] = useState(BUNDLED_CONTRACT.version);
+  const isJester = !!user && isAdmin && jokerId === '00-00';
 
   // Live contract version — when the Jester amends the rules, members whose
   // signature is older than the current version get gated to re-sign.
@@ -155,12 +159,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, jokerId, isAdmin, isVaultKeeper, loading, agreement, refreshAgreement,
+      user, jokerId, isAdmin, isJester, isVaultKeeper, loading, agreement, refreshAgreement,
       contractVersion,
       // The Jester (00-00) never signs. Members are gated when they have no
       // signature, or when their signature predates the current wording.
       // agreement === null (still checking / read error) never blocks.
-      needsContract: !!user && !isAdmin && (
+      needsContract: !!user && !isJester && (
         agreement === false || (!!agreement && agreement.version < contractVersion)
       ),
     }}>

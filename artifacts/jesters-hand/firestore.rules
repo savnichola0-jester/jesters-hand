@@ -180,7 +180,7 @@ service cloud.firestore {
 
     match /contract/{docId} {
       allow read: if activeUser();
-      allow create: if activeUser() && isAdmin()
+      allow create: if activeUser() && isDealAdmin()
         && docId == 'current'
         && request.resource.data.keys().hasOnly(
              ['version', 'heading', 'sections', 'acknowledgement', 'previous',
@@ -200,7 +200,7 @@ service cloud.firestore {
         && request.resource.data.previous.version
            == request.resource.data.version - 1
         && request.resource.data.updatedAt == request.time;
-      allow update: if activeUser() && isAdmin()
+      allow update: if activeUser() && isDealAdmin()
         && request.resource.data.keys().hasOnly(
              ['version', 'heading', 'sections', 'acknowledgement', 'previous',
               'updatedAt'])

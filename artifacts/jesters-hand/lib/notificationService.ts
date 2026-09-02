@@ -33,6 +33,8 @@ export type AppNotificationType =
 export interface AppNotification {
   id:              string;
   type:            AppNotificationType;
+  /** Event-specific canonical title. Falls back to the type catalog for legacy rows. */
+  title?:          string;
   fromUid?:        string;
   conversationId?: string;
   anteBoard?:      string;
@@ -86,6 +88,18 @@ export async function broadcastNotification(
   void sendPushToUsers(targets, data);
 }
 
+/** Resolve the current active roster, then use the normal bell + real-push fan-out. */
+export async function broadcastToActiveMembers(
+  senderUid: string,
+  data: NotifInput,
+): Promise<void> {
+  const users = await getDocs(collection(db, 'users'));
+  const recipients = users.docs
+    .filter(d => d.data().suspended !== true)
+    .map(d => d.id);
+  await broadcastNotification(senderUid, recipients, data);
+}
+
 // ── Real-time listener ────────────────────────────────────────────────────────
 
 /** Listen to the 50 most recent notifications for a user, newest first. */
@@ -103,6 +117,7 @@ export function listenNotifications(
       snap.docs.map(d => ({
         id:              d.id,
         type:            d.data().type            ?? 'announcement',
+        title:           d.data().title,
         fromUid:         d.data().fromUid,
         conversationId:  d.data().conversationId,
         anteBoard:       d.data().anteBoard,

@@ -21,15 +21,13 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { collection, getDocs } from 'firebase/firestore';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
 import {
   ContractDoc, ContractSection, BUNDLED_CONTRACT, listenContract, publishContract,
 } from '@/lib/contractService';
 import { Agreement, listenAgreements, signAgreement } from '@/lib/agreementService';
-import { broadcastNotification } from '@/lib/notificationService';
+import { broadcastToActiveMembers } from '@/lib/notificationService';
 import SignaturePad, { SignatureView } from '@/components/SignaturePad';
 import PawPrints from '@/components/PawPrints';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
@@ -65,7 +63,7 @@ export default function ContractScreen() {
   const insets   = useSafeAreaInsets();
   const topInset = Platform.OS === 'web' ? 50 : insets.top;
 
-  const { user, jokerId, isAdmin, agreement, refreshAgreement, needsContract } = useAuth();
+  const { user, jokerId, isJester, agreement, refreshAgreement, needsContract } = useAuth();
 
   // Current wording — live subscription so an amendment published while this
   // screen is open updates the text and version before anyone signs.
@@ -74,7 +72,7 @@ export default function ContractScreen() {
 
   // Signed & current → read-only. Signed but outdated → sign again.
   const signed   = !!agreement;
-  const viewOnly = isAdmin || (signed && !needsContract);
+  const viewOnly = isJester || (signed && !needsContract);
 
   // Auth guard: members only.
   useEffect(() => {
@@ -145,10 +143,11 @@ export default function ContractScreen() {
   const [publishing, setPublishing] = useState(false);
 
   const startEdit = useCallback(() => {
+    if (!isJester) return;
     setDraftHead(contract.heading);
     setDrafts(toDraft(contract.sections));
     setEditing(true);
-  }, [contract]);
+  }, [contract, isJester]);
 
   const publish = useCallback(() => {
     const sections = fromDraft(drafts);
@@ -172,7 +171,7 @@ export default function ContractScreen() {
   }, [drafts, draftHead, contract.version]);
 
   const doPublish = useCallback(async (sections: ContractSection[]) => {
-    if (!user || publishing) return;
+    if (!user || !isJester || publishing) return;
     setPublishing(true);
     try {
       const newVersion = await publishContract(
@@ -187,9 +186,7 @@ export default function ContractScreen() {
       setEditing(false);
       // Tell every member the rules changed (best-effort).
       try {
-        const snap = await getDocs(collection(db, 'users'));
-        const uids = snap.docs.map(d => d.id);
-        await broadcastNotification(user.uid, uids, {
+        await broadcastToActiveMembers(user.uid, {
           type: 'contract_update',
           fromUid: user.uid,
           text: 'Your blood is dry.',
@@ -201,19 +198,19 @@ export default function ContractScreen() {
     } finally {
       setPublishing(false);
     }
-  }, [user, publishing, draftHead, contract.acknowledgement, contract.version]);
+  }, [user, isJester, publishing, draftHead, contract.acknowledgement, contract.version]);
 
   // ── Jester: signings ledger (who signed, with the actual signature) ──────
   const [signings, setSignings]         = useState<Agreement[] | null>(null);
   const [signingsErr, setSigningsErr]   = useState(false);
   const [openSigning, setOpenSigning]   = useState<string | null>(null);
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isJester) return;
     return listenAgreements(
       list => { setSignings(list); setSigningsErr(false); },
       ()   => setSigningsErr(true),
     );
-  }, [isAdmin]);
+  }, [isJester]);
 
   const backTarget = () =>
     (router.canGoBack() ? router.back() : router.replace('/(tabs)/system'));
@@ -232,14 +229,14 @@ export default function ContractScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Back button — anyone not being gated can leave */}
-        {(viewOnly || isAdmin) && (
+        {viewOnly && (
           <TouchableOpacity onPress={backTarget} style={s.backBtn} activeOpacity={0.75}>
             <Feather name="chevron-left" size={18} color={GOLD} />
             <Text style={s.backText}>THE SYSTEM</Text>
           </TouchableOpacity>
         )}
 
-        {editing ? (
+        {editing && isJester ? (
           /* ── Jester: amend mode ── */
           <View>
             <Text style={s.sectionTitle}>HEADING</Text>
@@ -313,7 +310,7 @@ export default function ContractScreen() {
               ))}
             </Text>
 
-            {isAdmin && (
+            {isJester && (
               <View style={s.jesterRow}>
                 <Text style={s.jesterNote}>Version {contract.version} — the Jester signs nothing.</Text>
                 <TouchableOpacity onPress={startEdit} activeOpacity={0.75} style={s.amendBtn}>
@@ -323,7 +320,7 @@ export default function ContractScreen() {
               </View>
             )}
 
-            {signed && !isAdmin && needsContract && (
+            {signed && !isJester && needsContract && (
               <View style={s.updateBanner}>
                 <Feather name="alert-triangle" size={14} color="#FFD700" />
                 <Text style={s.updateText}>
@@ -331,7 +328,7 @@ export default function ContractScreen() {
                 </Text>
               </View>
             )}
-            {signed && viewOnly && !isAdmin && (
+            {signed && viewOnly && !isJester && (
               <View style={s.sealedBadge}>
                 <Feather name="check-circle" size={13} color="#FFD700" />
                 <Text style={s.sealedText}>SIGNED & SEALED — {agreement!.signedDate}</Text>
@@ -363,7 +360,7 @@ export default function ContractScreen() {
               </View>
             ))}
 
-            {isAdmin && (
+            {isJester && (
               <>
                 {/* ── Jester: the signings ledger ── */}
                 <View style={s.sectionHead}>
@@ -424,7 +421,7 @@ export default function ContractScreen() {
               </>
             )}
 
-            {!isAdmin && (
+            {!isJester && (
               <>
                 {/* ── Acknowledgement ── */}
                 <View style={s.sectionHead}>

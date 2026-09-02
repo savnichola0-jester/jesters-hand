@@ -33,14 +33,22 @@ async function findJester(base: string, accessToken: string): Promise<{ uid: str
     body: JSON.stringify({
       structuredQuery: {
         from: [{ collectionId: "users" }],
-        where: { fieldFilter: { field: { fieldPath: "jokerId" }, op: "EQUAL", value: { stringValue: "00-00" } } },
-        limit: 1,
+        where: {
+          compositeFilter: {
+            op: "AND",
+            filters: [
+              { fieldFilter: { field: { fieldPath: "jokerId" }, op: "EQUAL", value: { stringValue: "00-00" } } },
+              { fieldFilter: { field: { fieldPath: "isAdmin" }, op: "EQUAL", value: { booleanValue: true } } },
+            ],
+          },
+        },
       },
     }),
   });
   if (!res.ok) throw new Error(`Jester lookup failed (${res.status})`);
-  const row = (await res.json() as Array<{ document?: FirestoreDoc }>).find(r => r.document?.name);
-  const name = row?.document?.name;
+  const rows = (await res.json() as Array<{ document?: FirestoreDoc }>)
+    .filter(r => r.document?.name);
+  const name = rows.length === 1 ? rows[0]?.document?.name : undefined;
   return name ? { uid: decodeURIComponent(name.slice(name.lastIndexOf("/") + 1)) } : null;
 }
 
@@ -92,6 +100,7 @@ router.post("/hidden-jest/found", async (req, res) => {
       body: JSON.stringify({ writes: [
         { update: { name: notificationName, fields: {
           type: { stringValue: "announcement" }, fromUid: { stringValue: uid },
+          title: { stringValue: "They found the Jest." },
           text: { stringValue: `${jokerId} found the Hidden Jest in ${title}.` },
           createdAt: { timestampValue: now }, read: { booleanValue: false },
         } }, currentDocument: { exists: false } },
@@ -117,7 +126,7 @@ router.post("/hidden-jest/found", async (req, res) => {
     if (!target?.alertsMuted && target?.expoPushToken) {
       void fetch(EXPO_PUSH_URL, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify([{ to: target.expoPushToken, title: "A Hidden Jest was found.", body: `${jokerId} found the Hidden Jest in ${title}.`, sound: "default", channelId: "dispatches", priority: "high", data: { type: "announcement" } }]),
+        body: JSON.stringify([{ to: target.expoPushToken, title: "They found the Jest.", body: `${jokerId} found the Hidden Jest in ${title}.`, sound: "default", channelId: "dispatches", priority: "high", data: { type: "announcement" } }]),
       }).catch(err => logger.warn({ err }, "hidden jest push failed"));
     }
     logger.info({ uid, entryId }, "hidden jest recorded");

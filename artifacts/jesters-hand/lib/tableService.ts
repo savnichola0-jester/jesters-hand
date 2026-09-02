@@ -10,12 +10,13 @@
  *     reactions     : Record<string, string[]>  // emoji → uid[]
  */
 import {
-  collection, addDoc, query, orderBy,
+  collection, addDoc, query, orderBy, getDocs,
   onSnapshot, serverTimestamp, Timestamp, limit as fsLimit,
   doc, updateDoc, getDoc, deleteDoc, arrayUnion, arrayRemove,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { recordDealActivity } from './dealService';
+import { broadcastNotification } from './notificationService';
 
 // ── Channel definitions ───────────────────────────────────────────────────────
 
@@ -103,6 +104,32 @@ export async function sendTableMessage(
     sentAt:    serverTimestamp(),
     reactions: {},
   });
+  // Resolve mentions and the current audience from the roster. Mentioned
+  // members receive the stronger call-to-table title instead of a duplicate.
+  getDocs(collection(db, 'users')).then(users => {
+    const active = users.docs.filter(d => d.data().suspended !== true);
+    const mentioned = new Set(
+      active
+        .filter(d => {
+          const jokerId = String(d.data().jokerId ?? '');
+          return jokerId && new RegExp(`(^|\\s)@${jokerId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(trimmed);
+        })
+        .map(d => d.id),
+    );
+    const common = {
+      type: 'announcement' as const,
+      fromUid: senderUid,
+      text: `spoke up in ${channelId}.`,
+    };
+    void broadcastNotification(senderUid, active.filter(d => !mentioned.has(d.id)).map(d => d.id), {
+      ...common,
+      title: 'Someone spoke up.',
+    });
+    void broadcastNotification(senderUid, [...mentioned], {
+      ...common,
+      title: 'Someone is calling you to the table.',
+    });
+  }).catch(() => {});
 }
 
 /** Toggle an emoji reaction on a table message (add if absent, remove if present). */

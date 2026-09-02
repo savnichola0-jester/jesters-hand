@@ -5,7 +5,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from './firebase';
-import { writeNotification } from './notificationService';
+import { broadcastToActiveMembers, writeNotification } from './notificationService';
 import { recordDealActivity } from './dealService';
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -235,6 +235,13 @@ export async function createTargetTicket(senderUid: string, draft: TicketDraft):
     mutedBy: [],
     createdAt: serverTimestamp(),
   });
+  void broadcastToActiveMembers(senderUid, {
+    type: 'announcement',
+    title: 'Target filed.',
+    fromUid: senderUid,
+    targetTicketId: refDoc.id,
+    text: 'filed a target.',
+  }).catch(() => {});
   return refDoc.id;
 }
 

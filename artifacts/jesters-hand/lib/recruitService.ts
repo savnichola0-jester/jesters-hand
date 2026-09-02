@@ -13,6 +13,7 @@ import {
 import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
 import { db, storage, auth } from './firebase';
 import { fetchProtectedDataUri } from './vaultService';
+import { broadcastToActiveMembers } from './notificationService';
 
 export type RecruitSection = 'recruit' | 'verdict';
 export type RecruitStatus = 'draft' | 'published';
@@ -165,6 +166,7 @@ export async function saveRecruitPost(
   status: RecruitStatus,
   isNew: boolean,
 ): Promise<void> {
+  const before = isNew ? null : await getDoc(doc(db, 'recruitPosts', postId));
   // Strip transient local uris before persisting.
   const clean = elements.map(el =>
     el.type === 'photo' ? { ...el, localUri: undefined } : el);
@@ -181,10 +183,31 @@ export async function saveRecruitPost(
   else await updateDoc(doc(db, 'recruitPosts', postId), {
     status: data.status, title: data.title, design: data.design, updatedAt: data.updatedAt,
   });
+  if (status === 'published' && (isNew || (before ? before.data()?.status !== 'published' : true))) {
+    void broadcastToActiveMembers(uid, {
+      type: 'announcement',
+      title: section === 'recruit' ? "A new hand's being dealt." : "The verdict's in.",
+      fromUid: uid,
+      text: section === 'recruit' ? 'posted a new event.' : 'posted a new verdict.',
+    }).catch(() => {});
+  }
 }
 
 export async function setRecruitStatus(postId: string, status: RecruitStatus): Promise<void> {
+  const before = await getDoc(doc(db, 'recruitPosts', postId));
   await updateDoc(doc(db, 'recruitPosts', postId), { status, updatedAt: serverTimestamp() });
+  if (status === 'published' && before.exists() && before.data().status !== 'published') {
+    const uid = auth.currentUser?.uid;
+    const section = before.data().section as RecruitSection;
+    if (uid) {
+      void broadcastToActiveMembers(uid, {
+        type: 'announcement',
+        title: section === 'recruit' ? "A new hand's being dealt." : "The verdict's in.",
+        fromUid: uid,
+        text: section === 'recruit' ? 'posted a new event.' : 'posted a new verdict.',
+      }).catch(() => {});
+    }
+  }
 }
 
 export async function deleteRecruitPost(post: RecruitPost): Promise<void> {

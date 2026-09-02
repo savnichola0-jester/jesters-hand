@@ -14,6 +14,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { broadcastToActiveMembers, writeNotification } from './notificationService';
 
 export type DealDuration = '24h' | '48h' | 'until_next';
 export type DealStatus = 'draft' | 'published' | 'archived';
@@ -173,6 +174,15 @@ export async function publishDeal(dealId: string): Promise<void> {
     expiresAt,
   });
   await batch.commit();
+  const actorUid = auth.currentUser?.uid;
+  if (actorUid) {
+    void broadcastToActiveMembers(actorUid, {
+      type: 'announcement',
+      title: 'The Jester dealt.',
+      fromUid: actorUid,
+      text: 'posted a Deal.',
+    }).catch(() => {});
+  }
 }
 
 /** Archive is the only Deal removal operation; Deal documents are never deleted. */
@@ -377,6 +387,14 @@ export async function awardDealMilestone(
     awardedBy,
     awardedAt: serverTimestamp(),
   });
+  if ((milestone === 3 || milestone === 6 || milestone === 9) && uid !== awardedBy) {
+    void writeNotification(uid, {
+      type: 'announcement',
+      title: "Don't sit cold.",
+      fromUid: awardedBy,
+      text: trimmed,
+    }).catch(() => {});
+  }
   return awardId;
 }
 

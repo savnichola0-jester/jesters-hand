@@ -13,8 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getTicket, saveTicket, uploadMug, uploadAdminPhoto, deleteMug } from '@/lib/ticketService';
 import { listenOwnStats, listenOwnCompletion, listenPublishedDeals, seatTemperature, DealMemberStats, Deal } from '@/lib/dealService';
 import { useLiveDeal } from '@/components/deal/useLiveDeal';
-import { getAllMembers } from '@/lib/whisperService';
-import { broadcastNotification } from '@/lib/notificationService';
+import { broadcastToActiveMembers } from '@/lib/notificationService';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { fieldsForJokerId, SUIT_GLYPHS, SUIT_GENRES } from '@/lib/ticketFields';
@@ -119,6 +118,14 @@ export default function TicketScreen() {
     if (!user) return;
     try {
       await saveTicket(user.uid, values);
+      if (jokerId === '00-00') {
+        void broadcastToActiveMembers(user.uid, {
+          type: 'announcement',
+          title: 'The Jester whispered.',
+          fromUid: user.uid,
+          text: 'updated the Jester Ticket.',
+        }).catch(() => {});
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSavedFlash(true);
       if (savedTimer.current) clearTimeout(savedTimer.current);
@@ -126,7 +133,7 @@ export default function TicketScreen() {
     } catch {
       Alert.alert('Save failed', 'Could not save to server. Try again.');
     }
-  }, [user, values]);
+  }, [jokerId, user, values]);
 
   // Suit = what the member is reading right now; saves immediately.
   const pickSuit = useCallback(async (v: string) => {
@@ -134,10 +141,18 @@ export default function TicketScreen() {
     setValues(prev => ({ ...prev, suit: v })); // optimistic
     try {
       await saveTicket(user.uid, { suit: v } as any);
+      if (jokerId === '00-00') {
+        void broadcastToActiveMembers(user.uid, {
+          type: 'announcement',
+          title: 'The Jester whispered.',
+          fromUid: user.uid,
+          text: 'updated the Jester Ticket.',
+        }).catch(() => {});
+      }
     } catch {
       Alert.alert('Save failed', 'Could not save your suit. Try again.');
     }
-  }, [user]);
+  }, [jokerId, user]);
 
   const toggleEdit = useCallback(() => {
     setEditMode(prev => {
@@ -197,23 +212,19 @@ export default function TicketScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Filed!', 'Your Intel has been filed. An admin will review it.');
 
-      // Broadcast a filed_ticket notification to all other members (best-effort)
-      getAllMembers()
-        .then(members => {
-          const allUids = members.map(m => m.uid);
-          broadcastNotification(user.uid, allUids, {
-            type:    'filed_ticket',
-            fromUid: user.uid,
-            text:    'filed their ticket.',
-          }).catch(() => {});
-        })
-        .catch(() => {});
+      // Broadcast the canonical Hand event to all other members (best-effort).
+      void broadcastToActiveMembers(user.uid, {
+        type:    jokerId === '00-00' ? 'announcement' : 'filed_ticket',
+        title:   jokerId === '00-00' ? 'The Jester whispered.' : 'Recruit filed.',
+        fromUid: user.uid,
+        text:    jokerId === '00-00' ? 'updated the Jester Ticket.' : 'filed their ticket.',
+      }).catch(() => {});
     } catch {
       Alert.alert('Error', 'Could not file Intel. Try again.');
     } finally {
       setFiling(false);
     }
-  }, [user, values]);
+  }, [jokerId, user, values]);
 
   // ── Review Intel ─────────────────────────────────────────────────────────
   const reviewIntel = useCallback(async () => {

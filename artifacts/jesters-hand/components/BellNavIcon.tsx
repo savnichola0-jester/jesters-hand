@@ -103,7 +103,7 @@ export default function BellNavIcon({ size = 38 }: Props) {
   const renderRow = useCallback(({ item }: { item: AppNotification }) => {
     const label = item.fromUid ? (memberCache[item.fromUid] ?? '——') : null;
     const ts    = formatNotifTimestamp(item.createdAt);
-    const title = notificationTitle(item.type);
+    const title = item.title ?? notificationTitle(item.type);
     const detail = notificationText(item.type, item.text);
 
     let icon: React.ReactNode;

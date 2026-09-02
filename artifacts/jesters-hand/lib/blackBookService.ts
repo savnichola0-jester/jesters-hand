@@ -9,7 +9,7 @@ import {
   getCountFromServer,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
-import { writeNotification } from './notificationService';
+import { broadcastToActiveMembers, writeNotification } from './notificationService';
 import { recordDealActivity } from './dealService';
 
 export type BlackBookTab = 'recruit' | 'uniform' | 'turn' | 'royals';
@@ -132,8 +132,16 @@ export async function addBlackBookEntry(
   if (tab === 'royals' && writerUid !== ownerUid) {
     writeNotification(ownerUid, {
       type: 'royals_honor',
+      title: 'Cred stamped.',
       fromUid: writerUid,
       text: 'The Jester has bestowed an honor on you',
+    }).catch(() => {});
+  } else {
+    void broadcastToActiveMembers(writerUid, {
+      type: 'announcement',
+      title: 'Someone just left a tag, baby.',
+      fromUid: writerUid,
+      text: 'left a tag in the Black Book.',
     }).catch(() => {});
   }
   return ref.id;

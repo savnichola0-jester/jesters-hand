@@ -14,6 +14,7 @@ import {
 import { Platform } from 'react-native';
 import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from './firebase';
+import { broadcastToActiveMembers } from './notificationService';
 
 export type VaultSection = 'stack' | 'wall' | 'margins' | 'cut';
 export type VaultStatus = 'published' | 'hidden' | 'archived';
@@ -93,6 +94,23 @@ export interface VaultActivityRecord {
   section: VaultSection;
   action: VaultAction;
   at?: Timestamp;
+}
+
+function publishedTitle(section: VaultSection): string {
+  if (section === 'wall') return 'New sketch.';
+  if (section === 'stack') return "The ink that doesn't come off.";
+  if (section === 'cut') return 'The slide just racked.';
+  return 'Loaded, not fired.';
+}
+
+function notifyPublishedEntry(uid: string, section: VaultSection): void {
+  void broadcastToActiveMembers(uid, {
+    type: 'announcement',
+    title: publishedTitle(section),
+    fromUid: uid,
+    vaultSection: section,
+    text: 'posted a new entry.',
+  }).catch(() => {});
 }
 
 // ── Listeners ─────────────────────────────────────────────────────────────────
@@ -185,10 +203,12 @@ export async function addVaultEntry(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  if ((input.status ?? 'published') === 'published') notifyPublishedEntry(uid, section);
   return entryRef.id;
 }
 
 export async function updateVaultEntry(entryId: string, input: Partial<VaultEntryInput>): Promise<void> {
+  const before = input.status === 'published' ? await getDoc(doc(db, 'vault', entryId)) : null;
   const patch: Record<string, unknown> = { updatedAt: serverTimestamp() };
   if (input.title !== undefined) patch.title = input.title.trim();
   if (input.description !== undefined) {
@@ -204,6 +224,10 @@ export async function updateVaultEntry(entryId: string, input: Partial<VaultEntr
     patch.decoderHash = input.decoderHash ? input.decoderHash : deleteField();
   }
   await updateDoc(doc(db, 'vault', entryId), patch);
+  const uid = auth.currentUser?.uid;
+  if (uid && input.status === 'published' && before?.exists() && before.data().status !== 'published') {
+    notifyPublishedEntry(uid, before.data().section as VaultSection);
+  }
 }
 
 function replacementFilePath(entryId: string): string {

@@ -105,12 +105,18 @@ async function cleanupEvidence(evidencePaths: string[]): Promise<void> {
  */
 async function notifyAdminOfReport(reporterUid: string): Promise<void> {
   const adminSnap = await getDocs(query(
-    collection(db, 'users'), where('isAdmin', '==', true), limit(1)));
-  const adminUid = adminSnap.docs[0]?.id;
+    collection(db, 'users'),
+    where('jokerId', '==', '00-00'),
+    where('isAdmin', '==', true),
+  ));
+  // Fail closed if the permanent seat is missing or duplicated. A sensitive
+  // report alert must never be guessed onto the wrong account.
+  const adminUid = adminSnap.size === 1 ? adminSnap.docs[0]?.id : undefined;
   if (!adminUid || adminUid === reporterUid) return;
 
   await addDoc(collection(db, 'notifications', adminUid, 'items'), {
     type: 'filed_report',
+    title: 'Someone is bleeding out.',
     fromUid: reporterUid,
     text: 'A new card has been passed.',
     createdAt: serverTimestamp(),
@@ -119,6 +125,7 @@ async function notifyAdminOfReport(reporterUid: string): Promise<void> {
   // Push mirror, post-commit, best-effort. No fromUid → generic banner.
   void sendPushToUsers([adminUid], {
     type: 'filed_report',
+    title: 'Someone is bleeding out.',
     text: 'A new card has been passed.',
   });
 }

@@ -93,6 +93,7 @@ export async function issueItem(
       if (uid !== adminUid) {
         writeNotification(uid, {
           type: 'issued_item',
+          title: 'Ante up or bleed out.',
           fromUid: adminUid,
           text: `New equipment has been issued to your locker: ${title}`,
         }).catch(() => {});

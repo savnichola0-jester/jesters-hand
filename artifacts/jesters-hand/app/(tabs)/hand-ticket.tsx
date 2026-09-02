@@ -16,6 +16,7 @@ import BellNavIcon from '@/components/BellNavIcon';
 import { fieldsForJokerId, SUIT_GLYPHS, SUIT_GENRES } from '@/lib/ticketFields';
 import { MARBLE_TEXT_SHADOW } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
+import { writeNotification } from '@/lib/notificationService';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -149,14 +150,24 @@ export default function HandTicketScreen() {
     setSuitBusy(true);
     setSaveMsg(null);
     try {
-      await saveTicket(uid, { suit: v } as any);
-      setTicket(t => (t ? { ...t, suit: v } as any : t));
+      const previous = String(ticket?.suit ?? '');
+      const next = previous === v ? '' : v;
+      await saveTicket(uid, { suit: next } as any);
+      setTicket(t => (t ? { ...t, suit: next } as any : t));
+      if (user && user.uid !== uid) {
+        void writeNotification(uid, {
+          type: 'announcement',
+          title: previous ? 'Suit updated.' : 'Suit granted.',
+          fromUid: user.uid,
+          text: next ? `marked your Ticket ${next}.` : 'removed the suit from your Ticket.',
+        }).catch(() => {});
+      }
     } catch {
       setSaveMsg('Could not mark the suit — try again.');
     } finally {
       setSuitBusy(false);
     }
-  }, [uid, suitBusy]);
+  }, [ticket?.suit, uid, user, suitBusy]);
 
   const goWhisper = () => {
     if (!uid) return;

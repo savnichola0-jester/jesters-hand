@@ -16,6 +16,7 @@ export interface TicketData {
   name?: string;
   street?: string;
   role?: string;
+  suit?: string;
   state?: string;
   country?: string;
   firstjest?: string;

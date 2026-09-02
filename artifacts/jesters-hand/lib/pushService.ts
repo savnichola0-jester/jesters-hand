@@ -148,6 +148,7 @@ export async function unregisterPushToken(uid: string): Promise<void> {
 
 export interface PushPayload {
   type:            AppNotificationType;
+  title?:           string;
   fromUid?:        string;
   conversationId?: string;
   anteBoard?:      string;
@@ -190,7 +191,7 @@ export async function sendPushToUsers(
     const normalizedText = notificationText(payload.type, payload.text);
     const body = senderLabel ? `${senderLabel} ${normalizedText}` : normalizedText;
 
-    const title = notificationTitle(payload.type);
+    const title = payload.title ?? notificationTitle(payload.type);
     const data = {
       type:            payload.type,
       conversationId:  payload.conversationId,

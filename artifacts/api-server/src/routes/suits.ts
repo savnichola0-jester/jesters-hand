@@ -54,10 +54,10 @@ async function holders(a: Auth) {
   const all = await Promise.all(docs.map(async d => { const uid = d.name!.split("/").pop()!; const u = await getDoc(a, `users/${enc(uid)}`); const x = read(d); return u ? { uid, jokerId: read(u).jokerId ?? uid, pips: x.pips ?? [], streaks: x.streaks ?? {} } : null; }));
   return all.filter(Boolean);
 }
-async function notifyRecipients(a: Auth, recipients: string[], pip: string) {
+async function notifyRecipients(a: Auth, recipients: string[], pip: string, title = "You're marked. Move.", body?: string) {
   try {
     const targets = await Promise.all(recipients.map(uid => getUserPushTargets(a.project, uid)));
-    const messages = targets.filter(t => t && !t.alertsMuted && t.expoPushToken).map(t => ({ to: t!.expoPushToken, title: "You're marked. Move.", sound: "default", channelId: "dispatches", priority: "high", data: { section: "suits", pip } }));
+    const messages = targets.filter(t => t && !t.alertsMuted && t.expoPushToken).map(t => ({ to: t!.expoPushToken, title, ...(body ? { body } : {}), sound: "default", channelId: "dispatches", priority: "high", data: { section: "suits", pip } }));
     if (messages.length) await fetch("https://exp.host/--/api/v2/push/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(messages) });
   } catch (err) { logger.warn({ err, pip }, "suits holder push failed"); }
 }
@@ -85,7 +85,7 @@ router.post("/suits/assignment", async (req, res) => {
       const id = hashId("assignment", b.targetUid, b.pip, String(b.assigned), x.doc?.updateTime ?? "missing");
       const data = { ...x.data, pips: [...pips].slice(0, 4), auditMutation: { ...(x.data.auditMutation ?? {}), [b.pip]: id } };
       const writes = [{ update: { name: `${root(a.project)}/suitAssignments/${enc(b.targetUid)}`, fields: fields(data) }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }], currentDocument: precondition(x.doc) }, ...auditWrites(a, id, b.targetUid, b.assigned ? "suit_assigned" : "suit_removed", { pip: b.pip, actorUid: a.uid })];
-      const r = await commit(a, writes); if (r.ok) { if (b.assigned) await notifyRecipients(a, [b.targetUid], b.pip); return void res.json({ ok: true }); } if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
+      const r = await commit(a, writes); if (r.ok) return void res.json({ ok: true }); if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
     }
     return void res.status(409).json({ error: "assignment changed concurrently; retry" });
   } catch (err) { logger.error({ err }, "assignment failed"); res.status(500).json({ error: "assignment failed" }); }
@@ -107,7 +107,7 @@ router.post("/suits/in-play", async (req, res) => {
       const id = hashId("task", b.pip, JSON.stringify(intended), old?.updateTime ?? "missing");
       const next = { ...data, inPlay: { ...(data.inPlay ?? {}), [b.pip]: intended }, auditMutation: { ...(data.auditMutation ?? {}), [b.pip]: id } };
       const writes = [{ update: { name: `${root(a.project)}/suitConfig/current`, fields: fields(next) }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }], currentDocument: precondition(old) }, ...auditWrites(a, id, a.uid, "suit_task_updated", { pip: b.pip, active: task.active, destination: task.destination ?? null })];
-      const r = await commit(a, writes); if (r.ok) { if (task.active) await notifyHolders(a, b.pip); return void res.json({ ok: true }); } if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
+      const r = await commit(a, writes); if (r.ok) { if (task.active && current?.active !== true) await notifyHolders(a, b.pip); return void res.json({ ok: true }); } if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
     }
     return void res.status(409).json({ error: "configuration changed concurrently; retry" });
   } catch (err) { logger.error({ err }, "configuration failed"); res.status(500).json({ error: "configuration failed" }); }
@@ -138,7 +138,10 @@ router.post("/suits/stamp", async (req, res) => {
         { update: { name: `${root(a.project)}/blackBook/${enc(b.targetUid)}/entries/${enc(royalId)}`, fields: fields({ tab: "royals", title: `${b.pip} Royal`, suit: b.pip, notes: "Awarded through SUITS", createdBy: a.uid }) }, updateTransforms: [{ fieldPath: "createdAt", setToServerValue: "REQUEST_TIME" }], currentDocument: { exists: false } },
         ...auditWrites(a, id, b.targetUid, "suit_completed_royal_awarded", { pip: b.pip, streak: nextStreak, actorUid: a.uid }),
       ];
-      const r = await commit(a, writes); if (r.ok) return void res.json({ ok: true, streak: nextStreak }); if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
+      const r = await commit(a, writes); if (r.ok) {
+        await notifyRecipients(a, [b.targetUid], b.pip, "Cred stamped.", `${b.pip} Royal awarded.`);
+        return void res.json({ ok: true, streak: nextStreak });
+      } if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
     }
     return void res.status(409).json({ error: "assignment changed concurrently; retry" });
   } catch (err) { logger.error({ err }, "stamp failed"); res.status(500).json({ error: "stamp failed" }); }

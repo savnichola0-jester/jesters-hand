@@ -4,7 +4,7 @@ import {
   serverTimestamp, Timestamp, arrayUnion, arrayRemove, increment,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
-import { writeNotification } from './notificationService';
+import { broadcastToActiveMembers, writeNotification } from './notificationService';
 
 export type AnteBoard = 'place' | 'raised';
 
@@ -91,7 +91,7 @@ export async function createAntePost(
   senderUid: string,
   fields: { title: string; description: string; options: string[] },
 ): Promise<void> {
-  await addDoc(postsCol(board), {
+  const post = await addDoc(postsCol(board), {
     senderUid,
     title: fields.title.trim(),
     description: fields.description.trim(),
@@ -101,6 +101,14 @@ export async function createAntePost(
     commentCount: 0,
     createdAt: serverTimestamp(),
   });
+  void broadcastToActiveMembers(senderUid, {
+    type: 'announcement',
+    title: board === 'place' ? 'Someone placed an ante.' : 'Someone raised the ante.',
+    fromUid: senderUid,
+    anteBoard: board,
+    antePostId: post.id,
+    text: board === 'place' ? 'placed an ante.' : 'raised the ante.',
+  }).catch(() => {});
 }
 
 /** Toggle an emoji reaction on a post. */
