@@ -23,7 +23,10 @@
       "distribution": "internal",
       "node": "20.18.0",
       "pnpm": "10.26.1",
-      "android": { "buildType": "apk" },
+      "android": {
+        "buildType": "apk",
+        "image": "sdk-54"
+      },
       "env": {
         "EXPO_PUBLIC_DOMAIN": "jestershand54atcomand.replit.app",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCh2TuQI2pTXqJtVc77xw4O0IHH1J3QjEE",
