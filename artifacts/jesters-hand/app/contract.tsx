@@ -184,17 +184,21 @@ export default function ContractScreen() {
       );
       setContract(c => ({ ...c, version: newVersion, heading: draftHead.trim(), sections }));
       setEditing(false);
-      // Tell every member the rules changed (best-effort).
-      try {
-        await broadcastToActiveMembers(user.uid, {
+      // Tell every member the rules changed without holding the saved screen open.
+      void broadcastToActiveMembers(user.uid, {
           type: 'contract_update',
           fromUid: user.uid,
           text: 'Your blood is dry.',
-        });
-      } catch { /* notification fan-out is best-effort */ }
+        }).catch(() => { /* notification fan-out is best-effort */ });
       Alert.alert('Amended', `The contract is now version ${newVersion}. Members will re-sign on their next visit.`);
-    } catch {
-      Alert.alert('Failed', 'Could not publish the amendment. Try again.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      Alert.alert(
+        'Failed',
+        message === 'contract changed'
+          ? 'The contract changed while you were editing. Reopen it and try again.'
+          : message || 'Could not publish the amendment. Try again.',
+      );
     } finally {
       setPublishing(false);
     }
