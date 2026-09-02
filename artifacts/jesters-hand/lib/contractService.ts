@@ -43,6 +43,7 @@ type FirestoreValue =
   | { integerValue: string }
   | { doubleValue: number }
   | { stringValue: string }
+  | { timestampValue: string }
   | { arrayValue: { values?: FirestoreValue[] } }
   | { mapValue: { fields?: Record<string, FirestoreValue> } };
 
@@ -74,11 +75,15 @@ function decodeValue(value: FirestoreValue): unknown {
   if ('integerValue' in value) return Number(value.integerValue);
   if ('doubleValue' in value) return value.doubleValue;
   if ('stringValue' in value) return value.stringValue;
+  if ('timestampValue' in value) return value.timestampValue;
   if ('arrayValue' in value) return (value.arrayValue.values ?? []).map(decodeValue);
-  return Object.fromEntries(
-    Object.entries(value.mapValue.fields ?? {})
-      .map(([key, entry]) => [key, decodeValue(entry)]),
-  );
+  if ('mapValue' in value) {
+    return Object.fromEntries(
+      Object.entries(value.mapValue.fields ?? {})
+        .map(([key, entry]) => [key, decodeValue(entry)]),
+    );
+  }
+  return undefined;
 }
 
 function encodeFields(value: Record<string, unknown>): Record<string, FirestoreValue> {
