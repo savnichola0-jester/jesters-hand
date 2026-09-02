@@ -5,6 +5,7 @@ import {
   Timestamp, QuerySnapshot, DocumentData,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
+import { getApiDomain } from './apiConfig';
 import { sendPushToUsers } from './pushService';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -459,7 +460,7 @@ export async function clearConversation(conversationId: string, uid: string): Pr
  */
 async function teardownConversationServerSide(conversationId: string): Promise<boolean> {
   try {
-    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    const domain = getApiDomain();
     const idToken = await auth.currentUser?.getIdToken();
     if (!domain || !idToken) return false;
     const res = await fetch(`https://${domain}/api/chat/teardown`, {

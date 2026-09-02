@@ -16,6 +16,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { deleteField, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { getApiDomain } from './apiConfig';
 import type { AppNotificationType } from './notificationService';
 import { notificationText, notificationTitle } from './notificationCatalog';
 import { registerWebPush, unregisterWebPush } from './webPush';
@@ -183,7 +184,7 @@ export async function sendPushToUsers(
   payload: PushPayload,
 ): Promise<void> {
   try {
-    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    const domain = getApiDomain();
     const idToken = await auth.currentUser?.getIdToken();
     if (!domain || !idToken || recipientUids.length === 0) return;
 

@@ -1,4 +1,5 @@
 import { auth } from './firebase';
+import { getApiDomain } from './apiConfig';
 
 export const SUITS = [
   { key: 'spade', pip: '♠', name: 'Loyalty' },
@@ -30,7 +31,7 @@ export interface SuitHolder {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  const domain = getApiDomain();
   const token = await auth.currentUser?.getIdToken();
   if (!domain || !token) throw new Error('SUITS is unavailable until you are signed in.');
   const response = await fetch(`https://${domain}/api/suits${path}`, {

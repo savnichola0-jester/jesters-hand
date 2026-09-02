@@ -14,6 +14,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { getApiDomain } from './apiConfig';
 import { broadcastToActiveMembers, writeNotification } from './notificationService';
 
 export type DealDuration = '24h' | '48h' | 'until_next';
@@ -227,7 +228,7 @@ export async function recordDealActivity(
 ): Promise<void> {
   if (!uid || !sourceId || !TASK_TYPES.includes(type)) return;
   try {
-    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    const domain = getApiDomain();
     const idToken = await auth.currentUser?.getIdToken();
     if (!domain || !idToken || auth.currentUser?.uid !== uid) return;
     await fetch(`https://${domain}/api/deal/activity`, {
@@ -245,7 +246,7 @@ export async function recordDealActivity(
  * Re-running is idempotent and repairs stale local progress.
  */
 export async function reconcileDealProgress(uid: string): Promise<DealCompletion | null> {
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  const domain = getApiDomain();
   const idToken = await auth.currentUser?.getIdToken();
   // The server derives the UID from this token. Keep uid only as a caller-side
   // guard so a stale action from a signed-out account cannot be reconciled.

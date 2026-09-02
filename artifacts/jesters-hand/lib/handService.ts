@@ -5,6 +5,7 @@
 // admin — the client gate alone is never trusted).
 import { collection, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { getApiDomain } from './apiConfig';
 
 export interface RosterMember {
   uid: string;
@@ -57,7 +58,7 @@ export function listenRoster(cb: (slots: RosterSlot[]) => void): () => void {
 // ── Admin actions (api-server) ───────────────────────────────────────────────
 
 async function adminPost(path: string, body: Record<string, unknown>): Promise<void> {
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  const domain = getApiDomain();
   if (!domain) throw new Error('Server address is not configured.');
   const idToken = await auth.currentUser?.getIdToken();
   if (!idToken) throw new Error('Not signed in.');

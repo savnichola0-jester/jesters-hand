@@ -4,9 +4,10 @@
  * and the Jester's notification.
  */
 import { auth } from './firebase';
+import { getApiDomain } from './apiConfig';
 
 export async function reportHiddenJestFound(entryId: string): Promise<void> {
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  const domain = getApiDomain();
   const idToken = await auth.currentUser?.getIdToken();
   if (!domain || !idToken) throw new Error('not authenticated');
   const response = await fetch(`https://${domain}/api/hidden-jest/found`, {

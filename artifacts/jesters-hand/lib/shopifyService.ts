@@ -8,6 +8,7 @@
 // `shopifyHandle` when the admin has set one, else by normalized title.
 
 import { auth } from './firebase';
+import { getApiDomain } from './apiConfig';
 
 export interface ShopifyVariant {
   id: string;                 // gid://shopify/ProductVariant/…
@@ -26,7 +27,7 @@ export interface ShopifyProduct {
 }
 
 async function relayFetch(path: string, init?: RequestInit): Promise<Response> {
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  const domain = getApiDomain();
   const idToken = await auth.currentUser?.getIdToken();
   if (!domain || !idToken) throw new Error('Not signed in.');
   return fetch(`https://${domain}/api/shopify/${path}`, {

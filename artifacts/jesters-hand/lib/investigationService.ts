@@ -8,6 +8,7 @@ import {
   collection, doc, getDoc, getDocs, query, where, Timestamp,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { getApiDomain } from './apiConfig';
 import {
   fetchSessions, sessionEnd, formatDuration as fmtDur, SessionLog,
 } from './sessionService';
@@ -102,7 +103,7 @@ type PocketAuditMessage = {
 };
 
 async function fetchAuditApi<T>(path: string): Promise<T> {
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  const domain = getApiDomain();
   const idToken = await auth.currentUser?.getIdToken();
   if (!domain || !idToken) throw new Error('Privileged audit API is unavailable.');
   const response = await fetch(`https://${domain}/api${path}`, {

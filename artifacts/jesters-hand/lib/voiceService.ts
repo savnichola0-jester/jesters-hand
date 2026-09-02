@@ -15,6 +15,7 @@ import {
   serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { getApiDomain } from './apiConfig';
 
 // ── Engine module ─────────────────────────────────────────────────────────────
 //
@@ -162,7 +163,7 @@ export function refreshPresenceHeartbeat(): void {
 async function fetchVoiceToken(channelId: string): Promise<{
   appId: string; token: string; uid: string;
 }> {
-  const domain = process.env.EXPO_PUBLIC_DOMAIN;
+  const domain = getApiDomain();
   const idToken = await auth.currentUser?.getIdToken();
   if (!domain || !idToken) throw new Error('Not signed in.');
   const res = await fetch(`https://${domain}/api/agora/token`, {
