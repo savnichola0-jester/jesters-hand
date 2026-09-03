@@ -186,6 +186,7 @@ export default function StreetArtScreen() {
   const navBottom = topInset + NAV_H;
 
   const { user, isAdmin, jokerId } = useAuth();
+  const canAwardRoyals = isAdmin && jokerId === '00-00';
 
   // ── Peek mode: viewing another member's book (read-only) ──
   const params = useLocalSearchParams<{ uid?: string; label?: string; tab?: string }>();
@@ -222,7 +223,7 @@ export default function StreetArtScreen() {
   const [members, setMembers] = useState<MemberLite[]>([]);
   const [awardUid, setAwardUid] = useState<string | null>(null);
 
-  const awarding = isAdmin && !peeking && tabId === 'royals' && royalsMode === 'award';
+  const awarding = canAwardRoyals && !peeking && tabId === 'royals' && royalsMode === 'award';
 
   useEffect(() => {
     if (!awarding || members.length > 0 || !user) return;
@@ -240,7 +241,7 @@ export default function StreetArtScreen() {
   // Peeking at someone else's book is always read-only.
   const canEdit = peeking ? false
     : tabId !== 'royals' ? !!user
-    : isAdmin ? (!awarding || !!awardUid)
+    : canAwardRoyals ? (!awarding || !!awardUid)
     : false; // royals is read-only for members
 
   // ── Entries ──
@@ -445,7 +446,7 @@ export default function StreetArtScreen() {
 
         <View style={s.body}>
           {/* Admin royals sub-mode toggle */}
-          {isAdmin && !peeking && tabId === 'royals' ? (
+          {canAwardRoyals && !peeking && tabId === 'royals' ? (
             <View style={s.subToggleRow}>
               <TouchableOpacity
                 style={[s.subToggle, royalsMode === 'own' && s.subToggleActive]}

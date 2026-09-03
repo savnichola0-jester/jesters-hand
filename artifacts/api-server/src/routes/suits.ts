@@ -3,7 +3,7 @@ import { Router, type IRouter, type Request } from "express";
 import { verifyFirebaseIdToken } from "../lib/firebaseAuth";
 import { adminConfigured, firestoreBase, getAccessToken, getUserPushTargets } from "../lib/firestoreAdmin";
 import { logger } from "../lib/logger";
-import { canChangeSuitAssignment } from "../lib/suitsPermissions";
+import { canAwardRoyal, canChangeSuitAssignment } from "../lib/suitsPermissions";
 
 const router: IRouter = Router();
 const PIPS = new Set(["spade", "diamond", "heart", "club"]);
@@ -132,6 +132,7 @@ router.post("/suits/in-play", async (req, res) => {
 router.post("/suits/stamp", async (req, res) => {
   const a = await caller(req, "dealer"), b = req.body;
   if (!a) return void res.status(403).json({ error: "dealer seat required" });
+  if (!canAwardRoyal(a.jokerId)) return void res.status(403).json({ error: "00-00 is required to award Royals" });
   if (!b || typeof b.targetUid !== "string" || !PIPS.has(b.pip)) return void res.status(400).json({ error: "invalid stamp" });
   try {
     const today = new Date().toISOString().slice(0, 10), id = hashId("stamp", b.targetUid, b.pip, today), royalId = `suits-royal-${b.pip}-${today}`;

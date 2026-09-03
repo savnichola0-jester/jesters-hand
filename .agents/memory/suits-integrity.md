@@ -9,13 +9,13 @@ SUITS assignments, active task configuration, streak stamps, Royal awards, and a
 
 **How to apply:** use update-time or nonexistence preconditions, bounded conflict retries, and verify the full intended state before treating a repeated request as idempotent success. Keep Activity records content-free; contextual evidence belongs only in Investigations.
 
-SUITS assignment, in-play dealing, Royal stamps, and cross-member management accept either pinned Hand admin (00-00 or 01-54) with the admin flag and a non-suspended record.
+SUITS assignment, in-play dealing, and cross-member management accept either pinned Hand admin (00-00 or 01-54) with the admin flag and a non-suspended record. Royal awards and completion stamps remain exact-00-00.
 
-**Why:** The two Hand seats have equal SUITS-management authority; a generic admin flag still must not grant those powers to any other identity.
+**Why:** The two Hand seats share ordinary SUITS management, but the user explicitly reserves the act of awarding Royals to the permanent 00-00 Jester.
 
 **How to apply:** Enforce the pinned two-seat role server-side before privileged reads or writes; client visibility is not an authorization boundary. Keep audit bodies out of Activity.
 
-For 01-54, SUITS must keep dealer work and personal assignments in separate top-level views. 00-00 keeps the single management interface. Both seats may alter the other’s assignment and award Royals.
+For 01-54, SUITS must keep dealer work and personal assignments in separate top-level views. 00-00 keeps the single management interface. Both seats may alter the other’s assignment, but only 00-00 may award Royals.
 
 **Why:** The separate personal view preserves 01-54’s member responsibilities without reducing management authority.
 

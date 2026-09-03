@@ -17,7 +17,7 @@ export default function SuitsScreen() {
   const [loading, setLoading] = useState(true);
   const canDeal = isHandAdmin;
   const isSecondDealer = canDeal && jokerId === '01-54';
-  const canAwardRoyals = canDeal;
+  const canAwardRoyals = canDeal && jokerId === '00-00';
   const load = useCallback(async () => {
     setLoading(true); setNote('');
     try {

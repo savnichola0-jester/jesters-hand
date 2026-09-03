@@ -27,7 +27,7 @@
 - [Phone-width web shell](phone-shell-web.md) — desktop web is a centered 430px column; use appWindow()/useAppDimensions, modals portal outside the shell and must re-cap; frames render at native 1.5 ratio
 - [Chamber decoder game](chamber-decoder.md) — decoderHash is a client-side GAME gate only, not access control; deliberate; pure-JS sha256 util for web+native parity
 - [Jester's Deal integrity](jesters-deal.md) — only server-verified app evidence may advance Deal progress, streaks, milestones, or Seat Temperature
-- [SUITS integrity](suits-integrity.md) — both pinned Hand seats manage assignments and Royals; mutations and body-free audit evidence stay atomic
+- [SUITS integrity](suits-integrity.md) — both Hand seats manage assignments; only 00-00 awards Royals; mutations and body-free audit evidence stay atomic
 - [Deal and SUITS card artwork](deal-suits-card-artwork.md) — the supplied distressed black card is canonical for both editing and member viewing
 - [Native install QR](native-install-qr.md) — engraving QR targets a permanent owned-domain redirect, never a temporary APK or legacy web-app URL
 - [Ticket admin-card parity](ticket-admin-card-parity.md) — personal and Hand-member Tickets are separate; both Hand admins need gallery-only admin-card controls on both

@@ -1273,6 +1273,8 @@ await test('royals award suit: valid suits accepted, junk rejected', async () =>
   await seedBlackBook();
   await assertSucceeds(setDoc(doc(admin(), 'blackBook/alice/entries/suited'),
     bbEntry('royals', { createdBy: 'admin', suit: 'Spade', notes: 'Loyalty honor' })));
+  await assertFails(setDoc(doc(env.authenticatedContext('secondHand').firestore(), 'blackBook/alice/entries/second-hand-award'),
+    bbEntry('royals', { createdBy: 'secondHand', suit: 'Heart', notes: 'Must be denied' })));
   // (Admin creates bypass validation by design — archive restores are
   // verbatim — so junk is checked through the validated member path.)
   await assertFails(setDoc(doc(alice(), 'blackBook/alice/entries/badsuit'),
@@ -1292,6 +1294,9 @@ await test('member cannot edit or delete an awarded royals entry', async () => {
   await assertFails(setDoc(doc(alice(), 'blackBook/alice/entries/r1'),
     { title: 'Better honor' }, { merge: true }));
   await assertFails(deleteDoc(doc(alice(), 'blackBook/alice/entries/r1')));
+  await assertFails(setDoc(doc(env.authenticatedContext('secondHand').firestore(), 'blackBook/alice/entries/r1'),
+    { title: 'Changed by 01-54' }, { merge: true }));
+  await assertFails(deleteDoc(doc(env.authenticatedContext('secondHand').firestore(), 'blackBook/alice/entries/r1')));
 });
 
 await test('member cannot write into another member\'s book', async () => {

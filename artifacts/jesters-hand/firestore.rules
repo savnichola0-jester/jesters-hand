@@ -912,8 +912,8 @@ service cloud.firestore {
     // Black Book (Street Art) — per-member logs at blackBook/{uid}/entries.
     // Tabs: recruit / uniform / turn are the owner's own logs.
     // royals entries are awarded by the admin only — members can read theirs
-    // but never create/edit/delete them. The admin may read and manage
-    // royals for anyone, and keeps their own logs like any member.
+    // but never create/edit/delete them. Only the permanent 00-00 Jester may
+    // award or manage royals; both Hand admins keep their own other logs.
     // Reads are open to any signed-in member (Jokers may peek at each
     // other's books); writes stay locked to owner/admin as described above.
     match /blackBook/{userId}/entries/{entryId} {
@@ -931,8 +931,10 @@ service cloud.firestore {
           && (!('suit' in d)     || d.suit in ['Spade', 'Diamond', 'Heart', 'Club']);
       }
       allow read: if activeUser();
-      // First isAdmin() clause: Archive restores recreate entries verbatim.
-      allow create: if (activeUser() && isAdmin())
+      // Admin archive restores recreate non-Royal entries verbatim. Royal
+      // creation/restoration remains exact-00-00.
+      allow create: if (activeUser() && isAdmin()
+                          && (request.resource.data.tab != 'royals' || isKeeper()))
         || activeUser()
         && validBlackBookEntry()
         && request.resource.data.get('reactions', {}).size() == 0
@@ -940,8 +942,8 @@ service cloud.firestore {
         && (
           // Owner logs their own recruit/uniform/turn entries.
           (request.auth.uid == userId && request.resource.data.tab != 'royals')
-          // Admin awards royals to anyone, and may write any tab in their own book.
-          || (isAdmin() && (request.resource.data.tab == 'royals' || request.auth.uid == userId))
+          // Only 00-00 awards royals.
+          || (isKeeper() && request.resource.data.tab == 'royals')
         );
       allow update: if activeUser()
         && request.resource.data.tab == resource.data.tab
@@ -950,7 +952,7 @@ service cloud.firestore {
           (
             (
               (request.auth.uid == userId && resource.data.tab != 'royals')
-              || (isAdmin() && (resource.data.tab == 'royals' || request.auth.uid == userId))
+              || (isKeeper() && resource.data.tab == 'royals')
             )
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['title', 'date', 'location', 'mode', 'price', 'notes', 'progress', 'suit'])
@@ -977,7 +979,7 @@ service cloud.firestore {
       allow delete: if activeUser()
         && (
           (request.auth.uid == userId && resource.data.tab != 'royals')
-          || (isAdmin() && (resource.data.tab == 'royals' || request.auth.uid == userId))
+          || (isKeeper() && resource.data.tab == 'royals')
         );
 
       match /comments/{commentId} {
