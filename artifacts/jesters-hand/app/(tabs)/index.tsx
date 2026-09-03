@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { ElementData } from '@/components/DraggableElement';
 import {
   LockscreenLayout, fetchLockscreenLayout, publishLockscreenLayout, scaleLayout,
@@ -183,6 +184,7 @@ function InputOverlay({
 export default function LockScreen() {
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const { user, contractGateReady, contractGateRequired } = useAuth();
 
   // Background position/scale
   const [bgScale, setBgScale] = useState(DEFAULT_BG_SCALE);
@@ -209,6 +211,14 @@ export default function LockScreen() {
       }
     }, [])
   );
+
+  // Firebase accepting the credentials happens before the profile, agreement,
+  // and current-contract checks settle. Navigate only after that entry gate is
+  // ready so the first successful sign-in cannot be lost in a blank navigator.
+  useEffect(() => {
+    if (!user || !contractGateReady || contractGateRequired === null) return;
+    router.replace(contractGateRequired ? '/contract' : '/(tabs)/home');
+  }, [contractGateReady, contractGateRequired, user]);
 
   // Load saved layout. The shared (published) layout in Firestore wins so
   // every device shows the same arrangement, scaled to its screen; the
@@ -266,7 +276,6 @@ export default function LockScreen() {
         cipherValue
       );
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      router.push('/(tabs)/home');
     } catch (err: any) {
       console.error('[TakeSeat] Firebase error:', err?.code, err?.message);
       const msg =

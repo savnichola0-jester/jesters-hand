@@ -3,13 +3,18 @@ import { Router, type IRouter, type Request } from "express";
 import { verifyFirebaseIdToken } from "../lib/firebaseAuth";
 import { adminConfigured, firestoreBase, getAccessToken, getUserPushTargets } from "../lib/firestoreAdmin";
 import { logger } from "../lib/logger";
+import { canChangeSuitAssignment } from "../lib/suitsPermissions";
 
 const router: IRouter = Router();
 const PIPS = new Set(["spade", "diamond", "heart", "club"]);
-const DESTINATIONS = new Set(["table", "jesters-deal", "uniform", "recruit", "target-ticket", "chamber", "social", "discovery"]);
+const DESTINATIONS = new Set([
+  "ticket", "hand", "street-art", "jesters-deal", "suits", "ante", "table",
+  "target-ticket", "vault", "chamber", "recruit", "uniform", "jesters-hand", "system",
+  "social", "discovery",
+]);
 const enc = encodeURIComponent;
 type Doc = { name?: string; fields?: Record<string, any>; updateTime?: string };
-type Auth = { project: string; token: string; uid: string };
+type Auth = { project: string; token: string; uid: string; jokerId: string };
 const field = (v: any): any => !v || typeof v !== "object" ? null : "stringValue" in v ? v.stringValue : "booleanValue" in v ? v.booleanValue : "integerValue" in v ? Number(v.integerValue) : "timestampValue" in v ? v.timestampValue : "arrayValue" in v ? (v.arrayValue.values ?? []).map(field) : "mapValue" in v ? Object.fromEntries(Object.entries(v.mapValue.fields ?? {}).map(([k, x]) => [k, field(x)])) : null;
 const read = (d: Doc | null) => Object.fromEntries(Object.entries(d?.fields ?? {}).map(([k, v]) => [k, field(v)]));
 const wire = (v: any): any => v === null ? { nullValue: null } : typeof v === "string" ? { stringValue: v } : typeof v === "boolean" ? { booleanValue: v } : typeof v === "number" ? { integerValue: String(v) } : Array.isArray(v) ? { arrayValue: { values: v.map(wire) } } : { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, wire(x)])) } };
@@ -23,7 +28,11 @@ async function authenticate(req: Request): Promise<Auth | null> {
   const bearer = req.headers.authorization ?? "";
   const uid = project && bearer.startsWith("Bearer ") ? await verifyFirebaseIdToken(bearer.slice(7), project) : null;
   const token = uid && adminConfigured() ? await getAccessToken() : null;
-  return project && uid && token ? { project, uid, token } : null;
+  if (!project || !uid || !token) return null;
+  const userDoc = await getDoc({ project, uid, token, jokerId: "" }, `users/${enc(uid)}`);
+  if (!userDoc) return null;
+  const jokerId = read(userDoc).jokerId;
+  return typeof jokerId === "string" ? { project, uid, token, jokerId } : null;
 }
 async function caller(req: Request, role: "member" | "dealer" | "jester" = "member"): Promise<Auth | null> {
   const a = await authenticate(req); if (!a) return null;
@@ -32,8 +41,8 @@ async function caller(req: Request, role: "member" | "dealer" | "jester" = "memb
   const u = read(userDoc);
   if (
     u.suspended === true ||
-    (role === "dealer" && (u.isAdmin !== true || !["00-00", "01-54"].includes(u.jokerId))) ||
-    (role === "jester" && (u.isAdmin !== true || u.jokerId !== "00-00"))
+    (role === "dealer" && (u.isAdmin !== true || !["00-00", "01-54"].includes(a.jokerId))) ||
+    (role === "jester" && (u.isAdmin !== true || a.jokerId !== "00-00"))
   ) return null;
   return a;
 }
@@ -41,12 +50,15 @@ async function assignment(a: Auth, uid: string) { const doc = await getDoc(a, `s
 const precondition = (doc: Doc | null) => doc?.updateTime ? { updateTime: doc.updateTime } : { exists: false };
 const auditWrites = (a: Auth, id: string, uid: string, action: string, context: Record<string, unknown>) => [
   { update: { name: `${root(a.project)}/activityEvents/${id}`, fields: fields({ uid, action, section: "suits" }) }, updateTransforms: [{ fieldPath: "occurredAt", setToServerValue: "REQUEST_TIME" }], currentDocument: { exists: false } },
-  { update: { name: `${root(a.project)}/investigationEvents/${id}`, fields: fields({ uid, action, section: "suits", context }) }, updateTransforms: [{ fieldPath: "occurredAt", setToServerValue: "REQUEST_TIME" }], currentDocument: { exists: false } },
+  ...(a.jokerId === "00-00" ? [
+    { update: { name: `${root(a.project)}/investigationEvents/${id}`, fields: fields({ uid, action, section: "suits", context }) }, updateTransforms: [{ fieldPath: "occurredAt", setToServerValue: "REQUEST_TIME" }], currentDocument: { exists: false } },
+  ] : []),
 ];
 async function commit(a: Auth, writes: unknown[]) { return api(`${firestoreBase(a.project)}:commit`, a.token, { method: "POST", body: JSON.stringify({ writes }) }); }
 async function auditExists(a: Auth, id: string) {
-  const [activity, investigation] = await Promise.all([getDoc(a, `activityEvents/${id}`), getDoc(a, `investigationEvents/${id}`)]);
-  return Boolean(activity && investigation);
+  const activity = await getDoc(a, `activityEvents/${id}`);
+  if (!activity) return false;
+  return a.jokerId !== "00-00" || Boolean(await getDoc(a, `investigationEvents/${id}`));
 }
 async function holders(a: Auth) {
   const r = await api(`${firestoreBase(a.project)}:runQuery`, a.token, { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "suitAssignments" }] } }) });
@@ -76,14 +88,18 @@ router.post("/suits/assignment", async (req, res) => {
   if (!a) return void res.status(403).json({ error: "dealer seat required" });
   if (!b || typeof b.targetUid !== "string" || !PIPS.has(b.pip) || typeof b.assigned !== "boolean") return void res.status(400).json({ error: "invalid assignment" });
   try {
-    if (!await getDoc(a, `users/${enc(b.targetUid)}`)) return void res.status(404).json({ error: "member not found" });
+    const target = await getDoc(a, `users/${enc(b.targetUid)}`);
+    if (!target) return void res.status(404).json({ error: "member not found" });
+    if (!canChangeSuitAssignment(a.jokerId, String(read(target).jokerId ?? ""))) {
+      return void res.status(403).json({ error: "01-54 cannot change 00-00 SUITS assignments" });
+    }
     for (let attempt = 0; attempt < 3; attempt++) {
       const x = await assignment(a, b.targetUid); const pips = new Set<string>(x.data.pips ?? []);
       const intended = b.assigned ? pips.has(b.pip) : !pips.has(b.pip);
       const priorMarker = x.data.auditMutation?.[b.pip];
       if (intended && typeof priorMarker === "string" && await auditExists(a, priorMarker)) return void res.json({ ok: true, idempotent: true });
       b.assigned ? pips.add(b.pip) : pips.delete(b.pip);
-      const id = hashId("assignment", b.targetUid, b.pip, String(b.assigned), x.doc?.updateTime ?? "missing");
+      const id = hashId("assignment", a.uid, b.targetUid, b.pip, String(b.assigned), x.doc?.updateTime ?? "missing");
       const data = { ...x.data, pips: [...pips].slice(0, 4), auditMutation: { ...(x.data.auditMutation ?? {}), [b.pip]: id } };
       const writes = [{ update: { name: `${root(a.project)}/suitAssignments/${enc(b.targetUid)}`, fields: fields(data) }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }], currentDocument: precondition(x.doc) }, ...auditWrites(a, id, b.targetUid, b.assigned ? "suit_assigned" : "suit_removed", { pip: b.pip, actorUid: a.uid })];
       const r = await commit(a, writes); if (r.ok) return void res.json({ ok: true }); if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
@@ -105,7 +121,7 @@ router.post("/suits/in-play", async (req, res) => {
       const old = await getDoc(a, "suitConfig/current"), data = read(old), current = data.inPlay?.[b.pip];
       const marker = data.auditMutation?.[b.pip];
       if (JSON.stringify(current) === JSON.stringify(intended) && typeof marker === "string" && await auditExists(a, marker)) return void res.json({ ok: true, idempotent: true });
-      const id = hashId("task", b.pip, JSON.stringify(intended), old?.updateTime ?? "missing");
+      const id = hashId("task", a.uid, b.pip, JSON.stringify(intended), old?.updateTime ?? "missing");
       const next = { ...data, inPlay: { ...(data.inPlay ?? {}), [b.pip]: intended }, auditMutation: { ...(data.auditMutation ?? {}), [b.pip]: id } };
       const writes = [{ update: { name: `${root(a.project)}/suitConfig/current`, fields: fields(next) }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }], currentDocument: precondition(old) }, ...auditWrites(a, id, a.uid, "suit_task_updated", { pip: b.pip, active: task.active, destination: task.destination ?? null })];
       const r = await commit(a, writes); if (r.ok) { if (task.active && current?.active !== true) await notifyHolders(a, b.pip); return void res.json({ ok: true }); } if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);

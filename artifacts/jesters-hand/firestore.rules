@@ -14,6 +14,20 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId in ['00-00', '01-54'];
     }
 
+    function validAdminCardState() {
+      let cardId = request.resource.data.get('adminCardId', '');
+      let photoUrl = request.resource.data.get('adminPhotoUrl', '');
+      return cardId == ''
+        && (
+          photoUrl == ''
+          || (
+            photoUrl is string
+            && photoUrl.size() <= 2048
+            && photoUrl.matches('https://.*')
+          )
+        );
+    }
+
     function isArchiveViewer() {
       // Archives are shared only by the two explicitly provisioned Hand
       // seats. A stray isAdmin flag never grants access to deleted content or
@@ -135,13 +149,13 @@ service cloud.firestore {
             // the restricted second Hand cannot lift their own limit.
             && request.resource.data.get('vaultKeeper', null)
                == resource.data.get('vaultKeeper', null)
-            // The admin portrait is placed only by the Jester (branch below);
-            // members cannot set or clear it on their own ticket.
-            && (
-              isAdmin()
-              || request.resource.data.get('adminPhotoUrl', null)
-                 == resource.data.get('adminPhotoUrl', null)
-            )
+            // Both admin-mark source fields are placed only through the
+            // narrow Jester branch below, even when 00-00 edits its own
+            // otherwise owner-controlled Ticket fields.
+            && request.resource.data.get('adminPhotoUrl', null)
+               == resource.data.get('adminPhotoUrl', null)
+            && request.resource.data.get('adminCardId', null)
+               == resource.data.get('adminCardId', null)
             // Suit is member-picked (reading genre) but must be one of the
             // four suits — or absent.
             && (
@@ -154,15 +168,28 @@ service cloud.firestore {
               .hasOnly(['expoPushToken'])
             && !('expoPushToken' in request.resource.data)
           )
-          // The Jester may place the admin portrait and mark the suit on any
-          // member's ticket from The Hand — ONLY those. The mug photo and all
+          // The Jester may place one gallery admin card on any member's ticket
+          // from The Hand — ONLY those fields. The mug photo and all
           // ticket fields belong to the member; privilege/identity/operational
           // keys (isAdmin, jokerId, suspended, expoPushToken, …) stay untouchable.
           || (
             activeUser()
             && isAdmin()
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['adminPhotoUrl', 'suit'])
+                 .hasOnly(['adminPhotoUrl', 'adminCardId'])
+            && validAdminCardState()
+          )
+          // Suit marking remains separate so an admin-mark write can never
+          // smuggle in even another otherwise-admin-controlled field.
+          || (
+            activeUser()
+            && isAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['suit'])
+            && (
+              !('suit' in request.resource.data)
+              || request.resource.data.suit in ['Spade', 'Diamond', 'Heart', 'Club']
+            )
           )
         );
       allow delete: if activeUser() && request.auth.uid == userId;
@@ -342,7 +369,7 @@ service cloud.firestore {
     // Anyone authenticated can create a conversation as long as they include themselves.
     // Membership changes are locked down: a member may only remove
     // themselves (self-leave), and on GROUP chats the creator (createdBy)
-    // may add members — but never remove others. createdBy itself is
+    // may add members — but never remove others. Creation metadata is
     // immutable after creation, so ownership can't be hijacked.
     match /conversations/{conversationId} {
       allow read: if activeUser()
@@ -355,74 +382,62 @@ service cloud.firestore {
         );
       allow update: if activeUser()
         && request.auth.uid in resource.data.memberUids
-        // createdBy is frozen: nobody may set, change, or delete it after
-        // create — with one exception: legacy groups created before
-        // ownership existed (no createdBy field) may be backfilled ONCE by
-        // any member, but only to the deterministic first member, and the
-        // write may touch nothing else. Once set, it is frozen forever.
         && (
-          !request.resource.data.diff(resource.data).affectedKeys()
-             .hasAny(['createdBy'])
-          || (
+          // Narrow one-time migration for groups created before ownership
+          // metadata existed. Any member may trigger it, but it can only set
+          // createdBy to the deterministic first member and touch nothing
+          // else (in particular, it cannot fabricate createdAt).
+          (
             !('createdBy' in resource.data)
             && resource.data.isGroup == true
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['createdBy'])
             && request.resource.data.createdBy == resource.data.memberUids[0]
           )
-          // …or the group's owner is leaving and hands ownership to the
-          // deterministic first remaining member in the same write. The
-          // memberUids clause below independently enforces that the only
-          // membership change is removing the requester's own uid.
+          // Canonical conversations keep both creation fields immutable and
+          // retain the existing membership/unread update constraints.
           || (
-            resource.data.isGroup == true
-            && resource.data.createdBy == request.auth.uid
-            && request.resource.data.memberUids is list
-            && !(request.auth.uid in request.resource.data.memberUids)
-            && request.resource.data.memberUids.size() > 0
-            && request.resource.data.createdBy == request.resource.data.memberUids[0]
-          )
-        )
-        && (
-          // memberUids untouched…
-          !request.resource.data.diff(resource.data).affectedKeys()
-             .hasAny(['memberUids'])
-          // …or the only change is removing your own uid (self-leave).
-          // The result must never be an EMPTY member list: the last member
-          // must DELETE the conversation instead (see delete rule below).
-          // This makes new zero-member orphans unreachable, so the orphan
-          // read allowance above only ever exposes pre-fix legacy leftovers.
-          || (
-            request.resource.data.memberUids is list
-            && request.resource.data.memberUids.size() > 0
-            && request.resource.data.memberUids.toSet()
-                 .difference(resource.data.memberUids.toSet()).size() == 0
-            && resource.data.memberUids.toSet()
-                 .difference(request.resource.data.memberUids.toSet())
-                 .hasOnly([request.auth.uid])
-            && !(request.auth.uid in request.resource.data.memberUids)
-          )
-          // …or the group's creator is adding members (additions only,
-          // no removals). Direct chats have no createdBy path and stay locked.
-          || (
-            resource.data.isGroup == true
-            && resource.data.createdBy == request.auth.uid
-            && request.resource.data.memberUids is list
-            // nobody removed…
-            && resource.data.memberUids.toSet()
-                 .difference(request.resource.data.memberUids.toSet()).size() == 0
-            // …and at least one member actually added.
-            && request.resource.data.memberUids.toSet()
-                 .difference(resource.data.memberUids.toSet()).size() > 0
+            request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
+            && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+            && (
+              // memberUids untouched…
+              !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['memberUids'])
+              // …or the only change is removing your own uid (self-leave).
+              // The result must never be an EMPTY member list: the last member
+              // must DELETE the conversation instead (see delete rule below).
+              // This makes new zero-member orphans unreachable, so the orphan
+              // read allowance above only ever exposes pre-fix legacy leftovers.
+              || (
+                request.resource.data.memberUids is list
+                && request.resource.data.memberUids.size() > 0
+                && request.resource.data.memberUids.toSet()
+                     .difference(resource.data.memberUids.toSet()).size() == 0
+                && resource.data.memberUids.toSet()
+                     .difference(request.resource.data.memberUids.toSet())
+                     .hasOnly([request.auth.uid])
+                && !(request.auth.uid in request.resource.data.memberUids)
+              )
+              // …or the group's creator is adding members (additions only,
+              // no removals). Direct chats have no createdBy path and stay locked.
+              || (
+                resource.data.isGroup == true
+                && resource.data.createdBy == request.auth.uid
+                && request.resource.data.memberUids is list
+                // nobody removed…
+                && resource.data.memberUids.toSet()
+                     .difference(request.resource.data.memberUids.toSet()).size() == 0
+                // …and at least one member actually added.
+                && request.resource.data.memberUids.toSet()
+                     .difference(resource.data.memberUids.toSet()).size() > 0
+              )
+            )
           )
         );
       allow create: if activeUser()
         && request.auth.uid in request.resource.data.memberUids
-        // If createdBy is set at creation, it must be the requester.
-        && (
-          !('createdBy' in request.resource.data)
-          || request.resource.data.createdBy == request.auth.uid
-        );
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
       // Deletes: only when the requester is the SOLE remaining member (the
       // last person leaving takes the conversation with them), or the
       // conversation is already an orphan with no members at all (anyone
@@ -728,7 +743,7 @@ service cloud.firestore {
 
     function validDealTask(t) {
       return t is map
-        && t.keys().hasOnly(['id', 'type', 'label', 'targetCount'])
+        && t.keys().hasOnly(['id', 'type', 'label', 'targetCount', 'assigneeUid'])
         && t.id is string
         && t.id.size() > 0
         && t.id.size() <= 80
@@ -738,7 +753,22 @@ service cloud.firestore {
         && t.label.size() <= 200
         && t.targetCount is int
         && t.targetCount >= 1
-        && t.targetCount <= 100;
+        && t.targetCount <= 100
+        && validDealAssignee(t.assigneeUid);
+    }
+
+    function validDealAssignee(uid) {
+      let target = get(/databases/$(database)/documents/users/$(uid)).data;
+      let targetJokerId = target.get('jokerId', '');
+      return uid is string
+        && uid.size() > 0
+        && uid.size() <= 128
+        && targetJokerId is string
+        && targetJokerId.size() > 0
+        && target.get('suspended', false) != true
+        // 00-00 may assign any active member. 01-54 may assign any active
+        // member except the permanent owner, and remains a valid recipient.
+        && (isAdmin() || targetJokerId != '00-00');
     }
 
     function validDeal(d) {
@@ -809,7 +839,7 @@ service cloud.firestore {
     // own progress evidence but cannot manufacture, amend, or erase it.
     match /dealActivity/{userId}/events/{eventId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isDealAdmin());
+        && (request.auth.uid == userId || isAdmin());
       allow create, update, delete: if false;
     }
 
@@ -830,7 +860,7 @@ service cloud.firestore {
     // inspect every assignment. No client can forge a pip, streak, or stamp.
     match /suitAssignments/{userId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isDealAdmin());
+        && (request.auth.uid == userId || isAdmin());
       allow create, update, delete: if false;
     }
 
@@ -841,7 +871,7 @@ service cloud.firestore {
 
     match /dealCompletions/{dealId}/members/{userId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isDealAdmin());
+        && (request.auth.uid == userId || isAdmin());
       // Reconciled only by the authenticated API server's privileged Firestore
       // credentials. Client activity remains immutable evidence above.
       allow create, update, delete: if false;
@@ -849,7 +879,7 @@ service cloud.firestore {
 
     match /dealMemberStats/{userId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isDealAdmin());
+        && (request.auth.uid == userId || isAdmin());
       allow create, update, delete: if false;
     }
 
@@ -870,7 +900,7 @@ service cloud.firestore {
 
     match /dealAwards/{userId}/items/{awardId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isDealAdmin());
+        && (request.auth.uid == userId || isAdmin());
       allow create, update: if activeUser() && isDealAdmin()
         && validDealAward(userId);
       allow delete: if false;

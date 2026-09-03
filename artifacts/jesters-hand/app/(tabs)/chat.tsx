@@ -131,26 +131,21 @@ export default function ChatScreen() {
   // Auth guard
   useEffect(() => { if (user === null) router.replace('/'); }, [user]);
 
-  // Live conversation metadata — keeps createdBy (ownership) fresh when it
-  // transfers, so the owner indicator and add-member button update in place.
+  // Live conversation metadata keeps group ownership current.
   useEffect(() => {
     if (!conversationId) return;
-    let backfillAttempted = false;
     const unsub = onSnapshot(doc(db, 'conversations', conversationId), snap => {
       if (!snap.exists()) return;
       const d = snap.data();
       const memberUids: string[] = d.memberUids ?? [];
-      const createdBy: string | undefined = d.createdBy;
+      const createdBy: string = d.createdBy ?? '';
 
-      // Legacy group (created before ownership existed): backfill createdBy
-      // with the first member. Rules only allow this exact one-time write,
-      // so it's safe for any member to trigger it on open. The snapshot
-      // listener picks up the new createdBy automatically.
-      if (d.isGroup === true && !createdBy && memberUids.length > 0 && !backfillAttempted) {
-        backfillAttempted = true;
-        claimLegacyGroupOwnership(snap.id, memberUids[0]).catch(e => {
-          // Non-fatal (e.g. another member won the race and it's now set).
-          console.warn('[Chat] legacy ownership backfill skipped:', e);
+      // Any current member may trigger this migration, but rules permit only
+      // the first member to be recorded and only when createdBy is absent.
+      if (d.isGroup === true && !createdBy && memberUids.length > 0) {
+        void claimLegacyGroupOwnership(snap.id, memberUids[0]).catch(error => {
+          // Non-fatal: another member may have won the one-time update race.
+          console.warn('[Chat] legacy ownership backfill skipped:', error);
         });
       }
 
@@ -160,6 +155,7 @@ export default function ChatScreen() {
         isGroup:       d.isGroup       ?? false,
         groupName:     d.groupName,
         createdBy,
+        createdAt:     d.createdAt     ?? null,
         lastMessage:   d.lastMessage   ?? '',
         lastMessageAt: d.lastMessageAt ?? null,
         unreadCounts:  d.unreadCounts  ?? {},

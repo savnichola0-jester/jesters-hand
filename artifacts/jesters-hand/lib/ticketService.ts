@@ -31,8 +31,11 @@ export interface TicketData {
   static?: string;
   mugUrl?: string;
   adminPhotoUrl?: string;
+  /** Legacy field cleared when a gallery admin card is uploaded. */
+  adminCardId?: string;
   filed?: boolean;
   filedAt?: number;
+  suspended?: boolean;
 }
 
 // ── Read ──────────────────────────────────────────────────────────────────────

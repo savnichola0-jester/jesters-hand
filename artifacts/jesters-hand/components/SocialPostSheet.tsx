@@ -115,7 +115,7 @@ export default function SocialPostSheet({
           {reactionChips(reactions, () => setPickerFor('post'))}
           {footer}
           <View style={s.divider} />
-          <Text style={s.commentsTitle}>{commentCount || comments.length} COMMENTS</Text>
+          <Text style={s.commentsTitle}>SPEAK YOUR PIECE · {commentCount || comments.length}</Text>
           {comments.map(comment => (
             <View key={comment.id} style={s.comment}>
               <Text style={s.commentAuthor}>
@@ -130,7 +130,7 @@ export default function SocialPostSheet({
           <TextInput
             value={text}
             onChangeText={setText}
-            placeholder="Leave a comment…"
+            placeholder="Speak your piece…"
             placeholderTextColor="rgba(237,224,196,0.35)"
             style={s.input}
             maxLength={2000}
@@ -141,7 +141,10 @@ export default function SocialPostSheet({
             onPress={send}
             disabled={!text.trim() || sending}
           >
-            {sending ? <ActivityIndicator size="small" color={GOLD} /> : <Feather name="send" size={18} color={GOLD} />}
+            {sending
+              ? <ActivityIndicator size="small" color={GOLD} />
+              : <Text style={s.sendText}>SPEAK</Text>
+            }
           </TouchableOpacity>
         </View>
         {pickerFor ? (
@@ -204,9 +207,11 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)', fontFamily: 'Inter_400Regular', fontSize: 13,
   },
   send: {
-    width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center',
+    minWidth: 66, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 12,
     borderWidth: 1, borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.1)',
   },
+  sendText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.2 },
   disabled: { opacity: 0.4 },
   picker: {
     position: 'absolute', left: 14, right: 14, flexDirection: 'row', flexWrap: 'wrap',

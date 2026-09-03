@@ -594,30 +594,33 @@ export default function AnteScreen() {
               contentContainerStyle={{ paddingBottom: 8 }}
               showsVerticalScrollIndicator={false}
               ListHeaderComponent={openPost ? (
-                <Pressable
-                  style={[s.postCard, { marginBottom: 14 }]}
-                  onLongPress={() => openPicker({ kind: 'post', postId: openPost.id })}
-                >
-                  {renderSenderHead(openPost.senderUid, openPost.createdAt)}
-                  {renderPostBody(openPost)}
-                  {renderReactionsRow(openPost.reactions, { kind: 'post', postId: openPost.id })}
-                  <View style={s.postFootRow}>
-                    <TouchableOpacity
-                      style={s.footBtn}
-                      onPress={() => openPicker({ kind: 'post', postId: openPost.id })}
-                      activeOpacity={0.7}
-                    >
-                      <Feather name="smile" size={14} color={GOLD} />
-                      <Text style={s.footBtnText}>React</Text>
-                    </TouchableOpacity>
-                  </View>
-                </Pressable>
+                <>
+                  <Pressable
+                    style={[s.postCard, { marginBottom: 14 }]}
+                    onLongPress={() => openPicker({ kind: 'post', postId: openPost.id })}
+                  >
+                    {renderSenderHead(openPost.senderUid, openPost.createdAt)}
+                    {renderPostBody(openPost)}
+                    {renderReactionsRow(openPost.reactions, { kind: 'post', postId: openPost.id })}
+                    <View style={s.postFootRow}>
+                      <TouchableOpacity
+                        style={s.footBtn}
+                        onPress={() => openPicker({ kind: 'post', postId: openPost.id })}
+                        activeOpacity={0.7}
+                      >
+                        <Feather name="smile" size={14} color={GOLD} />
+                        <Text style={s.footBtnText}>React</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </Pressable>
+                  <Text style={s.commentsSectionTitle}>SPEAK YOUR PIECE</Text>
+                </>
               ) : null}
               ListEmptyComponent={
                 commentsLoading ? (
                   <ActivityIndicator color={GOLD} style={{ marginTop: 20 }} />
                 ) : (
-                  <Text style={s.noComments}>No comments yet. Say your piece.</Text>
+                  <Text style={s.noComments}>No one has spoken yet. Speak your piece.</Text>
                 )
               }
               renderItem={({ item }) => (
@@ -639,7 +642,7 @@ export default function AnteScreen() {
             <View style={s.commentInputRow}>
               <TextInput
                 style={s.commentInput}
-                placeholder="Add a comment…"
+                placeholder="Speak your piece…"
                 placeholderTextColor="rgba(237,224,196,0.35)"
                 value={commentText}
                 onChangeText={setCommentText}
@@ -653,7 +656,7 @@ export default function AnteScreen() {
               >
                 {commenting
                   ? <ActivityIndicator color={GOLD} size="small" />
-                  : <Feather name="send" size={18} color={GOLD} />
+                  : <Text style={s.sendBtnText}>SPEAK</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -918,6 +921,10 @@ const s = StyleSheet.create({
     marginBottom: 12, gap: 12,
   },
   modalTitle: { flex: 1, color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 15, letterSpacing: 1.5 },
+  commentsSectionTitle: {
+    color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11,
+    letterSpacing: 1.5, marginBottom: 10,
+  },
   noComments: {
     color: 'rgba(237,224,196,0.4)', fontFamily: 'Cinzel_400Regular',
     fontSize: 12, textAlign: 'center', marginTop: 16,
@@ -938,9 +945,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10,
   },
   sendBtn: {
-    width: 44, height: 44, borderRadius: 10,
+    minWidth: 66, height: 44, borderRadius: 10, paddingHorizontal: 12,
     backgroundColor: 'rgba(200,165,60,0.12)',
     borderWidth: 1.2, borderColor: 'rgba(200,165,60,0.45)',
     alignItems: 'center', justifyContent: 'center',
+  },
+  sendBtnText: {
+    color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.2,
   },
 });

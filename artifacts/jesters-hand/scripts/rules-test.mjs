@@ -600,6 +600,20 @@ await test('creating a conversation including yourself succeeds', async () => {
   await seedConvWithMsg();
   await assertSucceeds(setDoc(doc(mallory(), 'conversations/mine'), {
     memberUids: ['mallory', 'alice'], isGroup: false,
+    createdBy: 'mallory', createdAt: serverTimestamp(),
+    lastMessage: '', lastMessageAt: null, unreadCounts: {},
+  }));
+});
+
+await test('conversation creation requires requester-owned server creation metadata', async () => {
+  await seedConvWithMsg();
+  await assertFails(setDoc(doc(mallory(), 'conversations/no-metadata'), {
+    memberUids: ['mallory', 'alice'], isGroup: false,
+    lastMessage: '', lastMessageAt: null, unreadCounts: {},
+  }));
+  await assertFails(setDoc(doc(mallory(), 'conversations/forged-time'), {
+    memberUids: ['mallory', 'alice'], isGroup: false,
+    createdBy: 'mallory', createdAt: new Date(),
     lastMessage: '', lastMessageAt: null, unreadCounts: {},
   }));
 });
@@ -957,11 +971,12 @@ await test('creating a group with own createdBy succeeds', async () => {
   await seedGroup();
   await assertSucceeds(setDoc(doc(mallory(), 'conversations/legitgrp'), {
     memberUids: ['mallory', 'alice'], isGroup: true, groupName: 'G',
-    createdBy: 'mallory', lastMessage: '', lastMessageAt: null, unreadCounts: {},
+    createdBy: 'mallory', createdAt: serverTimestamp(),
+    lastMessage: '', lastMessageAt: null, unreadCounts: {},
   }));
 });
 
-// ── Legacy group ownership backfill (createdBy missing) ──────────────────────
+// ── Conversation creation metadata is immutable ───────────────────────────────
 
 async function seedLegacyGroup(extra = {}) {
   await env.clearFirestore();
@@ -974,7 +989,7 @@ async function seedLegacyGroup(extra = {}) {
   });
 }
 
-await test('legacy group: any member may backfill createdBy = first member', async () => {
+await test('legacy group: any member may backfill createdBy to first member', async () => {
   await seedLegacyGroup();
   const bob = env.authenticatedContext('bob').firestore();
   await assertSucceeds(setDoc(doc(bob, 'conversations/legacy1'),
@@ -1000,19 +1015,37 @@ await test('legacy group: outsider cannot backfill createdBy', async () => {
     { createdBy: 'alice' }, { merge: true }));
 });
 
-await test('legacy group: backfill cannot piggyback other changes', async () => {
+await test('legacy group: backfill cannot piggyback membership or unread changes', async () => {
   await seedLegacyGroup();
-  await assertFails(setDoc(doc(alice(), 'conversations/legacy1'),
-    { createdBy: 'alice', memberUids: ['alice', 'bob', 'carol'] }, { merge: true }));
+  await assertFails(setDoc(doc(alice(), 'conversations/legacy1'), {
+    createdBy: 'alice',
+    memberUids: ['alice', 'bob', 'carol'],
+    unreadCounts: { alice: 0, bob: 0, carol: 0 },
+  }, { merge: true }));
 });
 
-await test('legacy DIRECT chat cannot gain createdBy', async () => {
+await test('legacy group: backfill cannot fabricate createdAt', async () => {
+  await seedLegacyGroup();
+  await assertFails(setDoc(doc(alice(), 'conversations/legacy1'),
+    { createdBy: 'alice', createdAt: serverTimestamp() }, { merge: true }));
+});
+
+await test('legacy group: existing createdAt cannot change during backfill', async () => {
+  const original = new Date('2020-01-01T00:00:00.000Z');
+  await seedLegacyGroup({ createdAt: original });
+  await assertFails(setDoc(doc(alice(), 'conversations/legacy1'),
+    { createdBy: 'alice', createdAt: serverTimestamp() }, { merge: true }));
+  await assertSucceeds(setDoc(doc(alice(), 'conversations/legacy1'),
+    { createdBy: 'alice' }, { merge: true }));
+});
+
+await test('legacy direct conversation cannot gain createdBy', async () => {
   await seedLegacyGroup({ isGroup: false });
   await assertFails(setDoc(doc(alice(), 'conversations/legacy1'),
     { createdBy: 'alice' }, { merge: true }));
 });
 
-await test('backfilled ownership is frozen (hijack after backfill rejected)', async () => {
+await test('backfilled ownership is immutable', async () => {
   await seedLegacyGroup();
   await assertSucceeds(setDoc(doc(alice(), 'conversations/legacy1'),
     { createdBy: 'alice' }, { merge: true }));
@@ -1021,7 +1054,7 @@ await test('backfilled ownership is frozen (hijack after backfill rejected)', as
     { createdBy: 'bob' }, { merge: true }));
 });
 
-await test('after backfill, first member can add new members', async () => {
+await test('backfilled first member can subsequently add a member', async () => {
   await seedLegacyGroup();
   await assertSucceeds(setDoc(doc(alice(), 'conversations/legacy1'),
     { createdBy: 'alice' }, { merge: true }));
@@ -1029,10 +1062,18 @@ await test('after backfill, first member can add new members', async () => {
     { memberUids: ['alice', 'bob', 'carol'], 'unreadCounts.carol': 0 }, { merge: true }));
 });
 
-await test('legacy group without backfill still blocks member adds', async () => {
+await test('legacy group without a claim still blocks member additions', async () => {
   await seedLegacyGroup();
   await assertFails(setDoc(doc(alice(), 'conversations/legacy1'),
-    { memberUids: ['alice', 'bob', 'carol'] }, { merge: true }));
+    { memberUids: ['alice', 'bob', 'carol'], 'unreadCounts.carol': 0 }, { merge: true }));
+});
+
+await test('conversation createdBy and createdAt cannot be changed', async () => {
+  await seedGroup();
+  await assertFails(setDoc(doc(alice(), 'conversations/grp1'),
+    { createdBy: 'bob' }, { merge: true }));
+  await assertFails(setDoc(doc(alice(), 'conversations/grp1'),
+    { createdAt: serverTimestamp() }, { merge: true }));
 });
 
 await test('self-leave from a group still works', async () => {
@@ -1042,11 +1083,11 @@ await test('self-leave from a group still works', async () => {
     { memberUids: ['alice'] }, { merge: true }));
 });
 
-// ── Ownership transfer when the owner leaves a group ─────────────────────────
+// ── Ownership is never transferred ────────────────────────────────────────────
 
-await test('owner leave + transfer to first remaining member succeeds', async () => {
+await test('owner leave cannot transfer immutable createdBy', async () => {
   await seedGroup(); // memberUids: [alice, bob], createdBy: alice
-  await assertSucceeds(setDoc(doc(alice(), 'conversations/grp1'),
+  await assertFails(setDoc(doc(alice(), 'conversations/grp1'),
     { memberUids: ['bob'], createdBy: 'bob', deletedBy: ['alice'] }, { merge: true }));
 });
 
@@ -1095,13 +1136,10 @@ await test('owner leave cannot kick others in the same write', async () => {
     { memberUids: ['bob'], createdBy: 'bob' }, { merge: true }));
 });
 
-await test('after transfer, the new owner can add members', async () => {
+await test('former owner metadata cannot be changed to let a new member add', async () => {
   await seedGroup();
-  await assertSucceeds(setDoc(doc(alice(), 'conversations/grp1'),
+  await assertFails(setDoc(doc(alice(), 'conversations/grp1'),
     { memberUids: ['bob'], createdBy: 'bob', deletedBy: ['alice'] }, { merge: true }));
-  const bob = env.authenticatedContext('bob').firestore();
-  await assertSucceeds(setDoc(doc(bob, 'conversations/grp1'),
-    { memberUids: ['bob', 'carol'], 'unreadCounts.carol': 0 }, { merge: true }));
 });
 
 await test('DIRECT chat owner leave cannot transfer createdBy', async () => {
@@ -1218,6 +1256,7 @@ async function seedBlackBook() {
   await env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();
     await setDoc(doc(db, 'users/admin'), { jokerId: '00-00', isAdmin: true });
+    await setDoc(doc(db, 'users/secondHand'), { jokerId: '01-54', isAdmin: true });
     await setDoc(doc(db, 'users/alice'), { jokerId: '01-01' });
     await setDoc(doc(db, 'blackBook/alice/entries/r1'),
       { tab: 'royals', title: 'Honor', createdBy: 'admin', createdAt: new Date() });
@@ -1395,6 +1434,50 @@ await test('admin can set another member adminPhotoUrl and nothing else', async 
   await assertFails(updateDoc(doc(admin(), 'users/alice'), { expoPushToken: 'ExponentPushToken[x]' }));
   // Non-admin members still cannot edit others.
   await assertFails(updateDoc(doc(mallory(), 'users/alice'), { adminPhotoUrl: 'https://x/evil.jpg' }));
+});
+
+await test('built-in admin card IDs are no longer accepted', async () => {
+  await seedBlackBook();
+  await assertFails(updateDoc(doc(admin(), 'users/admin'), {
+    adminCardId: 'card-01', adminPhotoUrl: '',
+  }));
+  await assertFails(updateDoc(doc(admin(), 'users/alice'), {
+    adminCardId: 'card-15', adminPhotoUrl: '',
+  }));
+});
+
+await test('invalid legacy admin card IDs are rejected', async () => {
+  await seedBlackBook();
+  await assertFails(updateDoc(doc(admin(), 'users/alice'), {
+    adminCardId: 'card-16', adminPhotoUrl: '',
+  }));
+  await assertFails(updateDoc(doc(admin(), 'users/alice'), {
+    adminCardId: '../card-01', adminPhotoUrl: '',
+  }));
+});
+
+await test('regular member and 01-54 cannot set legacy admin cards', async () => {
+  await seedBlackBook();
+  const secondHand = env.authenticatedContext('secondHand').firestore();
+  await assertFails(updateDoc(doc(alice(), 'users/alice'), {
+    adminCardId: 'card-02', adminPhotoUrl: '',
+  }));
+  await assertFails(updateDoc(doc(secondHand, 'users/alice'), {
+    adminCardId: 'card-02', adminPhotoUrl: '',
+  }));
+});
+
+await test('gallery admin card updates cannot alter owner fields or retain a legacy card ID', async () => {
+  await seedBlackBook();
+  await assertFails(updateDoc(doc(admin(), 'users/alice'), {
+    adminCardId: 'card-03', adminPhotoUrl: '', coffee: 'Changed by admin',
+  }));
+  await assertFails(updateDoc(doc(admin(), 'users/alice'), {
+    adminCardId: 'card-03', adminPhotoUrl: 'https://x/card.jpg',
+  }));
+  await assertFails(updateDoc(doc(admin(), 'users/admin'), {
+    adminCardId: 'card-03', adminPhotoUrl: '', name: 'Combined owner edit',
+  }));
 });
 
 // ── Dead push token cleanup (deletion-only carve-out) ───────────────────────
@@ -2506,6 +2589,7 @@ const validAgreement = (uid, extra = {}) => {
     signedAt: serverTimestamp(), ...extra,
   };
 };
+const secondHand = () => env.authenticatedContext('secondHand').firestore();
 
 await test('member signs own contract; forgeries rejected', async () => {
   await seedAgreements();
@@ -2525,6 +2609,25 @@ await test('member signs own contract; forgeries rejected', async () => {
   })));
   // The real thing
   await assertSucceeds(setDoc(doc(alice(), 'agreements/alice'), validAgreement('alice')));
+});
+
+await test('00-00 never signs and 01-54 cannot amend', async () => {
+  await seedAgreements();
+  await assertFails(setDoc(doc(admin(), 'agreements/admin'), validAgreement('admin', {
+    uid: 'admin', jokerId: '00-00',
+  })));
+  const bundled = {
+    version: 1, heading: 'ORIGINAL', sections: [{ title: 'CORE RULES', lines: ['Stay sharp.'] }],
+    acknowledgement: 'I first agree.',
+  };
+  await assertFails(setDoc(doc(secondHand(), 'contract/current'), {
+    version: 2,
+    heading: 'NO',
+    sections: [{ title: 'CORE RULES', lines: ['Not authorized.'] }],
+    acknowledgement: 'No.',
+    previous: bundled,
+    updatedAt: serverTimestamp(),
+  }));
 });
 
 await test('signed contract is immutable — no edits, overwrites, or deletes', async () => {
@@ -2840,7 +2943,7 @@ await test('creates cannot be planted with forged reactions', async () => {
 
 const dealFields = (extra = {}) => ({
   title: 'The First Deal',
-  tasks: [{ id: 'm1', type: 'mark', label: 'Leave a mark', targetCount: 1 }],
+  tasks: [{ id: 'm1', type: 'mark', label: 'Leave a mark', targetCount: 1, assigneeUid: 'alice' }],
   duration: '24h',
   status: 'draft',
   previousDealId: null,
@@ -2856,12 +2959,12 @@ async function seedDealAccess({ published = true, suspended = false } = {}) {
   await env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();
     await setDoc(doc(db, 'users/admin'), { isAdmin: true, jokerId: '00-00' });
-    await setDoc(doc(db, 'users/alice'), { isAdmin: false, suspended });
-    await setDoc(doc(db, 'users/bob'), { isAdmin: false });
+    await setDoc(doc(db, 'users/alice'), { isAdmin: false, jokerId: '02-54', suspended });
+    await setDoc(doc(db, 'users/bob'), { isAdmin: false, jokerId: '03-54' });
     await setDoc(doc(db, 'users/deputy'), { isAdmin: true, jokerId: '01-54' });
     await setDoc(doc(db, 'deals/d1'), {
       title: 'Live Deal',
-      tasks: [{ id: 'm1', type: 'mark', label: 'Leave a mark', targetCount: 1 }],
+      tasks: [{ id: 'm1', type: 'mark', label: 'Leave a mark', targetCount: 1, assigneeUid: 'alice' }],
       duration: '24h',
       status: published ? 'published' : 'draft',
       previousDealId: null,
@@ -2884,6 +2987,33 @@ await test('Deal creation is dealer-only and strictly shaped', async () => {
   await assertSucceeds(setDoc(doc(admin(), 'deals/admin-deal'), dealFields()));
 });
 
+await test('Deal task recipients honor the two dealer seats without exempting 01-54', async () => {
+  await seedDealAccess();
+  const deputy = env.authenticatedContext('deputy').firestore();
+  await assertSucceeds(setDoc(doc(admin(), 'deals/admin-to-deputy'), dealFields({
+    tasks: [{ id: 'm1', type: 'mark', label: 'Leave a mark', targetCount: 1, assigneeUid: 'deputy' }],
+  })));
+  await assertSucceeds(setDoc(doc(deputy, 'deals/deputy-to-self'), dealFields({
+    createdBy: 'deputy',
+    tasks: [{ id: 'm1', type: 'mark', label: 'Leave a mark', targetCount: 1, assigneeUid: 'deputy' }],
+  })));
+  await assertFails(setDoc(doc(deputy, 'deals/deputy-to-owner'), dealFields({
+    createdBy: 'deputy',
+    tasks: [{ id: 'm1', type: 'mark', label: 'Leave a mark', targetCount: 1, assigneeUid: 'admin' }],
+  })));
+  await assertFails(setDoc(doc(admin(), 'deals/missing-recipient'), dealFields({
+    tasks: [{ id: 'm1', type: 'mark', label: 'Leave a mark', targetCount: 1, assigneeUid: 'missing' }],
+  })));
+  await env.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'users/suspended-target'), {
+      isAdmin: false, jokerId: '02-54', suspended: true,
+    });
+  });
+  await assertFails(setDoc(doc(admin(), 'deals/suspended-recipient'), dealFields({
+    tasks: [{ id: 'm1', type: 'mark', label: 'Leave a mark', targetCount: 1, assigneeUid: 'suspended-target' }],
+  })));
+});
+
 await test('only dealer seats publish a Deal and members read published only', async () => {
   await seedDealAccess({ published: false });
   await assertFails(updateDoc(doc(alice(), 'deals/d1'), {
@@ -2897,7 +3027,7 @@ await test('only dealer seats publish a Deal and members read published only', a
   await assertFails(deleteDoc(doc(admin(), 'deals/d1')));
 });
 
-await test('activity is server-write-only, owner-readable, and suspension-aware', async () => {
+await test('activity is server-write-only, owner/00-00-readable, and suspension-aware', async () => {
   await seedDealAccess();
   await assertFails(setDoc(doc(alice(), 'dealActivity/alice/events/e1'), {
     uid: 'alice', type: 'mark', sourceId: 'ticket:t1', occurredAt: serverTimestamp(),
@@ -2915,6 +3045,7 @@ await test('activity is server-write-only, owner-readable, and suspension-aware'
   });
   await assertSucceeds(getDoc(doc(alice(), 'dealActivity/alice/events/e1')));
   await assertSucceeds(getDoc(doc(admin(), 'dealActivity/alice/events/e1')));
+  await assertFails(getDoc(doc(env.authenticatedContext('deputy').firestore(), 'dealActivity/alice/events/e1')));
   await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), 'dealActivity/alice/events/e1')));
   await assertFails(updateDoc(doc(alice(), 'dealActivity/alice/events/e1'), { sourceId: 'changed' }));
   await seedDealAccess({ suspended: true });
@@ -2924,7 +3055,7 @@ await test('activity is server-write-only, owner-readable, and suspension-aware'
   }));
 });
 
-await test('progress and stats are client read-only; owner and dealer reads work', async () => {
+await test('progress and stats are client read-only; owner and 00-00 reads work', async () => {
   await seedDealAccess();
   const completion = {
     uid: 'alice', taskCounts: { m1: 1 }, completedTaskIds: ['m1'],
@@ -2958,8 +3089,8 @@ await test('progress and stats are client read-only; owner and dealer reads work
   await assertSucceeds(getDocs(collection(admin(), 'dealMemberStats')));
   await assertSucceeds(getDocs(collection(admin(), 'dealCompletions/d1/members')));
   const deputy = env.authenticatedContext('deputy').firestore();
-  await assertSucceeds(getDoc(doc(deputy, 'dealMemberStats/alice')));
-  await assertSucceeds(getDocs(collection(deputy, 'dealMemberStats')));
+  await assertFails(getDoc(doc(deputy, 'dealMemberStats/alice')));
+  await assertFails(getDocs(collection(deputy, 'dealMemberStats')));
 });
 
 await test('only dealer seats award valid milestones; member reads own awards only', async () => {
@@ -2982,10 +3113,11 @@ await test('only dealer seats award valid milestones; member reads own awards on
   await assertSucceeds(getDoc(doc(alice(), 'dealAwards/alice/items/a1')));
   const bob = env.authenticatedContext('bob').firestore();
   await assertFails(getDoc(doc(bob, 'dealAwards/alice/items/a1')));
+  await assertFails(getDoc(doc(deputy, 'dealAwards/alice/items/a1')));
   await assertSucceeds(getDocs(collection(admin(), 'dealAwards/alice/items')));
 });
 
-await test('SUITS state is server-write-only with owner and dealer reads', async () => {
+await test('SUITS state is server-write-only with owner and 00-00 reads', async () => {
   await seedDealAccess();
   await env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();
@@ -2999,7 +3131,7 @@ await test('SUITS state is server-write-only with owner and dealer reads', async
   await assertSucceeds(getDoc(doc(alice(), 'suitAssignments/alice')));
   await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), 'suitAssignments/alice')));
   await assertSucceeds(getDoc(doc(admin(), 'suitAssignments/alice')));
-  await assertSucceeds(getDoc(doc(env.authenticatedContext('deputy').firestore(), 'suitAssignments/alice')));
+  await assertFails(getDoc(doc(env.authenticatedContext('deputy').firestore(), 'suitAssignments/alice')));
   await assertSucceeds(getDoc(doc(alice(), 'suitConfig/current')));
   await assertFails(setDoc(doc(alice(), 'suitAssignments/alice'), {
     pips: ['heart'], streaks: { heart: 99 }, completed: {},

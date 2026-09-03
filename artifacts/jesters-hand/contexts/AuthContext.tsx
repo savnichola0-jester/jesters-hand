@@ -30,6 +30,10 @@ interface AuthContextType {
   contractVersion: number;
   /** True when this member must (re-)sign the contract before entering. */
   needsContract: boolean;
+  /** False until profile, agreement, and current contract checks have settled. */
+  contractGateReady: boolean;
+  /** Entry-time gate decision. Null while deciding; live amendments do not eject an active session. */
+  contractGateRequired: boolean | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -44,6 +48,8 @@ const AuthContext = createContext<AuthContextType>({
   refreshAgreement: async () => {},
   contractVersion: BUNDLED_CONTRACT.version,
   needsContract: false,
+  contractGateReady: false,
+  contractGateRequired: null,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -54,32 +60,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [agreement, setAgreement] = useState<Agreement | false | null>(null);
   const [contractVersion, setContractVersion] = useState(BUNDLED_CONTRACT.version);
+  const [agreementChecked, setAgreementChecked] = useState(false);
+  const [contractChecked, setContractChecked] = useState(false);
+  const [contractGateRequired, setContractGateRequired] = useState<boolean | null>(null);
   const isAdmin = !!user && adminFlag && jokerId === '00-00';
   const isJester = isAdmin;
   const isHandAdmin = !!user && adminFlag && (jokerId === '00-00' || jokerId === '01-54');
+  const contractGateReady = !!user && !loading && agreementChecked && contractChecked;
+  const needsContract = !!user && !isJester && (
+    agreement === false || (!!agreement && agreement.version < contractVersion)
+  );
+
+  // Decide the hard gate once on entry. A live amendment updates status and
+  // System immediately, but does not throw a member out of an active tab.
+  // Returning members are checked again and blocked until they sign.
+  useEffect(() => {
+    if (!contractGateReady) return;
+    setContractGateRequired(current =>
+      current === null ? needsContract : (current && needsContract),
+    );
+  }, [contractGateReady, needsContract]);
 
   // Live contract version — when the Jester amends the rules, members whose
   // signature is older than the current version get gated to re-sign.
   useEffect(() => {
-    if (!user) return;
-    const unsub = listenContract(c => setContractVersion(c.version));
+    if (!user) {
+      setContractChecked(false);
+      setContractVersion(BUNDLED_CONTRACT.version);
+      return;
+    }
+    setContractChecked(false);
+    const unsub = listenContract(c => {
+      setContractVersion(c.version);
+      setContractChecked(true);
+    });
     return unsub;
-  }, [user]);
+  }, [user?.uid]);
 
   // The Contract gate: check for the member's signed agreement on sign-in.
   // Fail open (treat as signed) on read errors so a network hiccup can't
   // trap a long-standing member on the contract screen.
   const refreshAgreement = React.useCallback(async () => {
     const uid = auth.currentUser?.uid;
-    if (!uid) { setAgreement(null); return; }
+    if (!uid) {
+      setAgreement(null);
+      setAgreementChecked(false);
+      return;
+    }
     try {
       const a = await getAgreement(uid);
+      if (auth.currentUser?.uid !== uid) return;
       setAgreement(a ?? false);
     } catch {
       // Fail open: an unreadable agreement must never keep blocking the app
       // (especially right after a successful sign) — keep a loaded agreement
       // if we have one, otherwise fall back to non-blocking "unknown".
       setAgreement(prev => (prev ? prev : null));
+    } finally {
+      if (auth.currentUser?.uid === uid) setAgreementChecked(true);
     }
   }, []);
 
@@ -95,6 +133,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (unsubDoc) { unsubDoc(); unsubDoc = null; }
       setUser(u);
       if (u) {
+        setLoading(true);
+        setAgreement(null);
+        setAgreementChecked(false);
+        setContractChecked(false);
+        setContractGateRequired(null);
         unsubDoc = onSnapshot(
           doc(db, 'users', u.uid),
           (snap) => {
@@ -137,6 +180,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAdminFlag(false);
         setIsVaultKeeper(false);
         setAgreement(null);
+        setAgreementChecked(false);
+        setContractChecked(false);
+        setContractGateRequired(null);
         setLoading(false);
       }
     });
@@ -168,12 +214,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       user, jokerId, isAdmin, isHandAdmin, isJester, isVaultKeeper, loading, agreement, refreshAgreement,
       contractVersion,
+      contractGateReady,
+      contractGateRequired,
       // The Jester (00-00) never signs. Members are gated when they have no
       // signature, or when their signature predates the current wording.
       // agreement === null (still checking / read error) never blocks.
-      needsContract: !!user && !isJester && (
-        agreement === false || (!!agreement && agreement.version < contractVersion)
-      ),
+      needsContract,
     }}>
       {children}
     </AuthContext.Provider>

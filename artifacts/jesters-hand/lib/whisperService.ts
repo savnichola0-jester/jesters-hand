@@ -15,7 +15,8 @@ export interface Conversation {
   memberUids: string[];
   isGroup: boolean;
   groupName?: string;
-  createdBy?: string;
+  createdBy: string;
+  createdAt: Timestamp | null;
   lastMessage: string;
   lastMessageAt: Timestamp | null;
   unreadCounts: Record<string, number>;
@@ -67,6 +68,8 @@ export async function getOrCreateDM(
   const ref = await addDoc(collection(db, 'conversations'), {
     memberUids:    [currentUid, recipientUid],
     isGroup:       false,
+    createdBy:     currentUid,
+    createdAt:     serverTimestamp(),
     lastMessage:   '',
     lastMessageAt: null,
     unreadCounts:  { [currentUid]: 0, [recipientUid]: 0 },
@@ -90,6 +93,7 @@ export async function createGroup(
     isGroup:       true,
     groupName:     groupName.trim() || 'Group',
     createdBy:     creatorUid,
+    createdAt:     serverTimestamp(),
     lastMessage:   '',
     lastMessageAt: null,
     unreadCounts,
@@ -149,8 +153,8 @@ export async function addMembersToGroup(
 
 // ── Backfill ownership on a legacy group (created before createdBy existed) ──
 // Firestore rules only accept this write when the group has no createdBy yet,
-// and only with the deterministic first member as owner — so any member can
-// safely trigger the one-time migration when they open the chat.
+// and only with the deterministic first member as owner. Do not add createdAt:
+// opening an old conversation must not manufacture creation activity.
 
 export async function claimLegacyGroupOwnership(
   conversationId: string,
@@ -288,6 +292,8 @@ export function listenConversations(
         memberUids:    d.data().memberUids   ?? [],
         isGroup:       d.data().isGroup      ?? false,
         groupName:     d.data().groupName,
+        createdBy:     d.data().createdBy    ?? '',
+        createdAt:     d.data().createdAt    ?? null,
         lastMessage:   d.data().lastMessage  ?? '',
         lastMessageAt: d.data().lastMessageAt ?? null,
         unreadCounts:  d.data().unreadCounts ?? {},
@@ -370,10 +376,7 @@ export function getConvDisplayName(
 
 // ── Format a Firestore Timestamp for display ──────────────────────────────────
 
-/** Remove the current user from a conversation — clears it from their list.
- *  If they own a group, ownership transfers to the first remaining member in
- *  the same atomic write (the only transfer path Firestore rules accept), so
- *  the group never ends up with no one able to add members. */
+/** Remove the current user from a conversation — clears it from their list. */
 export async function clearConversation(conversationId: string, uid: string): Promise<void> {
   const convRef = doc(db, 'conversations', conversationId);
 
@@ -438,9 +441,6 @@ export async function clearConversation(conversationId: string, uid: string): Pr
       memberUids: arrayRemove(uid),
       deletedBy:  arrayUnion(uid),
     };
-    if (data.isGroup === true && data.createdBy === uid && remaining.length > 0) {
-      updates.createdBy = remaining[0];
-    }
     tx.update(convRef, updates);
   });
 }

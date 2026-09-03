@@ -65,7 +65,9 @@ export default function DealMemberView() {
   }
 
   const streak = stats?.currentStreak ?? 0;
-  const taskCount = activeDeal.tasks.length;
+  // assigneeUid-less cards are legacy Deals published before targeted cards.
+  const assignedTasks = activeDeal.tasks.filter(task => !task.assigneeUid || task.assigneeUid === user?.uid);
+  const taskCount = assignedTasks.length;
   const completedTaskCount = completion?.completedTaskIds.length ?? 0;
   const progress = taskCount > 0 ? completedTaskCount / taskCount : 0;
   const isComplete = taskCount > 0 && completedTaskCount === taskCount;
@@ -84,7 +86,7 @@ export default function DealMemberView() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardSpread} style={s.cardScroller}>
-        {activeDeal.tasks.map(task => {
+        {assignedTasks.map(task => {
           const current = completion?.taskCounts[task.id] ?? 0;
           const done = current >= task.targetCount;
           return (
@@ -100,6 +102,13 @@ export default function DealMemberView() {
             </InWorldCard>
           );
         })}
+        {assignedTasks.length === 0 && (
+          <View style={s.noCard}>
+            <Feather name="clock" size={26} color="rgba(212,168,83,0.45)" />
+            <Text style={s.emptyText}>No card dealt to your ID.</Text>
+            <Text style={s.emptySub}>The Jester has not assigned you a task in this Deal.</Text>
+          </View>
+        )}
       </ScrollView>
 
       {isComplete && (
@@ -172,6 +181,7 @@ const s = StyleSheet.create({
   cardInnerContent: { flex: 1, justifyContent: 'center', gap: 12 },
   cardFooter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 'auto' },
   cardCount: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 16 },
+  noCard: { width: SW - 32, minHeight: 180, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 24 },
 
   completeBox: { backgroundColor: 'rgba(212,168,83,0.1)', borderWidth: 1, borderColor: GOLD, borderRadius: 8, padding: 16, alignItems: 'center', marginBottom: 24 },
   completeTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 2, marginBottom: 4 },

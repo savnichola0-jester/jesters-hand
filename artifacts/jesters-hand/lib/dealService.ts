@@ -33,6 +33,7 @@ export interface DealTask {
   type: DealTaskType;
   label: string;
   targetCount: number;
+  assigneeUid: string;
 }
 
 export interface Deal {
@@ -104,11 +105,14 @@ function cleanTasks(tasks: DealInput['tasks']): DealTask[] {
     if (!label) throw new Error('Every Deal task needs a label');
     const fallbackId = `${task.type}-${index + 1}`;
     const id = (task.id?.trim() || fallbackId).replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 80);
+    const assigneeUid = task.assigneeUid?.trim().slice(0, 128);
+    if (!assigneeUid) throw new Error('Every Deal task needs an assigned Joker ID');
     return {
       id,
       type: task.type,
       label,
       targetCount: Math.max(1, Math.min(100, Math.floor(task.targetCount ?? 1))),
+      assigneeUid,
     };
   });
 }

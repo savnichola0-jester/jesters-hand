@@ -8,6 +8,27 @@ export const SUITS = [
   { key: 'club', pip: '♣', name: 'Discovery' },
 ] as const;
 export type SuitKey = typeof SUITS[number]['key'];
+export const SUIT_TASK_ACTIONS = [
+  { key: 'ticket', label: 'Your Ticket', route: '/(tabs)/ticket', actionable: true },
+  { key: 'hand', label: 'The Hand', route: '/(tabs)/hand', actionable: false },
+  { key: 'street-art', label: 'Street Art', route: '/(tabs)/street-art', actionable: true },
+  { key: 'jesters-deal', label: "Jester's Deal", route: '/(tabs)/jesters-deal', actionable: true },
+  { key: 'suits', label: 'SUITS', route: '/(tabs)/suits', actionable: false },
+  { key: 'ante', label: 'Ante', route: '/(tabs)/ante', actionable: true },
+  { key: 'table', label: "Jester's Table", route: '/(tabs)/table', actionable: true },
+  { key: 'target-ticket', label: 'Target Ticket', route: '/(tabs)/target-ticket', actionable: true },
+  { key: 'vault', label: 'Vault', route: '/(tabs)/vault', actionable: true },
+  { key: 'chamber', label: 'Chamber', route: '/(tabs)/chamber', actionable: true },
+  { key: 'recruit', label: 'Recruit', route: '/(tabs)/recruit', actionable: true },
+  { key: 'uniform', label: 'Uniform', route: '/(tabs)/uniform', actionable: true },
+  { key: 'jesters-hand', label: "Jester's Hand", route: '/(tabs)/jesters-hand', actionable: false },
+  // A System task is specifically the required current-contract re-sign, not
+  // changing account settings on the System screen.
+  { key: 'system', label: 'System · Contract Re-sign', route: '/contract', actionable: true },
+  { key: 'social', label: 'Social · Share', route: undefined, actionable: true },
+  { key: 'discovery', label: 'Discovery', route: undefined, actionable: false },
+] as const;
+export type SuitTaskDestination = typeof SUIT_TASK_ACTIONS[number]['key'];
 export interface SuitState {
   pips: SuitKey[];
   streaks: Partial<Record<SuitKey, number>>;
@@ -19,7 +40,7 @@ export interface SuitTask {
   active: boolean;
   title: string;
   instruction?: string;
-  destination?: 'table'|'jesters-deal'|'uniform'|'recruit'|'target-ticket'|'chamber'|'social'|'discovery';
+  destination?: SuitTaskDestination;
   social?: string;
   milestoneNotes?: Partial<Record<'3' | '6' | '9', string>>;
 }

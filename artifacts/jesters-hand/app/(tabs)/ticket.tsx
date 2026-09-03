@@ -11,8 +11,7 @@ import { Feather } from '@/components/FIcon';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTicket, saveTicket, uploadMug, uploadAdminPhoto, deleteMug } from '@/lib/ticketService';
-import { listenOwnStats, listenOwnCompletion, listenPublishedDeals, seatTemperature, DealMemberStats, Deal } from '@/lib/dealService';
-import { useLiveDeal } from '@/components/deal/useLiveDeal';
+import { listenOwnStats, DealMemberStats } from '@/lib/dealService';
 import { broadcastToActiveMembers } from '@/lib/notificationService';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
@@ -60,17 +59,13 @@ export default function TicketScreen() {
   const [values,      setValues]      = useState<Record<string, string>>({});
   const [userPhoto,   setUserPhoto]   = useState<string | null>(null);
   const [adminPhoto,  setAdminPhoto]  = useState<string | null>(null);
-  const [editMode,    setEditMode]    = useState(false);
   const [savedFlash,  setSavedFlash]  = useState(false);
   const [uploading,   setUploading]   = useState(false);
   const [uploadPct,   setUploadPct]   = useState(0);
   const [filing,      setFiling]      = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const activeDeal = useLiveDeal(deals);
   const [stats, setStats] = useState<DealMemberStats | null>(null);
-  const [progress, setProgress] = useState(0);
   const [seat, setSeat] = useState<SeatActivitySummary | null>(null);
   useEffect(() => { if (user) void fetchSeatActivitySummary(user.uid).then(setSeat); }, [user?.uid]);
   const refreshSeat = useCallback(() => {
@@ -82,26 +77,7 @@ export default function TicketScreen() {
     return listenOwnStats(user.uid, (s) => setStats(s));
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    return listenPublishedDeals(setDeals);
-  }, [user]);
-
-  useEffect(() => {
-    if (!activeDeal || !user) {
-      setProgress(0);
-      return;
-    }
-    return listenOwnCompletion(activeDeal.id, user.uid, comp => {
-      if (comp && activeDeal.tasks.length > 0) {
-        setProgress(comp.completedTaskIds.length / activeDeal.tasks.length);
-      } else {
-        setProgress(0);
-      }
-    });
-  }, [activeDeal, user]);
-
-  const temp = seat?.temperature ?? seatTemperature(stats?.lastActivityAt, progress);
+  const temp = seat?.temperature ?? null;
   const streak = stats?.currentStreak ?? 0;
 
   // ── Load from Firestore on mount ─────────────────────────────────────────
@@ -109,14 +85,14 @@ export default function TicketScreen() {
     if (!user) return;
     getTicket(user.uid).then(data => {
       if (!data) return;
-      const { mugUrl, adminPhotoUrl, ...rest } = data;
+      const { mugUrl, adminPhotoUrl, adminCardId: _legacyAdminCardId, ...rest } = data;
       const strFields: Record<string, string> = {};
       for (const [k, v] of Object.entries(rest)) {
         if (typeof v === 'string') strFields[k] = v;
       }
       setValues(strFields);
       if (mugUrl)        setUserPhoto(mugUrl);
-      if (adminPhotoUrl) setAdminPhoto(adminPhotoUrl);
+      setAdminPhoto(adminPhotoUrl || null);
     }).catch(() => {});
   }, [user]);
 
@@ -163,14 +139,6 @@ export default function TicketScreen() {
     }
   }, [jokerId, user]);
 
-  const toggleEdit = useCallback(() => {
-    setEditMode(prev => {
-      if (prev) save();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      return !prev;
-    });
-  }, [save]);
-
   // ── Pick + upload a card photo ───────────────────────────────────────────
   const pickPhoto = useCallback(async (target: 'user' | 'admin') => {
     if (!user || uploading) return;
@@ -207,7 +175,7 @@ export default function TicketScreen() {
       const progress = (p: number) => setUploadPct(Math.round(p * 100));
       if (target === 'admin') {
         const url = await uploadAdminPhoto(user.uid, res.assets[0].uri, progress);
-        await saveTicket(user.uid, { adminPhotoUrl: url });
+        await saveTicket(user.uid, { adminPhotoUrl: url, adminCardId: '' });
         setTimeout(refreshSeat, 750);
         setAdminPhoto(url);
       } else {
@@ -273,7 +241,7 @@ export default function TicketScreen() {
     try {
       const data = await getTicket(user.uid);
       if (data) {
-        const { mugUrl, adminPhotoUrl, ...rest } = data;
+        const { mugUrl, adminPhotoUrl, adminCardId: _legacyAdminCardId, ...rest } = data;
         const strFields: Record<string, string> = {};
         for (const [k, v] of Object.entries(rest)) {
           if (typeof v === 'string') strFields[k] = v;
@@ -281,6 +249,7 @@ export default function TicketScreen() {
         setValues(strFields);
         if (mugUrl)        setUserPhoto(mugUrl);
         if (adminPhotoUrl) setAdminPhoto(adminPhotoUrl);
+        else setAdminPhoto(null);
       }
       setUnlocked(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -288,6 +257,8 @@ export default function TicketScreen() {
       Alert.alert('Error', 'Could not load Intel.');
     }
   }, [user]);
+
+  const displayedAdminCard = adminPhoto ? { uri: adminPhoto } : undefined;
 
   return (
     <View style={s.root}>
@@ -310,13 +281,10 @@ export default function TicketScreen() {
           {/* Center title */}
           <Text style={s.navTitle} numberOfLines={1}>Ticket</Text>
 
-          {/* Right: whisper + bell + edit */}
+          {/* Right: whisper + bell */}
           <View style={s.navRight}>
             <WhisperNavIcon size={34} />
             <BellNavIcon size={34} />
-            <TouchableOpacity onPress={toggleEdit} activeOpacity={0.75} style={s.editBtn}>
-              <Feather name={editMode ? 'check' : 'edit-2'} size={16} color="#D4A853" />
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -362,7 +330,7 @@ export default function TicketScreen() {
               {/* Card 1 — user photo */}
               <TouchableOpacity
                 style={[s.card, { width: CARD_W, height: CARD_H }]}
-                onPress={() => !editMode && pickPhoto('user')}
+                onPress={() => pickPhoto('user')}
                 activeOpacity={0.85}
               >
                 {userPhoto
@@ -381,12 +349,12 @@ export default function TicketScreen() {
                 disabled={jokerId !== '00-00' || uploading}
                 activeOpacity={0.82}
               >
-                {adminPhoto
-                  ? <Image source={{ uri: adminPhoto }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                {displayedAdminCard
+                  ? <Image source={displayedAdminCard} style={s.adminCardImage} resizeMode="contain" />
                   : <View style={s.cardEmpty}>
                       <Feather name="lock" size={20} color="rgba(237,224,196,0.28)" />
                       <Text style={[s.cardLabel, { opacity: 0.4 }]}>Admin</Text>
-                      {jokerId === '00-00' && <Text style={s.adminCardHint}>Tap to upload</Text>}
+                      {jokerId === '00-00' && <Text style={s.adminCardHint}>Tap to choose</Text>}
                     </View>
                 }
                 {jokerId === '00-00' && (
@@ -419,9 +387,9 @@ export default function TicketScreen() {
               <View>
                 <Text style={[s.fieldLabel, { marginBottom: 4 }]}>SEAT TEMPERATURE</Text>
                 <Text style={[s.fieldValue, { color: temp === 'Hot' ? '#FF6B6B' : temp === 'Warm' ? '#FFA06B' : 'rgba(237,224,196,0.5)' }]}>
-                  {temp?.toUpperCase()} {seat?.score != null ? `· ${seat.score}/100` : ''}
+                  {temp?.toUpperCase() ?? 'CALCULATING…'} {seat?.score != null ? `· ${seat.score}/100` : ''}
                 </Text>
-                <SeatThermometer score={seat?.score ?? 0} temperature={temp} />
+                {temp && <SeatThermometer score={seat?.score ?? 0} temperature={temp} />}
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={[s.fieldLabel, { marginBottom: 4 }]}>STREAK</Text>
@@ -522,9 +490,6 @@ const s = StyleSheet.create({
   navRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dagIcon:  { width: 48, height: 26 },
   sqIcon:   { width: 34, height: 34 },
-  editBtn:  { width: 34, height: 34, alignItems: 'center', justifyContent: 'center',
-              borderRadius: 17, borderWidth: 1, borderColor: 'rgba(200,165,60,0.35)',
-              backgroundColor: 'rgba(0,0,0,0.5)' },
 
   // Folder
   folderWrap: { width: FOLDER_W },
@@ -551,6 +516,7 @@ const s = StyleSheet.create({
     borderRadius: 8, backgroundColor: '#111',
     borderWidth: 1, borderColor: 'rgba(237,224,196,0.28)', overflow: 'hidden',
   },
+  adminCardImage: { width: '100%', height: '100%' },
   cardEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   cardLabel: { color: 'rgba(237,224,196,0.4)', fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
   adminCardHint: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 9, letterSpacing: 0.8 },

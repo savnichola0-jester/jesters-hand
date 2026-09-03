@@ -257,7 +257,7 @@ export default function TargetTicketViewScreen() {
           </View>
 
           {/* Comments */}
-          <Text style={s.commentsHeader}>The Whispers · {ticket.commentCount}</Text>
+          <Text style={s.commentsHeader}>WHISPERS · {ticket.commentCount}</Text>
           {comments.map(c => (
             <View key={c.id} style={s.commentCard}>
               <View style={s.commentTop}>
@@ -300,7 +300,10 @@ export default function TargetTicketViewScreen() {
               disabled={!commentText.trim() || sending}
               onPress={sendComment}
             >
-              <Feather name="send" size={17} color="#FFD700" />
+              {sending
+                ? <ActivityIndicator size="small" color="#FFD700" />
+                : <Text style={s.sendBtnText}>WHISPER</Text>
+              }
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -401,9 +404,11 @@ const s = StyleSheet.create({
     fontSize: 13.5, fontFamily: 'Inter_400Regular',
   },
   sendBtn: {
-    width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    minWidth: 82, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 12,
     borderWidth: 1, borderColor: 'rgba(255,215,0,0.55)', backgroundColor: '#0D0D0D',
   },
+  sendBtnText: { color: '#FFD700', fontSize: 10, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.2 },
 
   pickerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   pickerSheet: {

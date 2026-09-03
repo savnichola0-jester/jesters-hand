@@ -12,6 +12,11 @@ import { getApiDomain } from './apiConfig';
 import {
   fetchSessions, sessionEnd, formatDuration as fmtDur, SessionLog,
 } from './sessionService';
+import {
+  fetchSeatActivitySummary,
+  type AppIconId,
+  type IconActivitySummary,
+} from './activityService';
 
 export type ActivityKind =
   | 'session_login' | 'session_logout'
@@ -29,6 +34,8 @@ export interface ActivityItem {
   durationNote?: string;    // sessions: "Logged in for 2h 14m"
   /** Server-written audit event: immutable and safe to use in Activities. */
   immutable?: boolean;
+  /** The action may be shown, but its private content must never be opened. */
+  privateContent?: boolean;
 }
 
 export interface InvestigationResult {
@@ -37,6 +44,7 @@ export interface InvestigationResult {
   items: ActivityItem[];    // newest first; undated reactions at the end
   currentlyActive: boolean;
   statusSince: Date | null; // active: login time · offline: last seen
+  iconSummaries?: Record<AppIconId, IconActivitySummary> | null;
 }
 
 const ANTE_BOARDS: { id: string; label: string }[] = [
@@ -95,11 +103,7 @@ const eventString = (value: unknown): string | null =>
 
 type AuditEvent = Record<string, unknown> & { id: string };
 type PocketAuditMessage = {
-  id: string;
-  conversationId: string;
-  text: string;
   sentAt: string | null;
-  hasAttachment: boolean;
 };
 
 async function fetchAuditApi<T>(path: string): Promise<T> {
@@ -205,18 +209,16 @@ export async function fetchInvestigation(
         immutable: true,
       });
     });
-    audit.pocketMessages.forEach(message => {
+    audit.pocketMessages.forEach((message, index) => {
       items.push({
-        id: `pocket-${message.conversationId}-${message.id}`,
+        id: `pocket-activity-${index}-${message.sentAt ?? 'undated'}`,
         kind: 'message',
         section: 'Pocket',
         action: 'Sent a private message',
-        content: joinContent([
-          message.text,
-          message.hasAttachment ? '[Attachment]' : null,
-        ]),
+        content: '',
         at: toDate(message.sentAt),
         immutable: true,
+        privateContent: true,
       });
     });
     if (audit.partial?.pocket) {
@@ -612,9 +614,11 @@ export async function fetchInvestigation(
  */
 export async function fetchActivityLog(uid: string, jokerId: string): Promise<InvestigationResult> {
   await assertJester();
-  const audit = await fetchAuditApi<{ events: AuditEvent[] }>(
-    `/audit/activity/${encodeURIComponent(uid)}`,
-  );
+  const [audit, seat] = await Promise.all([
+    fetchAuditApi<{ events: AuditEvent[] }>(`/audit/activity/${encodeURIComponent(uid)}`),
+    fetchSeatActivitySummary(uid),
+  ]);
+  if (!seat?.iconSummaries) throw new Error('Icon activity summary is unavailable.');
   const items = audit.events.map(event => {
     const d = event as Record<string, unknown>;
     return {
@@ -628,5 +632,12 @@ export async function fetchActivityLog(uid: string, jokerId: string): Promise<In
     };
   }).sort((a, b) => (b.at?.getTime() ?? 0) - (a.at?.getTime() ?? 0));
 
-  return { uid, jokerId, items, currentlyActive: false, statusSince: null };
+  return {
+    uid,
+    jokerId,
+    items,
+    currentlyActive: false,
+    statusSince: null,
+    iconSummaries: seat.iconSummaries,
+  };
 }

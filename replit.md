@@ -1,6 +1,6 @@
-# [Project name]
+# Jester's Hand
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Private Android-first club application with member identity, communications, activities, and administration.
 
 ## Run & Operate
 
@@ -34,7 +34,9 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Android is the only supported mobile release target; do not spend release time or build credits on iOS.
+- For user-requested app releases, create a fresh `preview` Android APK with the latest code baked in. An EAS Update alone is not accepted as proof that the installed app changed.
+- Keep the in-app UPDATE path on the `preview` channel working, but verify releases against the installable Android build rather than assuming OTA delivery succeeded.
 
 ## Gotchas
 

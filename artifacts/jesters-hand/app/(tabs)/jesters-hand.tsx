@@ -40,10 +40,29 @@ import AppKeyQr from '@/components/admin/AppKeyQr';
 import { SignatureView } from '@/components/SignaturePad';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
+import { SeatThermometer } from '@/components/SeatThermometer';
+import type { AppIconId } from '@/lib/activityService';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
 const MARBLE     = require('../../assets/images/wood_bg.png');
+const ACTIVITY_ICONS: { id: AppIconId; label: string; src: number }[] = [
+  { id: 'ticket', label: 'Ticket', src: require('../../assets/images/tile_ticket.png') },
+  { id: 'hand', label: 'The Hand', src: require('../../assets/images/tile_the_hand.png') },
+  { id: 'street_art', label: 'Street Art / Black Book', src: require('../../assets/images/tile_6.png') },
+  { id: 'jesters_deal', label: "Jester's Deal", src: require('../../assets/images/icon_jesters_deal.png') },
+  { id: 'suits', label: 'SUITS', src: require('../../assets/images/icon_suits.png') },
+  { id: 'ante', label: 'Ante', src: require('../../assets/images/tile_ante.png') },
+  { id: 'table', label: "Jester's Table", src: require('../../assets/images/tile_jesters_table.png') },
+  { id: 'target_ticket', label: 'Target Ticket', src: require('../../assets/images/tile_target_ticket.png') },
+  { id: 'recruit', label: 'Recruit', src: require('../../assets/images/tile_9.png') },
+  { id: 'vault', label: 'Vault', src: require('../../assets/images/tile_7.png') },
+  { id: 'chamber', label: 'Chamber', src: require('../../assets/images/tile_8.png') },
+  { id: 'system', label: 'System', src: require('../../assets/images/tile_11.png') },
+  { id: 'uniform', label: 'Uniform', src: require('../../assets/images/tile_10.png') },
+  { id: 'jesters_hand', label: "Jester's Hand", src: require('../../assets/images/tile_12.png') },
+  { id: 'pocket', label: 'Pocket', src: require('../../assets/images/nav_whisper.png') },
+];
 
 const NAV_H = 52;
 const SIDE  = 16;
@@ -691,70 +710,90 @@ export default function JestersHandScreen() {
                   <Text style={st.emptyText}>Pulling the activity log…</Text>
                 </View>
               ) : actResult ? (
-                <>
-                  {/* Status header */}
-                  <View style={st.invStatusBlock}>
-                    <Text style={st.invStatusJoker}>{actResult.jokerId}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[
-                        st.invStatusLabel,
-                        { color: actResult.currentlyActive ? GOLD : 'rgba(237,224,196,0.5)' },
-                      ]}>
-                        {actResult.currentlyActive ? 'CURRENTLY ACTIVE' : 'CURRENTLY OFFLINE'}
-                      </Text>
-                      <Text style={st.invStatusDetail}>
-                        {actResult.statusSince
-                          ? actResult.currentlyActive
-                            ? `Logged in for ${formatDuration(Date.now() - actResult.statusSince.getTime())} this session`
-                            : `Logged out for ${formatDuration(Date.now() - actResult.statusSince.getTime())}`
-                          : 'No sessions recorded yet — history begins with their next login.'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {actResult.items.length === 0 ? (
-                    <View style={st.centerFill}>
+                <FlatList
+                  data={actResult.items}
+                  keyExtractor={it => it.id}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: 8 }}
+                  ItemSeparatorComponent={() => <View style={st.rowSep} />}
+                  ListHeaderComponent={(
+                    <>
+                      <View style={st.invStatusBlock}>
+                        <Text style={st.invStatusJoker}>{actResult.jokerId}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[
+                            st.invStatusLabel,
+                            { color: actResult.currentlyActive ? GOLD : 'rgba(237,224,196,0.5)' },
+                          ]}>
+                            {actResult.currentlyActive ? 'CURRENTLY ACTIVE' : 'CURRENTLY OFFLINE'}
+                          </Text>
+                          <Text style={st.invStatusDetail}>
+                            {actResult.statusSince
+                              ? actResult.currentlyActive
+                                ? `Logged in for ${formatDuration(Date.now() - actResult.statusSince.getTime())} this session`
+                                : `Logged out for ${formatDuration(Date.now() - actResult.statusSince.getTime())}`
+                              : 'Icon heat shows meaningful use and actions from the last 31 days.'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={st.activityHeading}>ICON HEAT</Text>
+                      <View style={st.activityIconGrid}>
+                        {ACTIVITY_ICONS.map(icon => {
+                          const summary = actResult.iconSummaries?.[icon.id] ?? {
+                            score: 0, temperature: 'Cold' as const, count: 0, lastActivityAt: null,
+                          };
+                          return (
+                            <View key={icon.id} style={st.activityIconCard}>
+                              <Image source={icon.src} style={st.activityIconImage} resizeMode="contain" />
+                              <View style={st.activityIconInfo}>
+                                <Text style={st.activityIconLabel} numberOfLines={1}>{icon.label}</Text>
+                                <SeatThermometer score={summary.score} temperature={summary.temperature} compact />
+                                <Text style={st.activityIconMeta}>
+                                  {summary.temperature.toUpperCase()} · {summary.count} {summary.count === 1 ? 'action' : 'actions'}
+                                </Text>
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                      <Text style={st.activityHeading}>RECENT ACTIVITY</Text>
+                    </>
+                  )}
+                  ListEmptyComponent={(
+                    <View style={st.activityEmpty}>
                       <Text style={st.emptyText}>No activity on record for {actResult.jokerId}.</Text>
                     </View>
-                  ) : (
-                    <FlatList
-                      data={actResult.items}
-                      keyExtractor={it => it.id}
-                      showsVerticalScrollIndicator={false}
-                      contentContainerStyle={{ paddingBottom: 8 }}
-                      ItemSeparatorComponent={() => <View style={st.rowSep} />}
-                      renderItem={({ item }) => {
-                        const isSession = item.kind === 'session_login' || item.kind === 'session_logout';
-                        const ts = item.at
-                          ? {
-                              date: item.at.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }),
-                              time: item.at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-                            }
-                          : null;
-                        return (
-                          <View style={st.invRow}>
-                            <View style={st.reportRowTop}>
-                              <Text style={[
-                                st.invRowAction,
-                                isSession && { color: item.kind === 'session_login' ? GOLD : 'rgba(237,224,196,0.55)' },
-                              ]}>
-                                {item.action.toUpperCase()}
-                              </Text>
-                              <Text style={st.reportRowWhen}>
-                                {ts ? `${ts.date} · ${ts.time}` : 'time not recorded'}
-                              </Text>
-                            </View>
-                            <Text style={st.invRowSection}>{item.section}</Text>
-                            {item.durationNote
-                              ? <Text style={st.invRowDuration}>{item.durationNote}</Text>
-                              : null}
-                            {/* Deliberately NO content — Activity is high-level only. */}
-                          </View>
-                        );
-                      }}
-                    />
                   )}
-                </>
+                  renderItem={({ item }) => {
+                    const isSession = item.kind === 'session_login' || item.kind === 'session_logout';
+                    const ts = item.at
+                      ? {
+                          date: item.at.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }),
+                          time: item.at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+                        }
+                      : null;
+                    return (
+                      <View style={st.invRow}>
+                        <View style={st.reportRowTop}>
+                          <Text style={[
+                            st.invRowAction,
+                            isSession && { color: item.kind === 'session_login' ? GOLD : 'rgba(237,224,196,0.55)' },
+                          ]}>
+                            {item.action.toUpperCase()}
+                          </Text>
+                          <Text style={st.reportRowWhen}>
+                            {ts ? `${ts.date} · ${ts.time}` : 'time not recorded'}
+                          </Text>
+                        </View>
+                        <Text style={st.invRowSection}>{item.section}</Text>
+                        {item.durationNote
+                          ? <Text style={st.invRowDuration}>{item.durationNote}</Text>
+                          : null}
+                        {/* Deliberately NO content — Activity is high-level only. */}
+                      </View>
+                    );
+                  }}
+                />
               ) : (
                 <View style={st.centerFill}>
                   <Text style={[st.emptySuit, { color: activeMeta.suitColor }]}>{activeMeta.suit}</Text>
@@ -832,6 +871,7 @@ export default function JestersHandScreen() {
                       ItemSeparatorComponent={() => <View style={st.rowSep} />}
                       renderItem={({ item }) => {
                         const isSession = item.kind === 'session_login' || item.kind === 'session_logout';
+                        const canOpen = !isSession && !item.privateContent;
                         const ts = item.at
                           ? {
                               date: item.at.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -841,8 +881,9 @@ export default function JestersHandScreen() {
                         return (
                           <TouchableOpacity
                             style={st.invRow}
-                            onPress={() => { if (!isSession) setOpenItem(item); }}
-                            activeOpacity={isSession ? 1 : 0.75}
+                            onPress={() => { if (canOpen) setOpenItem(item); }}
+                            disabled={!canOpen}
+                            activeOpacity={canOpen ? 0.75 : 1}
                           >
                             <View style={st.reportRowTop}>
                               <Text style={[
@@ -862,7 +903,7 @@ export default function JestersHandScreen() {
                             {item.content
                               ? <Text style={st.invRowContent} numberOfLines={2}>{item.content}</Text>
                               : null}
-                            {!isSession
+                            {canOpen
                               ? <Text style={st.reportRowMeta}>Tap to open the full entry</Text>
                               : null}
                           </TouchableOpacity>
@@ -1634,6 +1675,28 @@ const st = StyleSheet.create({
     color: 'rgba(237,224,196,0.55)', fontFamily: 'Inter_400Regular',
     fontSize: 11, marginTop: 2,
   },
+  activityHeading: {
+    color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2,
+    marginTop: 4, marginBottom: 8,
+  },
+  activityIconGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14,
+  },
+  activityIconCard: {
+    width: '48.5%', minHeight: 76, flexDirection: 'row', alignItems: 'center',
+    gap: 7, borderRadius: 9, borderWidth: 1,
+    borderColor: 'rgba(200,165,60,0.2)', backgroundColor: '#080808',
+    padding: 7,
+  },
+  activityIconImage: { width: 48, height: 48, borderRadius: 5 },
+  activityIconInfo: { flex: 1, minWidth: 0, gap: 4 },
+  activityIconLabel: {
+    color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 8.5, letterSpacing: 0.5,
+  },
+  activityIconMeta: {
+    color: 'rgba(237,224,196,0.5)', fontFamily: 'Inter_400Regular', fontSize: 7.5,
+  },
+  activityEmpty: { paddingVertical: 24 },
   invRow: { paddingVertical: 10, gap: 3 },
   invRowAction: {
     color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1,

@@ -113,22 +113,14 @@ async function pocketMessages(
   targetUid: string,
 ): Promise<{
   messages: Array<{
-    id: string;
-    conversationId: string;
-    text: string;
     sentAt: string | null;
-    hasAttachment: boolean;
   }>;
   partial: boolean;
   failures: number;
 }> {
   const conversations = await listDocs(projectId, token, "conversations");
   const messages: Array<{
-    id: string;
-    conversationId: string;
-    text: string;
     sentAt: string | null;
-    hasAttachment: boolean;
   }> = [];
   let failures = 0;
 
@@ -147,14 +139,8 @@ async function pocketMessages(
         for (const message of docs) {
           const data = fieldsOf(message.fields);
           if (data.senderUid !== targetUid) continue;
-          const id = documentId(message.name);
-          if (!id) continue;
           messages.push({
-            id,
-            conversationId,
-            text: typeof data.text === "string" ? data.text : "",
             sentAt: typeof data.sentAt === "string" ? data.sentAt : null,
-            hasAttachment: typeof data.imageUrl === "string" && data.imageUrl.length > 0,
           });
         }
       } catch {
@@ -206,7 +192,9 @@ router.get("/audit/investigation/:uid", async (req, res) => {
     }
     return void res.json({
       events: events.map(({ id, data }) => ({ ...data, id })),
-      pocketMessages: pocket.messages,
+      // Pocket is usage-only in Investigations. The response deliberately
+      // excludes bodies, attachments, recipients, and source identifiers.
+      pocketMessages: pocket.messages.map(message => ({ sentAt: message.sentAt })),
       partial: { pocket: pocket.partial, pocketFailures: pocket.failures },
     });
   } catch (err) {

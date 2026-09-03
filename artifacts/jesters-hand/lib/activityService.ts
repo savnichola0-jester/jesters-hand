@@ -5,12 +5,23 @@ import { getApiDomain } from './apiConfig';
 
 export type SeatTemperature = 'Cold' | 'Lukewarm' | 'Warm' | 'Hot';
 export type ActivityCategory = 'login' | 'conversation' | 'participation' | 'deal_suits';
+export type AppIconId =
+  | 'ticket' | 'hand' | 'street_art' | 'jesters_deal' | 'suits' | 'ante'
+  | 'table' | 'target_ticket' | 'recruit' | 'vault' | 'chamber' | 'system'
+  | 'uniform' | 'jesters_hand' | 'pocket';
+export interface IconActivitySummary {
+  score: number;
+  temperature: SeatTemperature;
+  count: number;
+  lastActivityAt: string | null;
+}
 export interface SeatActivitySummary {
   score: number | null;
   temperature: SeatTemperature;
   lastActivityAt: string | null;
   categoryCounts: Record<ActivityCategory, number>;
   categoryTimestamps: Partial<Record<ActivityCategory, string>>;
+  iconSummaries: Record<AppIconId, IconActivitySummary> | null;
 }
 
 async function request(path: string, init?: RequestInit): Promise<Response | null> {

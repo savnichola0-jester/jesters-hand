@@ -10,7 +10,7 @@ const TASK_TYPES = new Set(["mark", "black_book", "target_whisper", "vault_mark"
 type WireFields = Record<string, any>;
 type Instant = { timestampValue: string };
 
-interface DealTask { id: string; type: string; targetCount: number }
+interface DealTask { id: string; type: string; targetCount: number; assigneeUid: string | null }
 interface ActiveDeal { id: string; tasks: DealTask[]; previousDealId: string | null; publishedAt: string; expiresAt: string | null }
 interface Completion { uid: string; taskCounts: Record<string, number>; completedTaskIds: string[]; completedAt: string | null; updatedAt: string | null }
 interface Stats { uid: string; currentStreak: number; bestStreak: number; lastCompletedDealId: string | null; lastCompletedAt: string | null; lastActivityAt: string | null }
@@ -142,8 +142,9 @@ function activeDeal(docs: any[]): ActiveDeal | null {
     const expiresAt = data.expiresAt === null ? null : time(data.expiresAt);
     const tasks = Array.isArray(data.tasks) ? data.tasks : [];
     if (data.status !== "published" || !publishedAt || (expiresAt && Date.parse(expiresAt) <= now) ||
-      !tasks.length || tasks.length > 20 || !tasks.every(t => t && typeof t.id === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(t.id) && TASK_TYPES.has(t.type) && Number.isInteger(t.targetCount) && t.targetCount >= 1 && t.targetCount <= 100)) return null;
-    return { id, tasks, previousDealId: typeof data.previousDealId === "string" ? data.previousDealId : null, publishedAt, expiresAt } as ActiveDeal;
+      !tasks.length || tasks.length > 20 || !tasks.every(t => t && typeof t.id === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(t.id) && TASK_TYPES.has(t.type) && Number.isInteger(t.targetCount) && t.targetCount >= 1 && t.targetCount <= 100 && (t.assigneeUid === undefined || (typeof t.assigneeUid === "string" && t.assigneeUid.length > 0 && t.assigneeUid.length <= 128)))) return null;
+    const normalizedTasks = tasks.map(t => ({ ...t, assigneeUid: typeof t.assigneeUid === "string" ? t.assigneeUid : null }));
+    return { id, tasks: normalizedTasks, previousDealId: typeof data.previousDealId === "string" ? data.previousDealId : null, publishedAt, expiresAt } as ActiveDeal;
   }).filter((x): x is ActiveDeal => x !== null);
   return candidates.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0] ?? null;
 }
@@ -177,7 +178,9 @@ router.post("/deal/activity", async (req, res) => {
   try {
     const deals = await query(base, accessToken, { from: [{ collectionId: "deals" }], where: { fieldFilter: { field: { fieldPath: "status" }, op: "EQUAL", value: { stringValue: "published" } } } }, "");
     const deal = activeDeal(deals);
-    if (!deal || !deal.tasks.some(t => t.type === body.type)) return void res.status(409).json({ error: "no live Deal task accepts this activity" });
+    if (!deal || !deal.tasks.some(t => t.type === body.type && (t.assigneeUid === null || t.assigneeUid === uid))) {
+      return void res.status(409).json({ error: "no live Deal task assigned to this member accepts this activity" });
+    }
     const canonicalSource = await verifyEvidence(base, accessToken, uid, body.type, body.sourceId);
     if (!canonicalSource) return void res.status(400).json({ error: "activity evidence was not verified" });
     const name = `${documentRoot(projectId)}/dealActivity/${pathPart(uid)}/events/${pathPart(eventId(deal.id, body.type, canonicalSource))}`;
@@ -257,9 +260,10 @@ async function reconcileHandler(req: any, res: any): Promise<void> {
         countsByType[activity.type] = (countsByType[activity.type] ?? 0) + 1;
         latestActivityAt = at;
       }
-      const taskCounts = Object.fromEntries(deal.tasks.map(t => [t.id, countsByType[t.type] ?? 0]));
-      const completedTaskIds = deal.tasks.filter(t => taskCounts[t.id] >= t.targetCount).map(t => t.id);
-      const complete = completedTaskIds.length === deal.tasks.length;
+      const assignedTasks = deal.tasks.filter(t => t.assigneeUid === null || t.assigneeUid === uid);
+      const taskCounts = Object.fromEntries(assignedTasks.map(t => [t.id, countsByType[t.type] ?? 0]));
+      const completedTaskIds = assignedTasks.filter(t => taskCounts[t.id] >= t.targetCount).map(t => t.id);
+      const complete = assignedTasks.length > 0 && completedTaskIds.length === assignedTasks.length;
       const newCompletionTime = complete && !completion?.completedAt;
       const completionData = { uid, taskCounts, completedTaskIds, completedAt: newCompletionTime ? undefined : (complete ? completion?.completedAt : null) };
       const writes: any[] = [{ update: { name: names[0], fields: documentFields(completionData, ["completedAt"]) }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }] }];
@@ -286,7 +290,7 @@ async function reconcileHandler(req: any, res: any): Promise<void> {
       const commitTime = ((await commit.json()) as { commitTime?: string }).commitTime;
       if (!commitTime || !Number.isFinite(Date.parse(commitTime))) throw new Error("Firestore commit returned no timestamp");
       const result: Completion = { uid, taskCounts, completedTaskIds, completedAt: complete ? (completion?.completedAt ?? commitTime) : null, updatedAt: commitTime };
-      if (newCompletionTime) void auditDeal(projectId, accessToken, `completion-${deal.id}-${uid}`, uid, "deal_completed", { dealId: deal.id, taskCount: deal.tasks.length });
+      if (newCompletionTime) void auditDeal(projectId, accessToken, `completion-${deal.id}-${uid}`, uid, "deal_completed", { dealId: deal.id, taskCount: assignedTasks.length });
       if (outputStats) {
         if (complete && !completion?.completedAt) outputStats.lastCompletedAt = commitTime;
       }

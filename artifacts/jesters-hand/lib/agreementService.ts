@@ -22,7 +22,7 @@
  * Archives tab; it is a permanent record, not deleted content.
  */
 import {
-  collection, doc, getDoc, getDocFromServer, getDocs, onSnapshot, serverTimestamp, Timestamp, writeBatch,
+  collection, doc, getDocFromServer, getDocs, onSnapshot, serverTimestamp, Timestamp, writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import {
@@ -41,6 +41,14 @@ export interface Agreement {
   /** Missing only on agreements filed before immutable snapshots existed. */
   wording?:       ContractWording;
   signedAt:       Timestamp | null;
+}
+
+/** The wording changed after the member began reviewing/signing it. */
+export class ContractChangedError extends Error {
+  constructor() {
+    super('contract changed');
+    this.name = 'ContractChangedError';
+  }
 }
 
 function parseAgreement(uid: string, d: Record<string, any>): Agreement {
@@ -70,7 +78,7 @@ export function wordingForAgreement(agreement: Agreement, current: ContractDoc):
 
 /** Fetch a member's signed agreement, or null if they haven't signed. */
 export async function getAgreement(uid: string): Promise<Agreement | null> {
-  const snap = await getDoc(doc(db, 'agreements', uid));
+  const snap = await getDocFromServer(doc(db, 'agreements', uid));
   if (!snap.exists()) return null;
   const d = snap.data();
   return parseAgreement(uid, d);
@@ -126,7 +134,7 @@ export async function signAgreement(
   const contractSnap = await getDocFromServer(doc(db, 'contract', 'current'));
   const liveVersion = contractSnap.exists()
     ? Number(contractSnap.data().version ?? version)
-    : version;
+    : BUNDLED_CONTRACT.version;
   if (!Number.isInteger(liveVersion) || liveVersion < 1) {
     throw new Error('The current contract version is invalid.');
   }
@@ -137,19 +145,23 @@ export async function signAgreement(
   if (wording.version !== liveVersion) {
     throw new Error('The current contract wording is invalid.');
   }
+  // Never attach a signature to wording the member did not actually review.
+  // The caller must refresh the screen and collect a new signature.
+  if (liveVersion !== version) {
+    throw new ContractChangedError();
+  }
 
-  const commit = async (includeWording: boolean) => {
-    const agreementRef = doc(db, 'agreements', uid);
-    const archiveRef = doc(collection(db, 'archives'));
-    const batch = writeBatch(db);
-    batch.set(agreementRef, {
-      uid,
-      ...data,
-      version: liveVersion,
-      ...(includeWording ? { wording } : {}),
-      signedAt: serverTimestamp(),
-    });
-    batch.set(archiveRef, {
+  const agreementRef = doc(db, 'agreements', uid);
+  const archiveRef = doc(collection(db, 'archives'));
+  const batch = writeBatch(db);
+  batch.set(agreementRef, {
+    uid,
+    ...data,
+    version: liveVersion,
+    wording,
+    signedAt: serverTimestamp(),
+  });
+  batch.set(archiveRef, {
     type: 'contract_signed',
     section: 'The Contract',
     title: `${data.jokerId} signed the contract (v${liveVersion})`,
@@ -174,17 +186,8 @@ export async function signAgreement(
     createdAtOriginal: null,
     deletedAt: serverTimestamp(),
     deletedByUid: uid,
-    });
-    await batch.commit();
-  };
-
-  try {
-    await commit(true);
-  } catch (error: any) {
-    // Production may still use pre-snapshot rules. Retry its legacy agreement
-    // shape until the owner authorizes deploying the new rules.
-    if (error?.code !== 'permission-denied') throw error;
-    await commit(false);
-  }
+  });
+  // Agreement and permanent archive record are one indivisible filing.
+  await batch.commit();
   return liveVersion;
 }

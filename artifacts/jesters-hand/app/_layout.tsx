@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   Inter_400Regular,
@@ -78,7 +78,10 @@ function RootLayoutNav() {
  * Native: pass-through.
  */
 function PhoneShell({ children }: { children: React.ReactNode }) {
-  if (Platform.OS !== 'web') return <>{children}</>;
+  const insets = useSafeAreaInsets();
+  if (Platform.OS !== 'web') {
+    return <View style={[shellStyles.native, { paddingBottom: insets.bottom }]}>{children}</View>;
+  }
   return (
     <View style={shellStyles.outer}>
       <View style={shellStyles.column}>{children}</View>
@@ -87,6 +90,10 @@ function PhoneShell({ children }: { children: React.ReactNode }) {
 }
 
 const shellStyles = StyleSheet.create({
+  native: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
   outer: {
     flex: 1,
     backgroundColor: '#000',

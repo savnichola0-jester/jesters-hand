@@ -43,7 +43,7 @@ export default function SystemScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, jokerId, isAdmin } = useAuth();
+  const { user, jokerId, isAdmin, isJester, agreement, contractVersion, needsContract } = useAuth();
 
   // Auth guard
   useEffect(() => {
@@ -230,6 +230,10 @@ export default function SystemScreen() {
   const buildVersion = Platform.OS === 'android'
     ? String(Constants?.platform?.android?.versionCode ?? '—')
     : String(Constants?.platform?.ios?.buildNumber ?? '—');
+  const updateChannel = Updates.channel ?? '—';
+  const updateRuntime = Updates.runtimeVersion ?? String(Constants?.expoConfig?.runtimeVersion ?? '—');
+  const updateId = Updates.updateId?.slice(0, 8) ?? 'embedded';
+  const updateSource = Updates.isEmbeddedLaunch ? 'Built into APK' : 'Downloaded update';
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const checkForUpdate = useCallback(async () => {
@@ -243,7 +247,7 @@ export default function SystemScreen() {
     try {
       const result = await Updates.checkForUpdateAsync();
       if (!result.isAvailable) {
-        setUpdateMessage('You are already on the current version.');
+        setUpdateMessage(`Current release is installed (${updateId}).`);
         return;
       }
       await Updates.fetchUpdateAsync();
@@ -254,7 +258,7 @@ export default function SystemScreen() {
     } finally {
       setUpdateBusy(false);
     }
-  }, [updateBusy]);
+  }, [updateBusy, updateId]);
 
   return (
     <View style={s.root}>
@@ -344,6 +348,26 @@ export default function SystemScreen() {
                 <Text style={s.rowLabel}>App Build</Text>
                 <Text style={s.rowValue}>{buildVersion}</Text>
               </View>
+              <View style={s.hairline} />
+              <View style={s.rowBetween}>
+                <Text style={s.rowLabel}>Update Channel</Text>
+                <Text style={s.rowValue}>{updateChannel}</Text>
+              </View>
+              <View style={s.hairline} />
+              <View style={s.rowBetween}>
+                <Text style={s.rowLabel}>Runtime</Text>
+                <Text style={s.rowValue}>{updateRuntime}</Text>
+              </View>
+              <View style={s.hairline} />
+              <View style={s.rowBetween}>
+                <Text style={s.rowLabel}>Release ID</Text>
+                <Text style={s.rowValue}>{updateId}</Text>
+              </View>
+              <View style={s.hairline} />
+              <View style={s.rowBetween}>
+                <Text style={s.rowLabel}>Release Source</Text>
+                <Text style={s.rowValue}>{updateSource}</Text>
+              </View>
             </>
           ) : null}
         </View>
@@ -386,10 +410,22 @@ export default function SystemScreen() {
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={s.rowLabel}>Rules of The Hand</Text>
               <Text style={s.rowHint}>
-                The contract you signed on your first entry — rules, reactions, notifications, and your signature.
+                {isJester
+                  ? `Current contract · version ${contractVersion}. Review or amend the wording; 00-00 never signs.`
+                  : needsContract
+                    ? `ACTION REQUIRED · Version ${contractVersion} is amended. Review it and file a fresh signature now.`
+                    : agreement
+                      ? `SIGNED & CURRENT · Version ${agreement.version}. View the wording and signature on file.`
+                      : `Current contract · version ${contractVersion}. Open to review and sign.`}
               </Text>
             </View>
-            <Feather name="chevron-right" size={18} color={GOLD} />
+            <View style={s.contractAction}>
+              {needsContract ? <Feather name="alert-triangle" size={16} color="#FFD700" /> : null}
+              <Text style={[s.contractActionText, needsContract && { color: '#FFD700' }]}>
+                {needsContract ? 'REVIEW & SIGN' : isJester ? 'REVIEW / AMEND' : 'VIEW'}
+              </Text>
+              <Feather name="chevron-right" size={18} color={needsContract ? '#FFD700' : GOLD} />
+            </View>
           </View>
         </TouchableOpacity>
 
@@ -563,6 +599,8 @@ const s = StyleSheet.create({
   rowValueGold: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 2 },
   rowHint:    { color: 'rgba(237,224,196,0.45)', fontFamily: 'Inter_400Regular', fontSize: 11,
                 marginTop: 4, lineHeight: 15 },
+  contractAction: { alignItems: 'center', gap: 4 },
+  contractActionText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1 },
   hairline:   { height: 1, backgroundColor: 'rgba(200,165,60,0.14)', marginVertical: 4 },
 
   fieldLabel: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 10,

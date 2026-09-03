@@ -16,6 +16,7 @@ import VaultDiscussion, { VaultDiscussionTarget } from '@/components/vault/Vault
 import { appWindow, APP_MAX_W } from '@/lib/appWindow';
 import { PDF_PARAGRAPH_HELPER_SOURCE } from '@/lib/pdfParagraphs';
 import { resolveVaultReaderEndState } from '@/lib/vaultReaderState';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CREAM = '#EDE0C4';
 const GOLD  = '#D4A853';
@@ -94,6 +95,11 @@ function buildReaderHtml(fetchInfo: { url: string; token: string }, contentType:
         column-gap:44px;font-family:Georgia,serif;font-size:15px;line-height:1.65;color:#EDE0C4;}
       #flow img{max-width:100%;height:auto;}
       #flow h1,#flow h2,#flow h3{color:#D4A853;font-family:serif;}
+      #flow h1,#flow h2,#flow h3,#flow h4,#flow h5,#flow h6{
+        break-after:avoid-column;-webkit-column-break-after:avoid;}
+      #flow p{orphans:3;widows:3;}
+      #flow .chapterLead{
+        break-inside:avoid-column;-webkit-column-break-inside:avoid;page-break-inside:avoid;}
       #flow a{color:#D4A853;pointer-events:none;}
       #flow pre{white-space:pre-wrap;word-wrap:break-word;font-size:14px;line-height:1.6;font-family:Georgia,serif;}
       /* nav arrows + page counter */
@@ -332,18 +338,53 @@ function buildReaderHtml(fetchInfo: { url: string; token: string }, contentType:
           sanitizeInto(out,inert.body);
           return out;
         }
+        function keepChapterLeads(flow){
+          function styledShortBlock(el){
+            if(!el||el.nodeType!==1)return false;
+            if(/^H[1-6]$/.test(el.tagName))return true;
+            if(el.tagName!=='P'&&el.tagName!=='DIV')return false;
+            const text=(el.textContent||'').trim();
+            if(!text||text.length>90)return false;
+            const styled=el.querySelector('strong,b,em,i');
+            if(!styled)return false;
+            return Array.from(el.childNodes).every(function(node){
+              return node.nodeType===3
+                ? !(node.nodeValue||'').trim()
+                : /^(STRONG|B|EM|I|BR|SPAN)$/.test(node.tagName);
+            });
+          }
+          let node=flow.firstElementChild;
+          while(node){
+            if(!styledShortBlock(node)){node=node.nextElementSibling;continue;}
+            const lead=document.createElement('div');lead.className='chapterLead';
+            flow.insertBefore(lead,node);
+            let current=node;
+            while(current&&styledShortBlock(current)){
+              const next=current.nextElementSibling;lead.appendChild(current);current=next;
+            }
+            if(current&&/^(P|DIV|BLOCKQUOTE)$/.test(current.tagName)){
+              const next=current.nextElementSibling;lead.appendChild(current);current=next;
+            }
+            node=current;
+          }
+        }
         fetch(${SRC},{headers:{Authorization:'Firebase '+${TOK}}})
           .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return ${producer};})
           .then(html=>{
             document.getElementById('msg').style.display='none';
             const strip=document.getElementById('strip');
             const flow=sanitizeHtml(html);flow.id='flow';
+            keepChapterLeads(flow);
             strip.appendChild(flow);
             const GAP=44;
             function layout(){
-              const colW=window.innerWidth-44; // #flow horizontal padding
+              const pageW=window.innerWidth;
+              const colW=pageW-44; // full page minus #flow's 22px side padding
               flow.style.columnWidth=colW+'px';
-              flow.style.width=colW+'px';
+              flow.style.width=pageW+'px';
+              flow.style.minWidth=pageW+'px';
+              flow.style.maxWidth=pageW+'px';
+              flow.style.flex='0 0 '+pageW+'px';
               const stepPx=colW+GAP;
               const total=Math.max(1,Math.round((flow.scrollWidth+GAP)/stepPx));
               return {stepPx,total};
@@ -493,6 +534,7 @@ interface VaultViewerProps {
 }
 
 export default function VaultViewer({ entry, watermarkLabel, notice, fallbackContentType, onClose }: VaultViewerProps) {
+  const insets = useSafeAreaInsets();
   const [image, setImage] = useState<ProtectedImageHandle | null>(null);
   const [fetchInfo, setFetchInfo] = useState<{ url: string; token: string } | null>(null);
   const [error, setError] = useState(false);
@@ -664,7 +706,7 @@ export default function VaultViewer({ entry, watermarkLabel, notice, fallbackCon
     <Modal visible={!!entry} animationType="fade" transparent onRequestClose={onClose}>
       {/* Web modals portal outside the phone shell — re-apply the width cap */}
       <View style={v.shellOuter}>
-      <View style={v.root}>
+        <View style={[v.root, { paddingBottom: Platform.OS === 'web' ? 0 : insets.bottom }]}>
         {/* Header — close stays visible at all times */}
         <View style={v.header}>
           <Text style={v.notice} numberOfLines={1}>{notice ?? 'Protected Vault Material — View Only'}</Text>

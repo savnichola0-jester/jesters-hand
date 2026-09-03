@@ -8,11 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { getAllMembers, TicketData } from '@/lib/ticketService';
 import { getRoyalsCounts } from '@/lib/blackBookService';
-import {
-  Deal, DealCompletion, DealMemberStats, listenAllDealCompletions,
-  listenAllDealStats, listenPublishedDeals, seatTemperature,
-} from '@/lib/dealService';
-import { useLiveDeal } from '@/components/deal/useLiveDeal';
 import { useAuth } from '@/contexts/AuthContext';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
@@ -51,10 +46,6 @@ export default function HandScreen() {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
   const [royals,   setRoyals]   = useState<Record<string, number>>({});
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [stats, setStats] = useState<DealMemberStats[]>([]);
-  const [completions, setCompletions] = useState<Array<DealCompletion & { dealId: string }>>([]);
-  const activeDeal = useLiveDeal(deals);
   const [seatSummaries, setSeatSummaries] = useState<Record<string, SeatActivitySummary>>({});
 
   const load = useCallback(async () => {
@@ -87,22 +78,10 @@ export default function HandScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => {
-    if (!canSeeAllSeats) {
-      setDeals([]);
-      setStats([]);
-      setCompletions([]);
-      return;
-    }
-    const offDeals = listenPublishedDeals(setDeals);
-    const offStats = listenAllDealStats(setStats);
-    const offCompletions = listenAllDealCompletions(setCompletions);
-    return () => {
-      offDeals();
-      offStats();
-      offCompletions();
-    };
-  }, [canSeeAllSeats]);
+  const temperatureFor = useCallback((uid: string): SeatTemperature | null => {
+    if (!canSeeAllSeats) return null;
+    return seatSummaries[uid]?.temperature ?? null;
+  }, [canSeeAllSeats, seatSummaries]);
 
   return (
     <View style={s.root}>
@@ -164,7 +143,7 @@ export default function HandScreen() {
               key={m.uid}
               member={m}
               royalsCount={royals[m.uid] ?? 0}
-               temperature={canSeeAllSeats ? (seatSummaries[m.uid]?.temperature ?? null) : null}
+              temperature={temperatureFor(m.uid)}
               onPress={() =>
                 router.push({ pathname: '/(tabs)/hand-ticket', params: { uid: m.uid } })
               }

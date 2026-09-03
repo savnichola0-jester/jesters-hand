@@ -9,8 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@/components/FIcon';
 import { getTicket, saveTicket, uploadAdminPhoto, TicketData } from '@/lib/ticketService';
 import { useAuth } from '@/contexts/AuthContext';
-import { listenOwnStats, listenOwnCompletion, listenPublishedDeals, seatTemperature, DealMemberStats, Deal } from '@/lib/dealService';
-import { useLiveDeal } from '@/components/deal/useLiveDeal';
+import { listenOwnStats, DealMemberStats } from '@/lib/dealService';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { fieldsForJokerId, SUIT_GLYPHS, SUIT_GENRES } from '@/lib/ticketFields';
@@ -57,7 +56,7 @@ export default function HandTicketScreen() {
 
   const { user, jokerId, isAdmin, isHandAdmin } = useAuth();
   const { uid } = useLocalSearchParams<{ uid: string }>();
-  const canSeeAllSeats = isHandAdmin;
+  const canSeeAllSeats = jokerId === '00-00';
 
   // Auth guard
   useEffect(() => {
@@ -68,10 +67,7 @@ export default function HandTicketScreen() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
 
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const activeDeal = useLiveDeal(deals);
   const [stats, setStats] = useState<DealMemberStats | null>(null);
-  const [progress, setProgress] = useState(0);
   const [seat, setSeat] = useState<SeatActivitySummary | null>(null);
   useEffect(() => {
     if (!user || !uid || (user.uid !== uid && !canSeeAllSeats)) { setSeat(null); return; }
@@ -83,27 +79,6 @@ export default function HandTicketScreen() {
     if (user.uid !== uid && !canSeeAllSeats) return;
     return listenOwnStats(uid, (s) => setStats(s));
   }, [user, uid, canSeeAllSeats]);
-
-  useEffect(() => {
-    if (!user || !uid) return;
-    if (user.uid !== uid && !canSeeAllSeats) return;
-    return listenPublishedDeals(setDeals);
-  }, [user, uid, canSeeAllSeats]);
-
-  useEffect(() => {
-    if (!activeDeal || !uid || !user) {
-      setProgress(0);
-      return;
-    }
-    if (user.uid !== uid && !canSeeAllSeats) return;
-    return listenOwnCompletion(activeDeal.id, uid, comp => {
-      if (comp && activeDeal.tasks.length > 0) {
-        setProgress(comp.completedTaskIds.length / activeDeal.tasks.length);
-      } else {
-        setProgress(0);
-      }
-    });
-  }, [activeDeal, uid, user, canSeeAllSeats]);
 
   const canSeeTemp = !!user && (user.uid === uid || canSeeAllSeats);
   const temp = canSeeTemp ? (seat?.temperature ?? null) : null;
@@ -162,8 +137,8 @@ export default function HandTicketScreen() {
 
       setUploading(true);
       const url = await uploadAdminPhoto(uid, res.assets[0].uri);
-      await saveTicket(uid, { adminPhotoUrl: url });
-      setTicket(t => (t ? { ...t, adminPhotoUrl: url } : t));
+      await saveTicket(uid, { adminPhotoUrl: url, adminCardId: '' });
+      setTicket(t => (t ? { ...t, adminPhotoUrl: url, adminCardId: '' } : t));
       setSaveMsg('Admin card updated.');
     } catch (error: any) {
       const code = String(error?.code ?? '');
@@ -217,6 +192,10 @@ export default function HandTicketScreen() {
       params: { uid, ...(ticket?.jokerId ? { label: ticket.jokerId } : {}) },
     });
   };
+
+  const displayedAdminCard = ticket?.adminPhotoUrl
+    ? { uri: ticket.adminPhotoUrl }
+    : undefined;
 
   return (
     <View style={s.root}>
@@ -304,13 +283,13 @@ export default function HandTicketScreen() {
                     onPress={() => void pickAdminPhoto()}
                     activeOpacity={0.8}
                   >
-                    {ticket.adminPhotoUrl ? (
-                      <Image source={{ uri: ticket.adminPhotoUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    {displayedAdminCard ? (
+                      <Image source={displayedAdminCard} style={s.adminCardImage} resizeMode="contain" />
                     ) : (
                       <View style={s.cardEmpty}>
                         <Feather name="lock" size={20} color="rgba(237,224,196,0.15)" />
                         <Text style={[s.cardLabel, { opacity: 0.3 }]}>Admin</Text>
-                        {jokerId === '00-00' && <Text style={s.cardHint}>Tap to add</Text>}
+                        {jokerId === '00-00' && <Text style={s.cardHint}>Tap to choose</Text>}
                       </View>
                     )}
                     {uploading && (
@@ -457,6 +436,7 @@ const s = StyleSheet.create({
     borderRadius: 8, backgroundColor: '#111',
     borderWidth: 1, borderColor: 'rgba(237,224,196,0.22)', overflow: 'hidden',
   },
+  adminCardImage: { width: '100%', height: '100%' },
   cardEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   cardLabel: { color: 'rgba(237,224,196,0.35)', fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
 

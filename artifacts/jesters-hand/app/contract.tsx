@@ -14,7 +14,7 @@
  *     it — publishing bumps the version, notifies every member, and gates
  *     them to re-sign.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Platform, Image, ActivityIndicator, TextInput, Alert, Dimensions,
@@ -26,7 +26,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   ContractDoc, ContractSection, BUNDLED_CONTRACT, listenContract, publishContract,
 } from '@/lib/contractService';
-import { Agreement, listenAgreements, signAgreement, wordingForAgreement } from '@/lib/agreementService';
+import {
+  Agreement, ContractChangedError, listenAgreements, signAgreement,
+} from '@/lib/agreementService';
 import { broadcastToActiveMembers } from '@/lib/notificationService';
 import SignaturePad, { SignatureView } from '@/components/SignaturePad';
 import PawPrints from '@/components/PawPrints';
@@ -71,15 +73,15 @@ export default function ContractScreen() {
   // Current wording — live subscription so an amendment published while this
   // screen is open updates the text and version before anyone signs.
   const [contract, setContract] = useState<ContractDoc>(BUNDLED_CONTRACT);
-  useEffect(() => listenContract(setContract), []);
+  const [contractReady, setContractReady] = useState(false);
+  useEffect(() => listenContract(next => {
+    setContract(next);
+    setContractReady(true);
+  }), []);
 
   // Signed & current → read-only. Signed but outdated → sign again.
   const signed   = !!agreement;
   const viewOnly = isJester || (signed && !needsContract);
-  const previouslySignedWording = useMemo(
-    () => agreement ? wordingForAgreement(agreement, contract) : null,
-    [agreement, contract],
-  );
 
   // Auth guard: members only.
   useEffect(() => {
@@ -87,25 +89,38 @@ export default function ContractScreen() {
   }, [user]);
 
   // ── Form state (sign mode) ────────────────────────────────────────────────
-  const [formJokerId, setFormJokerId] = useState('');
   const [formName,    setFormName]    = useState('');
   const [formDate,    setFormDate]    = useState(todayString());
   const [sigPaths,    setSigPaths]    = useState<string[]>([]);
   const [drawing,     setDrawing]     = useState(false);
   const [filing,      setFiling]      = useState(false);
   const [errMsg,      setErrMsg]      = useState<string | null>(null);
+  const reviewedVersion = useRef(contract.version);
+
+  // An amendment arriving while this page is open invalidates any strokes
+  // made against the prior wording. Keep the live update, but require a truly
+  // fresh signature for the newly displayed version.
+  useEffect(() => {
+    if (!contractReady || reviewedVersion.current === contract.version) return;
+    reviewedVersion.current = contract.version;
+    setSigPaths(paths => {
+      if (paths.length > 0) {
+        setErrMsg('The contract was amended while you were reviewing it. Read the updated wording and sign again.');
+      }
+      return [];
+    });
+  }, [contract.version, contractReady]);
 
   // Prefill from the previous signature when re-signing.
   useEffect(() => {
     if (agreement && !viewOnly) {
-      setFormJokerId(prev => prev || agreement.jokerId || jokerId || '');
       setFormName(prev => prev || agreement.name);
       setFormDate(todayString());
       setSigPaths([]);
     }
   }, [agreement, viewOnly, jokerId]);
 
-  const effectiveJokerId = formJokerId || jokerId || '';
+  const effectiveJokerId = jokerId || '';
 
   const canSign = useMemo(() =>
     effectiveJokerId.trim().length > 0 &&
@@ -134,10 +149,14 @@ export default function ContractScreen() {
       await refreshAgreement();
       router.replace('/(tabs)/home');
     } catch (error: any) {
-      const permissionDenied = error?.code === 'permission-denied';
-      setErrMsg(permissionDenied
-        ? 'The contract changed while you were signing. Review the latest wording, redraw your signature, and try once more.'
-        : 'Could not file your signature. Check your connection and try again.');
+      if (error instanceof ContractChangedError || error?.message === 'contract changed') {
+        setSigPaths([]);
+        setErrMsg('The contract changed while you were signing. Review the latest wording and draw a fresh signature.');
+      } else if (error?.code === 'permission-denied') {
+        setErrMsg('Your signature was not accepted. Confirm your account and the latest contract are loaded, then try again.');
+      } else {
+        setErrMsg('Could not file your signature. Check your connection and try again.');
+      }
     } finally {
       setFiling(false);
     }
@@ -226,6 +245,17 @@ export default function ContractScreen() {
 
   const backTarget = () =>
     (router.canGoBack() ? router.back() : router.replace('/(tabs)/system'));
+
+  if (!contractReady) {
+    return (
+      <View style={[s.root, s.loading]}>
+        <Image source={MARBLE} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <View style={s.scrim} pointerEvents="none" />
+        <ActivityIndicator size="small" color={GOLD} />
+        <Text style={s.loadingText}>LOADING THE CURRENT CONTRACT…</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={s.root}>
@@ -336,7 +366,7 @@ export default function ContractScreen() {
               <View style={s.updateBanner}>
                 <Feather name="alert-triangle" size={14} color="#FFD700" />
                 <Text style={s.updateText}>
-                  The contract has been amended since you signed. Read it over and sign again below.
+                  ACTION REQUIRED · This is the current amended contract, version {contract.version}. Read it and file a fresh signature below.
                 </Text>
               </View>
             )}
@@ -347,18 +377,10 @@ export default function ContractScreen() {
               </View>
             )}
 
-            {signed && needsContract && previouslySignedWording && (
-              <View style={s.previousWording}>
-                <Text style={s.previousLabel}>YOUR PREVIOUSLY SIGNED WORDING · v{previouslySignedWording.version}</Text>
-                <Text style={s.previousHeading}>{previouslySignedWording.heading}</Text>
-                {previouslySignedWording.sections.map(sec => (
-                  <View key={`old-${sec.title}`} style={s.previousSection}>
-                    <Text style={s.previousTitle}>{sec.title}</Text>
-                    {sec.lines.map((line, i) => <Text key={i} style={s.previousLine}>{line}</Text>)}
-                  </View>
-                ))}
-                <Text style={s.currentLabel}>AMENDED WORDING · v{contract.version}</Text>
-              </View>
+            {!isJester && (
+              <Text style={s.currentLabel}>
+                {needsContract ? `CURRENT AMENDED WORDING · v${contract.version}` : `CURRENT WORDING · v${contract.version}`}
+              </Text>
             )}
             {contract.sections.map(sec => (
               <View key={sec.title} style={s.section}>
@@ -475,14 +497,14 @@ export default function ContractScreen() {
                   <View style={s.panel}>
                     {signed ? (
                       <Text style={s.resignNotice}>
-                        A newer contract is ready. Review it, then draw a fresh signature below to replace the signature on your previous version.
+                        FRESH SIGNATURE REQUIRED · Your earlier signature remains archived with the version you signed. Complete this new form for version {contract.version}.
                       </Text>
                     ) : null}
                     <Text style={s.fieldLabel}>JOKER ID</Text>
                     <TextInput
-                      style={s.input}
+                      style={[s.input, s.readonlyInput]}
                       value={effectiveJokerId}
-                      onChangeText={setFormJokerId}
+                      editable={false}
                       autoCapitalize="none"
                       autoCorrect={false}
                       placeholder="00-00"
@@ -542,7 +564,7 @@ export default function ContractScreen() {
                       {filing
                         ? <ActivityIndicator size="small" color={GOLD} />
                         : <Text style={s.goldBtnText}>
-                            {signed ? 'SIGN IN BLOOD' : 'SUBMIT'}
+                            {signed ? `SIGN AMENDED CONTRACT · v${contract.version}` : `SIGN CONTRACT · v${contract.version}`}
                           </Text>}
                     </TouchableOpacity>
                   </View>
@@ -558,6 +580,8 @@ export default function ContractScreen() {
 
 const s = StyleSheet.create({
   root:  { flex: 1, backgroundColor: '#000' },
+  loading: { alignItems: 'center', justifyContent: 'center', gap: 12 },
+  loadingText: { ...MARBLE_TEXT_SHADOW, color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1.5 },
   resignNotice: {
     color: '#EDE0C4',
     fontFamily: 'Cinzel_400Regular',
@@ -591,13 +615,8 @@ const s = StyleSheet.create({
                   backgroundColor: 'rgba(255,215,0,0.07)', marginBottom: 10 },
   updateText:   { ...MARBLE_TEXT_SHADOW, flex: 1, color: '#FFD700', fontFamily: 'Inter_500Medium', fontSize: 12,
                   lineHeight: 17 },
-  previousWording: { marginTop: 8, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(237,224,196,0.22)', backgroundColor: 'rgba(0,0,0,0.32)' },
-  previousLabel: { color: 'rgba(237,224,196,0.58)', fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.4, marginBottom: 8 },
-  previousHeading: { ...MARBLE_TEXT_SHADOW, color: 'rgba(237,224,196,0.72)', fontFamily: 'Cinzel_600SemiBold', fontSize: 13, marginBottom: 8 },
-  previousSection: { marginBottom: 7 },
-  previousTitle: { color: 'rgba(212,168,83,0.72)', fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.4, marginBottom: 3 },
-  previousLine: { color: 'rgba(237,224,196,0.58)', fontFamily: 'Inter_400Regular', fontSize: 11, lineHeight: 16, marginBottom: 3 },
-  currentLabel: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.8, marginTop: 4 },
+  currentLabel: { ...MARBLE_TEXT_SHADOW, color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10,
+                  letterSpacing: 1.8, marginTop: 10, marginBottom: 4, textAlign: 'center' },
 
   sealedBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
                  gap: 6, marginBottom: 8 },
@@ -626,6 +645,7 @@ const s = StyleSheet.create({
            borderWidth: 1, borderColor: 'rgba(237,224,196,0.18)', color: CREAM,
            fontFamily: 'Inter_400Regular', fontSize: 14, paddingHorizontal: 14,
            paddingVertical: 12, marginBottom: 8 },
+  readonlyInput: { color: GOLD, opacity: 0.85 },
 
   editHead:  { marginTop: 8, marginBottom: 16 },
   editBlock: { marginBottom: 18 },
