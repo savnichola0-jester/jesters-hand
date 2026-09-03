@@ -84,7 +84,7 @@ async function queryByUid(
   });
 }
 
-async function authorizeJester(req: Request) {
+async function authorizeHandAdmin(req: Request) {
   const projectId = process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"];
   const bearer = req.headers.authorization?.startsWith("Bearer ")
     ? req.headers.authorization.slice(7)
@@ -100,7 +100,7 @@ async function authorizeJester(req: Request) {
   if (!response.ok) return null;
   const caller = await response.json() as FirestoreDocument;
   if (
-    caller.fields?.["jokerId"]?.stringValue !== "00-00" ||
+    !["00-00", "01-54"].includes(caller.fields?.["jokerId"]?.stringValue ?? "") ||
     caller.fields?.["isAdmin"]?.booleanValue !== true ||
     caller.fields?.["suspended"]?.booleanValue === true
   ) return null;
@@ -154,8 +154,8 @@ async function pocketMessages(
 router.get("/audit/activity/:uid", async (req, res) => {
   if (!UID.test(req.params.uid ?? "")) return void res.status(400).json({ error: "invalid target uid" });
   try {
-    const authz = await authorizeJester(req);
-    if (!authz) return void res.status(403).json({ error: "Joker 00-00 authorization required" });
+    const authz = await authorizeHandAdmin(req);
+    if (!authz) return void res.status(403).json({ error: "Hand admin authorization required" });
     const records = await queryByUid(authz.base, authz.token, "activityEvents", req.params.uid);
     // Explicit allow-list: an Activity response can never carry body/context.
     const events = records.map(({ id, data }) => ({
@@ -179,8 +179,8 @@ router.get("/audit/activity/:uid", async (req, res) => {
 router.get("/audit/investigation/:uid", async (req, res) => {
   if (!UID.test(req.params.uid ?? "")) return void res.status(400).json({ error: "invalid target uid" });
   try {
-    const authz = await authorizeJester(req);
-    if (!authz) return void res.status(403).json({ error: "Joker 00-00 authorization required" });
+    const authz = await authorizeHandAdmin(req);
+    if (!authz) return void res.status(403).json({ error: "Hand admin authorization required" });
     const events = await queryByUid(authz.base, authz.token, "investigationEvents", req.params.uid);
     let pocket = { messages: [] as Awaited<ReturnType<typeof pocketMessages>>["messages"], partial: false, failures: 0 };
     try {

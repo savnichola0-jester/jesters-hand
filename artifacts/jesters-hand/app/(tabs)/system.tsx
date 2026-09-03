@@ -43,7 +43,7 @@ export default function SystemScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, jokerId, isAdmin, isJester, agreement, contractVersion, needsContract } = useAuth();
+  const { user, jokerId, isAdmin, agreement, contractVersion, needsContract } = useAuth();
 
   // Auth guard
   useEffect(() => {
@@ -410,8 +410,8 @@ export default function SystemScreen() {
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={s.rowLabel}>Rules of The Hand</Text>
               <Text style={s.rowHint}>
-                {isJester
-                  ? `Current contract · version ${contractVersion}. Review or amend the wording; 00-00 never signs.`
+                {isAdmin
+                  ? `Current contract · version ${contractVersion}. Review or amend the wording.`
                   : needsContract
                     ? `ACTION REQUIRED · Version ${contractVersion} is amended. Review it and file a fresh signature now.`
                     : agreement
@@ -422,7 +422,7 @@ export default function SystemScreen() {
             <View style={s.contractAction}>
               {needsContract ? <Feather name="alert-triangle" size={16} color="#FFD700" /> : null}
               <Text style={[s.contractActionText, needsContract && { color: '#FFD700' }]}>
-                {needsContract ? 'REVIEW & SIGN' : isJester ? 'REVIEW / AMEND' : 'VIEW'}
+                {needsContract ? 'REVIEW & SIGN' : isAdmin ? 'REVIEW / AMEND' : 'VIEW'}
               </Text>
               <Feather name="chevron-right" size={18} color={needsContract ? '#FFD700' : GOLD} />
             </View>

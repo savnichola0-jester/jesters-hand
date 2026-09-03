@@ -54,9 +54,9 @@ export default function HandTicketScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, jokerId, isAdmin, isHandAdmin } = useAuth();
+  const { user, isAdmin, isHandAdmin } = useAuth();
   const { uid } = useLocalSearchParams<{ uid: string }>();
-  const canSeeAllSeats = jokerId === '00-00';
+  const canSeeAllSeats = isHandAdmin;
 
   // Auth guard
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function HandTicketScreen() {
       .finally(() => setLoading(false));
   }, [uid]);
 
-  // ── Admin: only the admin portrait is the Jester's to set. The mug photo
+  // ── Admin: only a Hand admin may set the admin portrait. The mug photo
   // and all ticket fields belong to the member themselves.
   const [uploading, setUploading] = useState(false);
   const [saveMsg,   setSaveMsg]   = useState<string | null>(null);
@@ -110,8 +110,8 @@ export default function HandTicketScreen() {
   const pickAdminPhoto = useCallback(async () => {
     if (!uid || uploading) return;
     setSaveMsg(null);
-    if (jokerId !== '00-00') {
-      setSaveMsg('Only 00-00 can place the admin card.');
+    if (!isHandAdmin) {
+      setSaveMsg('Only The Hand can place the admin card.');
       return;
     }
 
@@ -152,7 +152,7 @@ export default function HandTicketScreen() {
     } finally {
       setUploading(false);
     }
-  }, [uid, uploading, jokerId]);
+  }, [uid, uploading, isHandAdmin]);
 
   // ── Admin: mark the member's suit on their ticket ─────────────────────────
   const [suitBusy, setSuitBusy] = useState(false);
@@ -279,7 +279,7 @@ export default function HandTicketScreen() {
                   {/* Admin photo — the Jester's card to place */}
                   <TouchableOpacity
                     style={[s.card, { width: CARD_W, height: CARD_H }]}
-                    disabled={jokerId !== '00-00' || uploading}
+                    disabled={!isHandAdmin || uploading}
                     onPress={() => void pickAdminPhoto()}
                     activeOpacity={0.8}
                   >
@@ -289,13 +289,13 @@ export default function HandTicketScreen() {
                       <View style={s.cardEmpty}>
                         <Feather name="lock" size={20} color="rgba(237,224,196,0.15)" />
                         <Text style={[s.cardLabel, { opacity: 0.3 }]}>Admin</Text>
-                        {jokerId === '00-00' && <Text style={s.cardHint}>Tap to choose</Text>}
+                        {isHandAdmin && <Text style={s.cardHint}>Tap to choose</Text>}
                       </View>
                     )}
                     {uploading && (
                       <View style={s.cardBusy}><ActivityIndicator size="small" color={GOLD} /></View>
                     )}
-                    {jokerId === '00-00' && !uploading && (
+                    {isHandAdmin && !uploading && (
                       <View
                         pointerEvents="none"
                         style={{
@@ -325,7 +325,7 @@ export default function HandTicketScreen() {
                     </View>
                   </View>
                 )}
-                {jokerId === '00-00' && seat && (
+                {isHandAdmin && seat && (
                   <View style={[s.fieldBlock, { backgroundColor: 'rgba(0,0,0,0.28)', padding: 12, borderRadius: 8 }]}>
                     <Text style={s.fieldLabel}>ACTIVITY SUMMARY</Text>
                     <Text style={s.fieldValue}>Logins {seat.categoryCounts.login} · Conversations {seat.categoryCounts.conversation}</Text>

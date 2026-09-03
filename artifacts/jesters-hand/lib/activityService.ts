@@ -33,7 +33,7 @@ async function request(path: string, init?: RequestInit): Promise<Response | nul
   });
 }
 
-/** Available only for the caller, except exact active 00-00 may request a uid. */
+/** Available only for the caller, except an active Hand admin may request a uid. */
 export async function fetchSeatActivitySummary(uid?: string): Promise<SeatActivitySummary | null> {
   const response = await request(`/activity/summary/${encodeURIComponent(uid ?? auth.currentUser?.uid ?? '')}`);
   if (!response || !response.ok) return null;

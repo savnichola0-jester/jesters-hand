@@ -11,7 +11,7 @@
 
 import {
   collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, writeBatch,
-  increment, onSnapshot, orderBy, query, serverTimestamp, Timestamp, where,
+  increment, onSnapshot, orderBy, query, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase';
@@ -150,13 +150,8 @@ export async function snapshotComments(colPath: string): Promise<ArchivedComment
 export function listenArchives(
   onData: (records: ArchiveRecord[]) => void,
   onError: (e: Error) => void,
-  excludeReports = false,
 ): () => void {
-  // The partial Hand must never receive archived report contents. The
-  // constrained query lets Firestore prove that before returning any row.
-  const q = excludeReports
-    ? query(collection(db, 'archives'), where('type', '!=', 'report'))
-    : query(collection(db, 'archives'), orderBy('deletedAt', 'desc'));
+  const q = query(collection(db, 'archives'), orderBy('deletedAt', 'desc'));
   return onSnapshot(q, snap => {
     const records = snap.docs.map(d => {
       const data = d.data() as any;

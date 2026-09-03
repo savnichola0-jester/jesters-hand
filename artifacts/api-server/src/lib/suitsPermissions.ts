@@ -1,8 +1,7 @@
 /**
- * The second Hand can deal SUITS, but can never alter the Jester's own
- * assignment. Callers must already have established that the actor is a
- * permitted SUITS dealer.
+ * Both pinned Hand seats have the same SUITS management authority. Callers
+ * still establish the actor's active admin record before using this helper.
  */
-export function canChangeSuitAssignment(actorJokerId: string, targetJokerId: string): boolean {
-  return actorJokerId === "00-00" || targetJokerId !== "00-00";
+export function canChangeSuitAssignment(actorJokerId: string, _targetJokerId: string): boolean {
+  return actorJokerId === "00-00" || actorJokerId === "01-54";
 }

@@ -54,7 +54,7 @@ export default function TicketScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, jokerId } = useAuth();
+  const { user, jokerId, isAdmin } = useAuth();
 
   const [values,      setValues]      = useState<Record<string, string>>({});
   const [userPhoto,   setUserPhoto]   = useState<string | null>(null);
@@ -102,7 +102,7 @@ export default function TicketScreen() {
     try {
       await saveTicket(user.uid, values);
       setTimeout(refreshSeat, 750);
-      if (jokerId === '00-00') {
+      if (isAdmin) {
         void broadcastToActiveMembers(user.uid, {
           type: 'announcement',
           title: 'The Jester whispered.',
@@ -117,7 +117,7 @@ export default function TicketScreen() {
     } catch {
       Alert.alert('Save failed', 'Could not save to server. Try again.');
     }
-  }, [jokerId, user, values]);
+  }, [isAdmin, user, values]);
 
   // Suit = what the member is reading right now; saves immediately.
   const pickSuit = useCallback(async (v: string) => {
@@ -126,7 +126,7 @@ export default function TicketScreen() {
     try {
       await saveTicket(user.uid, { suit: v } as any);
       setTimeout(refreshSeat, 750);
-      if (jokerId === '00-00') {
+      if (isAdmin) {
         void broadcastToActiveMembers(user.uid, {
           type: 'announcement',
           title: 'The Jester whispered.',
@@ -137,13 +137,13 @@ export default function TicketScreen() {
     } catch {
       Alert.alert('Save failed', 'Could not save your suit. Try again.');
     }
-  }, [jokerId, user]);
+  }, [isAdmin, user]);
 
   // ── Pick + upload a card photo ───────────────────────────────────────────
   const pickPhoto = useCallback(async (target: 'user' | 'admin') => {
     if (!user || uploading) return;
-    if (target === 'admin' && jokerId !== '00-00') {
-      Alert.alert('Admin card locked', 'Only the 00-00 login can change this card.');
+    if (target === 'admin' && !isAdmin) {
+      Alert.alert('Admin card locked', 'Only The Hand can change this card.');
       return;
     }
 
@@ -223,17 +223,17 @@ export default function TicketScreen() {
 
       // Broadcast the canonical Hand event to all other members (best-effort).
       void broadcastToActiveMembers(user.uid, {
-        type:    jokerId === '00-00' ? 'announcement' : 'filed_ticket',
-        title:   jokerId === '00-00' ? 'The Jester whispered.' : 'Recruit filed.',
+        type:    isAdmin ? 'announcement' : 'filed_ticket',
+        title:   isAdmin ? 'The Hand whispered.' : 'Recruit filed.',
         fromUid: user.uid,
-        text:    jokerId === '00-00' ? 'updated the Jester Ticket.' : 'filed their ticket.',
+        text:    isAdmin ? 'updated a Hand Ticket.' : 'filed their ticket.',
       }).catch(() => {});
     } catch {
       Alert.alert('Error', 'Could not file Intel. Try again.');
     } finally {
       setFiling(false);
     }
-  }, [jokerId, user, values]);
+  }, [isAdmin, user, values]);
 
   // ── Review Intel ─────────────────────────────────────────────────────────
   const reviewIntel = useCallback(async () => {
@@ -342,11 +342,11 @@ export default function TicketScreen() {
                 }
               </TouchableOpacity>
 
-              {/* Card 2 — the 00-00 login may place it on its own Ticket too */}
+              {/* Card 2 — either Hand admin may place it on their own Ticket too */}
               <TouchableOpacity
                 style={[s.card, { width: CARD_W, height: CARD_H }]}
                 onPress={() => void pickPhoto('admin')}
-                disabled={jokerId !== '00-00' || uploading}
+                disabled={!isAdmin || uploading}
                 activeOpacity={0.82}
               >
                 {displayedAdminCard
@@ -354,10 +354,10 @@ export default function TicketScreen() {
                   : <View style={s.cardEmpty}>
                       <Feather name="lock" size={20} color="rgba(237,224,196,0.28)" />
                       <Text style={[s.cardLabel, { opacity: 0.4 }]}>Admin</Text>
-                      {jokerId === '00-00' && <Text style={s.adminCardHint}>Tap to choose</Text>}
+                      {isAdmin && <Text style={s.adminCardHint}>Tap to choose</Text>}
                     </View>
                 }
-                {jokerId === '00-00' && (
+                {isAdmin && (
                   <View pointerEvents="none" style={s.adminEditBadge}>
                     <Feather name="edit-2" size={14} color="#0A0A0A" />
                   </View>

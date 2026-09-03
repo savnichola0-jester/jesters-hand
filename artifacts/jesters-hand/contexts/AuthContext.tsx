@@ -14,6 +14,7 @@ import { listenContract, BUNDLED_CONTRACT } from '@/lib/contractService';
 interface AuthContextType {
   user: User | null;
   jokerId: string | null;
+  /** Either explicitly provisioned Hand admin seat (00-00 or 01-54). */
   isAdmin: boolean;
   /** Either explicitly provisioned Hand seat (00-00 or 01-54). */
   isHandAdmin: boolean;
@@ -63,9 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [agreementChecked, setAgreementChecked] = useState(false);
   const [contractChecked, setContractChecked] = useState(false);
   const [contractGateRequired, setContractGateRequired] = useState<boolean | null>(null);
-  const isAdmin = !!user && adminFlag && jokerId === '00-00';
-  const isJester = isAdmin;
-  const isHandAdmin = !!user && adminFlag && (jokerId === '00-00' || jokerId === '01-54');
+  const isAdmin = !!user && adminFlag && (jokerId === '00-00' || jokerId === '01-54');
+  const isJester = !!user && adminFlag && jokerId === '00-00';
+  const isHandAdmin = isAdmin;
   const contractGateReady = !!user && !loading && agreementChecked && contractChecked;
   const needsContract = !!user && !isJester && (
     agreement === false || (!!agreement && agreement.version < contractVersion)

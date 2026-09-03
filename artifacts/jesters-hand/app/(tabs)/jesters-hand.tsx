@@ -125,18 +125,14 @@ export default function JestersHandScreen() {
   const insets    = useSafeAreaInsets();
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
-  const { user, jokerId, isAdmin, isHandAdmin, isVaultKeeper } = useAuth();
-  // This console belongs to the Jester's permanent 00-00 seat only. Other
-  // administrative roles never receive the route or its data collectors.
-  const isJester = isAdmin && jokerId === '00-00';
+  const { user, jokerId, isHandAdmin, isVaultKeeper } = useAuth();
   const isArchiveViewer = isHandAdmin;
 
   useEffect(() => { if (user === null) router.replace('/'); }, [user]);
-  // 01-54 receives the read-only seat roster and Archives; every other
-  // non-Jester is bounced home.
+  // Only the two explicitly provisioned Hand seats receive this console.
   useEffect(() => {
-    if (user && !isJester && !isArchiveViewer) router.replace('/(tabs)/home');
-  }, [user, isJester, isArchiveViewer]);
+    if (user && !isArchiveViewer) router.replace('/(tabs)/home');
+  }, [user, isArchiveViewer]);
 
   const [section, setSection] = useState<SectionId>('hand');
 
@@ -144,13 +140,10 @@ export default function JestersHandScreen() {
   const params = useLocalSearchParams<{ section?: string }>();
   useEffect(() => {
     const s = params.section;
-    if (jokerId === '01-54') {
-      if (s === 'archive' || s === 'hand') setSection(s);
-      else setSection('hand');
-    } else if (s && SECTIONS.some(t => t.id === s)) {
+    if (s && SECTIONS.some(t => t.id === s)) {
       setSection(s as SectionId);
     }
-  }, [params.section, jokerId]);
+  }, [params.section]);
 
   // ── The Hand roster ──
   const [slots, setSlots] = useState<RosterSlot[] | null>(null);
@@ -180,9 +173,9 @@ export default function JestersHandScreen() {
   // ── Reports ("Cards") ──
   const [reports, setReports] = useState<Report[] | null>(null);
   useEffect(() => {
-    if (!user || !isJester || section !== 'reports') return;
+    if (!user || !isHandAdmin || section !== 'reports') return;
     return listenReports(setReports);
-  }, [user, isJester, section]);
+  }, [user, isHandAdmin, section]);
 
   const [openReport, setOpenReport]     = useState<Report | null>(null);
   const [evidence, setEvidence]         = useState<(string | null)[] | null>(null);
@@ -282,10 +275,6 @@ export default function JestersHandScreen() {
       set.error('Enter a name, street name, or Joker ID.');
       return;
     }
-    if (q === '00-00' || q.toLowerCase() === 'jester') {
-      set.error('That is your own Joker ID.');
-      return;
-    }
     set.busy(true); set.error(null); set.result(null);
     try {
       // The roster listener already maps every slot; fall back to a lookup.
@@ -294,7 +283,7 @@ export default function JestersHandScreen() {
         set.error(`No member matches "${q}".`);
         return;
       }
-      if (target.jokerId === '00-00') {
+      if (target.jokerId === jokerId) {
         set.error('That is your own Joker ID.');
         return;
       }
@@ -325,7 +314,7 @@ export default function JestersHandScreen() {
   useEffect(() => {
     if (!isArchiveViewer || section !== 'archive') return;
     const stop = listenArchives(setArchives, () =>
-      setArchListError('The archive could not be loaded. Try again.'), !isJester);
+      setArchListError('The archive could not be loaded. Try again.'));
     return stop;
   }, [isArchiveViewer, section]);
 
@@ -429,7 +418,7 @@ export default function JestersHandScreen() {
           </Text>
           <Text style={[st.rowStatus, { color: statusColor }]}>{status}</Text>
         </View>
-        {m && isJester ? (
+        {m && isHandAdmin ? (
           <View style={st.rowBtns}>
             <TouchableOpacity
               style={[st.actBtn, m.suspended && st.actBtnActive]}
@@ -482,7 +471,7 @@ export default function JestersHandScreen() {
       {/* ── Folder ── */}
       <View style={[st.folderWrap, { top: navBottom + 42 }]}>
         <View style={st.tabsRow}>
-          {(isJester ? SECTIONS : SECTIONS.filter(s => s.id === 'hand' || s.id === 'archive')).map(s => {
+          {SECTIONS.map(s => {
             const active = s.id === section;
             return (
               <TouchableOpacity
@@ -1316,13 +1305,9 @@ export default function JestersHandScreen() {
                     <Text style={st.reportBody}>
                       Signed contracts are permanent records and cannot be restored or deleted.
                     </Text>
-                  ) : !isJester ? (
-                    <Text style={st.reportBody}>
-                      Only the Jester can restore or permanently delete archived items.
-                    </Text>
                   ) : openArch.type === 'vault_entry' && !isVaultKeeper ? (
                     <Text style={st.reportBody}>
-                      Only the Jester can restore or permanently delete archived Vault documents.
+                      Only the Vault keeper can restore or permanently delete archived Vault documents.
                     </Text>
                   ) : !purgeArmed ? (
                     <>

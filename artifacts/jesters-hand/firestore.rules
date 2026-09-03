@@ -5,13 +5,11 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId == '00-00';
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId in ['00-00', '01-54'];
     }
 
     function isDealAdmin() {
-      return request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId in ['00-00', '01-54'];
+      return isAdmin();
     }
 
     function validMemberJokerId(value) {
@@ -43,11 +41,11 @@ service cloud.firestore {
     }
 
     // Vault curation tier: the second Hand (01-54) is a full admin EXCEPT
-    // for Vault/Chamber document uploads. Admins default to keeper unless
-    // their user doc carries vaultKeeper: false (set only out-of-band; the
-    // flag is pinned like isAdmin in the users rules below).
+    // for Vault/Chamber document uploads and retained-file deletion.
     function isKeeper() {
-      return isAdmin();
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId == '00-00';
     }
 
     // Suspension: a suspended member keeps a valid ID token for up to an
@@ -772,10 +770,7 @@ service cloud.firestore {
         && uid.size() <= 128
         && targetJokerId is string
         && targetJokerId.size() > 0
-        && target.get('suspended', false) != true
-        // 00-00 may assign any active member. 01-54 may assign any active
-        // member except the permanent owner, and remains a valid recipient.
-        && (isAdmin() || targetJokerId != '00-00');
+        && target.get('suspended', false) != true;
     }
 
     function validDeal(d) {
@@ -846,7 +841,7 @@ service cloud.firestore {
     // own progress evidence but cannot manufacture, amend, or erase it.
     match /dealActivity/{userId}/events/{eventId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isAdmin());
+        && (request.auth.uid == userId || isDealAdmin());
       allow create, update, delete: if false;
     }
 
@@ -863,11 +858,12 @@ service cloud.firestore {
     }
 
     // SUITS assignment/configuration is also server-authoritative. Members may
-    // inspect their own assignment and the live task board, while 00-00 may
-    // inspect every assignment. No client can forge a pip, streak, or stamp.
+    // inspect their own assignment and the live task board, while both Hand
+    // dealer seats may inspect every assignment. No client can forge a pip,
+    // streak, or stamp.
     match /suitAssignments/{userId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isAdmin());
+        && (request.auth.uid == userId || isDealAdmin());
       allow create, update, delete: if false;
     }
 
@@ -878,7 +874,7 @@ service cloud.firestore {
 
     match /dealCompletions/{dealId}/members/{userId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isAdmin());
+        && (request.auth.uid == userId || isDealAdmin());
       // Reconciled only by the authenticated API server's privileged Firestore
       // credentials. Client activity remains immutable evidence above.
       allow create, update, delete: if false;
@@ -886,7 +882,7 @@ service cloud.firestore {
 
     match /dealMemberStats/{userId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isAdmin());
+        && (request.auth.uid == userId || isDealAdmin());
       allow create, update, delete: if false;
     }
 
@@ -907,7 +903,7 @@ service cloud.firestore {
 
     match /dealAwards/{userId}/items/{awardId} {
       allow read: if activeUser()
-        && (request.auth.uid == userId || isAdmin());
+        && (request.auth.uid == userId || isDealAdmin());
       allow create, update: if activeUser() && isDealAdmin()
         && validDealAward(userId);
       allow delete: if false;

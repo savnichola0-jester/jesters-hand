@@ -1,7 +1,7 @@
 // Report ("Card") service — members file reports against another Joker ID
 // from inside a whisper. Reports land in the admin-only Reports tab of
 // Jester's Hand. Evidence photos live in private Storage under
-// reports/{reporterUid}/{reportId}/img_N — readable ONLY by the admin.
+// reports/{reporterUid}/{reportId}/img_N — readable ONLY by The Hand.
 
 import {
   collection, doc, getDoc, setDoc, onSnapshot, orderBy, query,
@@ -82,7 +82,7 @@ export async function submitReport(input: SubmitReportInput): Promise<void> {
     throw err;
   }
 
-  // Ping the Jester — bell notification + push, best-effort AFTER the report
+  // Ping both Hand seats — bell notification + push, best-effort AFTER the report
   // is safely committed (a notification hiccup must never fail the filing).
   // Text stays generic: report contents never leave the Reports tab.
   await notifyAdminOfReport(me.uid).catch(err =>
@@ -97,7 +97,7 @@ async function cleanupEvidence(evidencePaths: string[]): Promise<void> {
 }
 
 /**
- * Bell + push notification to the admin (the Jester) that a card was passed.
+ * Bell + push notification to both Hand admins that a card was passed.
  * Deliberately generic — never includes the report's contents or parties.
  * The push payload carries no fromUid so the lock-screen banner stays
  * anonymous too; the notification doc keeps fromUid (rules require honest
@@ -106,24 +106,23 @@ async function cleanupEvidence(evidencePaths: string[]): Promise<void> {
 async function notifyAdminOfReport(reporterUid: string): Promise<void> {
   const adminSnap = await getDocs(query(
     collection(db, 'users'),
-    where('jokerId', '==', '00-00'),
     where('isAdmin', '==', true),
   ));
-  // Fail closed if the permanent seat is missing or duplicated. A sensitive
-  // report alert must never be guessed onto the wrong account.
-  const adminUid = adminSnap.size === 1 ? adminSnap.docs[0]?.id : undefined;
-  if (!adminUid || adminUid === reporterUid) return;
-
-  await addDoc(collection(db, 'notifications', adminUid, 'items'), {
-    type: 'filed_report',
-    title: 'Someone is bleeding out.',
-    fromUid: reporterUid,
-    text: 'A new card has been passed.',
-    createdAt: serverTimestamp(),
-    read: false,
-  });
+  const adminUids = adminSnap.docs
+    .filter(d => ['00-00', '01-54'].includes(d.data().jokerId))
+    .map(d => d.id)
+    .filter(uid => uid !== reporterUid);
+  await Promise.all(adminUids.map(adminUid =>
+    addDoc(collection(db, 'notifications', adminUid, 'items'), {
+      type: 'filed_report',
+      title: 'Someone is bleeding out.',
+      fromUid: reporterUid,
+      text: 'A new card has been passed.',
+      createdAt: serverTimestamp(),
+      read: false,
+    })));
   // Push mirror, post-commit, best-effort. No fromUid → generic banner.
-  void sendPushToUsers([adminUid], {
+  void sendPushToUsers(adminUids, {
     type: 'filed_report',
     title: 'Someone is bleeding out.',
     text: 'A new card has been passed.',

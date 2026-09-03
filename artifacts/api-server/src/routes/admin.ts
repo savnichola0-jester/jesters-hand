@@ -1,5 +1,5 @@
 /**
- * The Hand — member administration endpoints (admin/00-00 only).
+ * The Hand — member administration endpoints (00-00 and 01-54).
  *
  *   POST /admin/suspend  { targetUid, suspended: boolean }
  *   POST /admin/recover  { targetUid, newPassword }
@@ -54,7 +54,12 @@ async function requireAdmin(
     const jokerId =
       (doc?.fields?.["jokerId"] as { stringValue?: string } | undefined)
         ?.stringValue;
-    if (!isAdmin || jokerId !== "00-00") return { error: "forbidden", status: 403 };
+    const suspended =
+      (doc?.fields?.["suspended"] as { booleanValue?: boolean } | undefined)
+        ?.booleanValue === true;
+    if (!isAdmin || !["00-00", "01-54"].includes(jokerId ?? "") || suspended) {
+      return { error: "forbidden", status: 403 };
+    }
   } catch {
     return { error: "admin check failed", status: 500 };
   }

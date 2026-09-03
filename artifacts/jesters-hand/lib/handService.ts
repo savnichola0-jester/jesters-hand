@@ -1,4 +1,4 @@
-// ── The Hand — member administration (admin/00-00 only) ─────────────────────
+// ── The Hand — member administration (00-00 and 01-54) ──────────────────────
 // Roster of the 54 permanent Joker ID slots plus the three administrative
 // actions. Suspend/Recover/Transfer are privileged Firebase Auth operations,
 // so they run on the api-server (which re-verifies that the caller is the

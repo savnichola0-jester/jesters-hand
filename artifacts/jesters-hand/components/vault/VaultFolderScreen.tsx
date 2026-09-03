@@ -154,14 +154,11 @@ export default function VaultFolderScreen({ config }: { config: FolderConfig }) 
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, isAdmin: adminFlag, isVaultKeeper, jokerId } = useAuth();
-  // Vault/Chamber administration belongs only to the exact 00-00 admin seat.
-  // Treat every other account as a reader even if an admin flag is present.
-  const isAdmin = adminFlag && jokerId === '00-00';
+  const { user, isAdmin, isVaultKeeper, jokerId } = useAuth();
   const manuscriptScannerRef = useRef<ManuscriptScannerHandle>(null);
   // Curation (upload / replace / hide / delete) needs the keeper tier —
   // the second Hand is an admin who can VIEW everything here but not curate.
-  const canCurate = isAdmin && isVaultKeeper;
+  const canCurate = isVaultKeeper;
 
   useEffect(() => {
     if (user === null) router.replace('/');

@@ -27,9 +27,9 @@
 - [Phone-width web shell](phone-shell-web.md) — desktop web is a centered 430px column; use appWindow()/useAppDimensions, modals portal outside the shell and must re-cap; frames render at native 1.5 ratio
 - [Chamber decoder game](chamber-decoder.md) — decoderHash is a client-side GAME gate only, not access control; deliberate; pure-JS sha256 util for web+native parity
 - [Jester's Deal integrity](jesters-deal.md) — only server-verified app evidence may advance Deal progress, streaks, milestones, or Seat Temperature
-- [SUITS integrity](suits-integrity.md) — assignments, tasks, stamps, Royals, and both audit streams commit atomically; exact 00-00 authority requires pinned admin identity
+- [SUITS integrity](suits-integrity.md) — both pinned Hand seats manage assignments and Royals; mutations and body-free audit evidence stay atomic
 - [Deal and SUITS card artwork](deal-suits-card-artwork.md) — the supplied distressed black card is canonical for both editing and member viewing
 - [Native install QR](native-install-qr.md) — engraving QR targets a permanent owned-domain redirect, never a temporary APK or legacy web-app URL
-- [Ticket admin-card parity](ticket-admin-card-parity.md) — the personal Ticket and Hand member Ticket are separate surfaces; 00-00’s admin-card control must work on both
-- [Whole-app seat temperature](seat-temperature.md) — derive scores from canonical stored actions; never trust client-reported activity; 01-54 gets temperature only
+- [Ticket admin-card parity](ticket-admin-card-parity.md) — personal and Hand-member Tickets are separate; both Hand admins need gallery-only admin-card controls on both
+- [Whole-app seat temperature](seat-temperature.md) — canonical evidence only; both Hand admins get cross-member detail while Pocket remains usage/time-only
 - [Social wall integrity](social-wall-integrity.md) — new themed walls must use own-UID marks, atomic comment counters, archive-safe children, and wipe-safe cleanup

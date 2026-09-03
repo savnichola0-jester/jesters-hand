@@ -22,13 +22,15 @@ service firebase.storage {
     function isAdmin() {
       return signedIn()
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.jokerId == '00-00';
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.jokerId in ['00-00', '01-54'];
     }
 
     // Vault curation tier — mirrors isKeeper() in firestore.rules: the
     // second Hand (vaultKeeper: false) may not touch Vault/Chamber files.
     function isKeeper() {
-      return isAdmin();
+      return signedIn()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.jokerId == '00-00';
     }
 
     // Member photos (mug / admin portrait) — only the two known object

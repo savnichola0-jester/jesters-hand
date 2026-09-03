@@ -65,10 +65,8 @@ export default function ContractScreen() {
   const insets   = useSafeAreaInsets();
   const topInset = Platform.OS === 'web' ? 50 : insets.top;
 
-  const { user, jokerId, isJester, agreement, refreshAgreement, needsContract } = useAuth();
-  // Amendment authority is deliberately narrower than generic admin access:
-  // only the authenticated, provisioned 00-00 Jester seat may edit wording.
-  const canAmend = isJester && jokerId === '00-00';
+  const { user, jokerId, isAdmin, isJester, agreement, refreshAgreement, needsContract } = useAuth();
+  const canAmend = isAdmin;
 
   // Current wording — live subscription so an amendment published while this
   // screen is open updates the text and version before anyone signs.
@@ -354,7 +352,7 @@ export default function ContractScreen() {
 
             {canAmend && (
               <View style={s.jesterRow}>
-                <Text style={s.jesterNote}>Version {contract.version} — the Jester signs nothing.</Text>
+                <Text style={s.jesterNote}>Version {contract.version} — The Hand may amend this wording.</Text>
                 <TouchableOpacity onPress={startEdit} activeOpacity={0.75} style={s.amendBtn}>
                   <Feather name="edit-3" size={13} color={GOLD} />
                   <Text style={s.amendText}>AMEND</Text>

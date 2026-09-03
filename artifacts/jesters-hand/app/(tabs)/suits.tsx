@@ -9,7 +9,7 @@ import { InWorldCard, CardPip, CardTitle, CardSub, CardInput } from '@/component
 
 const GOLD = '#D4A853'; const CREAM = '#EDE0C4';
 export default function SuitsScreen() {
-  const { user, jokerId, isAdmin, isHandAdmin } = useAuth(); const inset = useSafeAreaInsets();
+  const { user, jokerId, isHandAdmin } = useAuth(); const inset = useSafeAreaInsets();
   const [state, setState] = useState<SuitState | null>(null); const [holders, setHolders] = useState<SuitHolder[]>([]);
   const [myState, setMyState] = useState<SuitState | null>(null);
   const [view, setView] = useState<'deal' | 'mine'>('deal');
@@ -17,7 +17,7 @@ export default function SuitsScreen() {
   const [loading, setLoading] = useState(true);
   const canDeal = isHandAdmin;
   const isSecondDealer = canDeal && jokerId === '01-54';
-  const canAwardRoyals = isAdmin && jokerId === '00-00';
+  const canAwardRoyals = canDeal;
   const load = useCallback(async () => {
     setLoading(true); setNote('');
     try {
@@ -90,7 +90,7 @@ export default function SuitsScreen() {
                    {held && active?.destination === 'ticket' ? <Text testID={`suits-ticket-review-${suit.key}`} style={s.ticketReview}>REVIEW YOUR TICKET</Text> : null}
                    {held && action && !action.actionable ? <Text style={s.viewOnly}>VIEW ONLY · NOT COMPLETABLE</Text> : null}
                    {held && shownState.notes?.[suit.key] ? <Text style={s.jesterNote}>“{shownState.notes[suit.key]}”</Text> : null}
-                   {held && shownState.completed[suit.key] ? <Text style={s.stamped}>Stamped by 00-00</Text> : null}
+                   {held && shownState.completed[suit.key] ? <Text style={s.stamped}>Stamped by The Hand</Text> : null}
                 </View>
               </InWorldCard>
             </TouchableOpacity>

@@ -27,8 +27,8 @@ const TASK_CATALOG = [
 ];
 
 export default function DealAdminView() {
-  const { user, jokerId } = useAuth();
-  const canInspectMemberStats = jokerId === '00-00';
+  const { user, jokerId, isHandAdmin } = useAuth();
+  const canInspectMemberStats = isHandAdmin;
   const [tab, setTab] = useState<'management' | 'mine'>('management');
   const hasPersonalTaskTab = jokerId === '01-54';
 
@@ -76,7 +76,6 @@ export default function DealAdminView() {
     return assignmentPool.filter(member =>
       !!member.jokerId
       && member.suspended !== true
-      && !(jokerId === '01-54' && member.jokerId === '00-00')
     );
   }, [jokerId, members, user]);
 
@@ -86,9 +85,6 @@ export default function DealAdminView() {
     if (tasks.length === 0) return showMsg('Need at least one task');
     if (tasks.some(t => !t.label.trim())) return showMsg('All tasks need a label');
     if (tasks.some(t => !t.assigneeUid)) return showMsg('Choose a Joker ID for every task card');
-    if (jokerId === '01-54' && tasks.some(task =>
-      members.some(member => member.uid === task.assigneeUid && member.jokerId === '00-00')
-    )) return showMsg('01-54 cannot assign a task to 00-00');
 
     setSubmitting(true);
     try {

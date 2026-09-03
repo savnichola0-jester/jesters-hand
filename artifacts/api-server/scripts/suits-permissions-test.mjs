@@ -15,12 +15,14 @@ try {
     outfile: join(outdir, "permissions.mjs"),
   });
   const { canChangeSuitAssignment } = await import(pathToFileURL(join(outdir, "permissions.mjs")).href);
-  assert.equal(canChangeSuitAssignment("01-54", "00-00"), false,
-    "01-54 must not alter any SUITS pip assigned to 00-00");
-  assert.equal(canChangeSuitAssignment("01-54", "23-45"), true,
+  assert.equal(canChangeSuitAssignment("01-54", "00-00"), true,
+    "01-54 has the same SUITS assignment authority as 00-00");
+  assert.equal(canChangeSuitAssignment("01-54", "23-54"), true,
     "01-54 remains permitted to deal to regular members");
   assert.equal(canChangeSuitAssignment("00-00", "00-00"), true,
     "00-00 retains authority over the Jester's own SUITS assignment");
+  assert.equal(canChangeSuitAssignment("23-54", "01-54"), false,
+    "ordinary members never receive SUITS management authority");
   console.log("SUITS assignment permission regression checks passed.");
 } finally {
   await rm(outdir, { recursive: true, force: true });

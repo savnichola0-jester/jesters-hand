@@ -123,13 +123,17 @@ await test('admin can write vault file and cover', async () => {
   await assertSucceeds(uploadBytes(ref(admin(), 'vault/new1/cover'), bytes));
 });
 
-await test('second Hand cannot read hidden, curate vault, or write recruit photos', async () => {
+await test('second Hand has full media admin authority except Vault/Chamber files', async () => {
   await assertFails(uploadBytes(ref(deputy(), 'vault/newd/file'), bytes));
   await assertFails(uploadBytes(ref(deputy(), 'vault/pub1/cover'), bytes));
   await assertFails(deleteObject(ref(deputy(), 'vault/arc1/file')));
-  // In Vault/Chamber this seat has ordinary member read access only.
-  await assertFails(getBytes(ref(deputy(), 'vault/hid1/file')));
-  await assertFails(uploadBytes(ref(deputy(), 'recruitPosts/rdep/img_dep1'), bytes));
+  await assertSucceeds(getBytes(ref(deputy(), 'vault/hid1/file')));
+  await assertSucceeds(uploadBytes(ref(deputy(), 'recruitPosts/rdep/img_dep1'), bytes));
+  await assertSucceeds(uploadBytes(
+    ref(deputy(), 'users/alice/admin.jpg'),
+    bytes,
+    { contentType: 'image/jpeg' },
+  ));
 });
 
 await test('member cannot write vault files (even for published entries)', async () => {

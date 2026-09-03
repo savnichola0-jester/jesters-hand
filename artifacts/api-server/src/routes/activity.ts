@@ -267,7 +267,7 @@ router.get(["/activity/summary", "/activity/summary/:uid"], async (req, res) => 
     const { score, temperature, counts, timestamps } = scoreSeatEvents(events);
     const latest = Object.values(timestamps).reduce((max, timestamp) =>
       Math.max(max, timestamp ? Date.parse(timestamp) : 0), 0);
-    const mayInspectActivity = target === a.uid || a.jester;
+    const mayInspectActivity = target === a.uid || a.handAdmin;
     return void res.json({
       score: mayInspectActivity ? score : null,
       temperature,

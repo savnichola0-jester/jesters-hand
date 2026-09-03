@@ -1,4 +1,4 @@
-// Investigation service — builds the exact-00-00 activity file for a searched
+// Investigation service — builds a Hand-admin activity file for a searched
 // Joker ID. Public sources are read through the normal client rules; immutable
 // audit events and target-authored Pocket messages come from the privileged
 // API. Activity uses a separate body-free endpoint and never receives those
@@ -101,13 +101,14 @@ const myReactions = (reactions: unknown, uid: string): string[] => {
 const joinContent = (parts: (string | undefined | null)[]): string =>
   parts.filter(p => p && String(p).trim()).map(p => String(p).trim()).join('\n');
 
-/** Query-layer guard: data collectors are reserved for the permanent Jester. */
-async function assertJester(): Promise<void> {
+/** Query-layer guard: data collectors are reserved for the two Hand admins. */
+async function assertHandAdmin(): Promise<void> {
   const current = auth.currentUser;
-  if (!current) throw new Error('Sign in as the Jester to access this file.');
+  if (!current) throw new Error('Sign in as The Hand to access this file.');
   const ownRecord = await getDoc(doc(db, 'users', current.uid));
-  if (ownRecord.data()?.jokerId !== '00-00') {
-    throw new Error('Only Joker 00-00 may access this file.');
+  const own = ownRecord.data();
+  if (own?.isAdmin !== true || !['00-00', '01-54'].includes(own?.jokerId)) {
+    throw new Error('Only The Hand may access this file.');
   }
 }
 
@@ -162,7 +163,7 @@ const investigationEventContext = (data: Record<string, unknown>): string => {
 
 /** users collection: resolve a Joker ID like "07-54" to its current uid. */
 export async function resolveJokerId(jokerId: string): Promise<{ uid: string } | null> {
-  await assertJester();
+  await assertHandAdmin();
   const canonical = canonicalJokerIdQuery(jokerId);
   if (!canonical) return null;
   const snap = await getDocs(query(
@@ -176,7 +177,7 @@ export async function resolveJokerId(jokerId: string): Promise<{ uid: string } |
 export async function resolveInvestigationTarget(
   rawQuery: string,
 ): Promise<{ uid: string; jokerId: string } | null> {
-  await assertJester();
+  await assertHandAdmin();
   const trimmed = rawQuery.trim();
   const needle = trimmed.toLowerCase();
   if (!needle) return null;
@@ -207,7 +208,7 @@ export async function resolveInvestigationTarget(
 export async function fetchInvestigation(
   uid: string, jokerId: string,
 ): Promise<InvestigationResult> {
-  await assertJester();
+  await assertHandAdmin();
   const items: ActivityItem[] = [];
 
   // Every fetch below is independent — run them all in parallel. Individual
@@ -645,7 +646,7 @@ export async function fetchInvestigation(
  * This path never requests Investigation context or Pocket message bodies.
  */
 export async function fetchActivityLog(uid: string, jokerId: string): Promise<InvestigationResult> {
-  await assertJester();
+  await assertHandAdmin();
   const [audit, seat] = await Promise.all([
     fetchAuditApi<{ events: AuditEvent[] }>(`/audit/activity/${encodeURIComponent(uid)}`),
     fetchSeatActivitySummary(uid),

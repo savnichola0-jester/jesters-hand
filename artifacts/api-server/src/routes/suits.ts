@@ -34,15 +34,14 @@ async function authenticate(req: Request): Promise<Auth | null> {
   const jokerId = read(userDoc).jokerId;
   return typeof jokerId === "string" ? { project, uid, token, jokerId } : null;
 }
-async function caller(req: Request, role: "member" | "dealer" | "jester" = "member"): Promise<Auth | null> {
+async function caller(req: Request, role: "member" | "dealer" = "member"): Promise<Auth | null> {
   const a = await authenticate(req); if (!a) return null;
   const userDoc = await getDoc(a, `users/${enc(a.uid)}`);
   if (!userDoc) return null;
   const u = read(userDoc);
   if (
     u.suspended === true ||
-    (role === "dealer" && (u.isAdmin !== true || !["00-00", "01-54"].includes(a.jokerId))) ||
-    (role === "jester" && (u.isAdmin !== true || a.jokerId !== "00-00"))
+    (role === "dealer" && (u.isAdmin !== true || !["00-00", "01-54"].includes(a.jokerId)))
   ) return null;
   return a;
 }
@@ -91,7 +90,7 @@ router.post("/suits/assignment", async (req, res) => {
     const target = await getDoc(a, `users/${enc(b.targetUid)}`);
     if (!target) return void res.status(404).json({ error: "member not found" });
     if (!canChangeSuitAssignment(a.jokerId, String(read(target).jokerId ?? ""))) {
-      return void res.status(403).json({ error: "01-54 cannot change 00-00 SUITS assignments" });
+      return void res.status(403).json({ error: "dealer seat required" });
     }
     for (let attempt = 0; attempt < 3; attempt++) {
       const x = await assignment(a, b.targetUid); const pips = new Set<string>(x.data.pips ?? []);
@@ -131,8 +130,8 @@ router.post("/suits/in-play", async (req, res) => {
 });
 
 router.post("/suits/stamp", async (req, res) => {
-  const a = await caller(req, "jester"), b = req.body;
-  if (!a) return void res.status(403).json({ error: "Jester 00-00 required" });
+  const a = await caller(req, "dealer"), b = req.body;
+  if (!a) return void res.status(403).json({ error: "dealer seat required" });
   if (!b || typeof b.targetUid !== "string" || !PIPS.has(b.pip)) return void res.status(400).json({ error: "invalid stamp" });
   try {
     const today = new Date().toISOString().slice(0, 10), id = hashId("stamp", b.targetUid, b.pip, today), royalId = `suits-royal-${b.pip}-${today}`;

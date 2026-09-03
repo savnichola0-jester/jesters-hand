@@ -1,4 +1,4 @@
-// ── Recruit/Verdict visual editor (admin 00-00 only) ─────────────────────────
+// ── Recruit/Verdict visual editor (Hand admins only) ─────────────────────────
 // Canva-style in-app editor over the official blank templates. Text boxes and
 // photo frames live in the 1024×1536 design space; the admin can add, move,
 // resize, rotate, duplicate, layer and delete elements, style text (font /
