@@ -47,6 +47,22 @@ export interface InvestigationResult {
   iconSummaries?: Record<AppIconId, IconActivitySummary> | null;
 }
 
+const JOKER_ID_QUERY = /^(\d{1,2})-(\d{2})$/;
+
+/**
+ * Treat Joker IDs as roster keys, never loose text. One-digit shorthand such
+ * as "1-54" resolves to the canonical "01-54" seat.
+ */
+const canonicalJokerIdQuery = (rawQuery: string): string | null => {
+  const match = rawQuery.trim().match(JOKER_ID_QUERY);
+  if (!match) return null;
+  const seat = Number(match[1]);
+  const deck = Number(match[2]);
+  if (seat === 0 && deck === 0) return '00-00';
+  if (deck !== 54 || seat < 1 || seat > 54) return '';
+  return `${String(seat).padStart(2, '0')}-54`;
+};
+
 const ANTE_BOARDS: { id: string; label: string }[] = [
   { id: 'place',  label: 'Place the Ante' },
   { id: 'raised', label: 'Raise the Ante' },
@@ -147,8 +163,10 @@ const investigationEventContext = (data: Record<string, unknown>): string => {
 /** users collection: resolve a Joker ID like "07-54" to its current uid. */
 export async function resolveJokerId(jokerId: string): Promise<{ uid: string } | null> {
   await assertJester();
+  const canonical = canonicalJokerIdQuery(jokerId);
+  if (!canonical) return null;
   const snap = await getDocs(query(
-    collection(db, 'users'), where('jokerId', '==', jokerId.trim()),
+    collection(db, 'users'), where('jokerId', '==', canonical),
   ));
   if (snap.empty) return null;
   return { uid: snap.docs[0].id };
@@ -159,12 +177,26 @@ export async function resolveInvestigationTarget(
   rawQuery: string,
 ): Promise<{ uid: string; jokerId: string } | null> {
   await assertJester();
-  const needle = rawQuery.trim().toLowerCase();
+  const trimmed = rawQuery.trim();
+  const needle = trimmed.toLowerCase();
   if (!needle) return null;
+
+  // ID-shaped searches are exact roster lookups. Never let "1-54" drift into
+  // a substring match such as "21-54".
+  const canonicalId = canonicalJokerIdQuery(trimmed);
+  if (canonicalId !== null) {
+    if (!canonicalId) return null;
+    const exact = await getDocs(query(
+      collection(db, 'users'), where('jokerId', '==', canonicalId),
+    ));
+    if (exact.empty) return null;
+    return { uid: exact.docs[0].id, jokerId: canonicalId };
+  }
+
   const users = await getDocs(collection(db, 'users'));
   const match = users.docs.find(user => {
     const data = user.data();
-    return [data.jokerId, data.name, data.street]
+    return [data.name, data.street]
       .some(value => typeof value === 'string' && value.trim().toLowerCase().includes(needle));
   });
   if (!match) return null;

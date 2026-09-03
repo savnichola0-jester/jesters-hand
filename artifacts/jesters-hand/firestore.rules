@@ -14,6 +14,13 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId in ['00-00', '01-54'];
     }
 
+    function validMemberJokerId(value) {
+      // The only client-created seats are 01-54 through 54-54. The permanent
+      // 00-00 Jester is provisioned out-of-band.
+      return value is string
+        && value.matches('^(0[1-9]|[1-4][0-9]|5[0-4])-54$');
+    }
+
     function validAdminCardState() {
       let cardId = request.resource.data.get('adminCardId', '');
       let photoUrl = request.resource.data.get('adminPhotoUrl', '');
@@ -127,7 +134,7 @@ service cloud.firestore {
         && request.resource.data.get('isAdmin', false) == false
         // The permanent Jester is provisioned out-of-band; a client-created
         // profile may never claim that seat.
-        && request.resource.data.get('jokerId', null) != '00-00';
+        && validMemberJokerId(request.resource.data.get('jokerId', null));
       // Dead push-token cleanup: any signed-in member may REMOVE another
       // user's expoPushToken (Expo reported it DeviceNotRegistered after a
       // send). Strictly deletion-only, touching nothing else — worst case a

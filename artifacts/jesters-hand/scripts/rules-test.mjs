@@ -1381,8 +1381,8 @@ await test('oversized or dishonest black book entries are rejected', async () =>
 await test('member cannot grant themselves isAdmin (create or update)', async () => {
   await seedBlackBook();
   await assertFails(setDoc(doc(mallory(), 'users/mallory'),
-    { jokerId: '13-13', isAdmin: true }));
-  await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '13-13' }));
+    { jokerId: '13-54', isAdmin: true }));
+  await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '13-54' }));
   await assertFails(setDoc(doc(mallory(), 'users/mallory'),
     { isAdmin: true }, { merge: true }));
   // …and without the flag they still cannot award royals.
@@ -1396,15 +1396,24 @@ await test('member cannot create their profile as the permanent 00-00 Jester', a
     jokerId: '00-00', name: 'Not the Jester',
   }));
   await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), {
-    jokerId: '13-13', name: 'Mallory',
+    jokerId: '13-54', name: 'Mallory',
   }));
+});
+
+await test('member profile must use a reserved 01-54 through 54-54 roster seat', async () => {
+  await seedBlackBook();
+  await assertFails(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '97-41' }));
+  await assertFails(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '55-54' }));
+  await assertFails(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '00-54' }));
+  await assertFails(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '1-54' }));
+  await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '54-54' }));
 });
 
 await test('member cannot change jokerId, alone or with an allowed profile field', async () => {
   await seedBlackBook();
-  await assertFails(updateDoc(doc(alice(), 'users/alice'), { jokerId: '13-13' }));
+  await assertFails(updateDoc(doc(alice(), 'users/alice'), { jokerId: '13-54' }));
   await assertFails(updateDoc(doc(alice(), 'users/alice'), {
-    jokerId: '13-13', coffee: 'Black',
+    jokerId: '13-54', coffee: 'Black',
   }));
   await assertSucceeds(updateDoc(doc(alice(), 'users/alice'), { coffee: 'Black' }));
 });
