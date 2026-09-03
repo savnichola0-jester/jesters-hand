@@ -33,3 +33,4 @@
 - [Ticket admin-card parity](ticket-admin-card-parity.md) — personal and Hand-member Tickets are separate; both Hand admins need gallery-only admin-card controls on both
 - [Whole-app seat temperature](seat-temperature.md) — canonical evidence only; both Hand admins get cross-member detail while Pocket remains usage/time-only
 - [Social wall integrity](social-wall-integrity.md) — new themed walls must use own-UID marks, atomic comment counters, archive-safe children, and wipe-safe cleanup
+- [GitHub synchronization](github-synchronization.md) — sync through the installed connector’s atomic Git Data API; local history may lag equivalent remote commits
