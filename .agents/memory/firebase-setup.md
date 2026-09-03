@@ -8,6 +8,11 @@ description: Firebase project wiring for Jester's Hand — auth scheme, Firestor
 - Email format: `{jokerID.toLowerCase()}@jestershand.local`
 - Password = Cipher entered on lock screen
 - Joker IDs are admin-assigned in Firebase Console → Authentication → Add user
+- Native auth must initialize with React Native AsyncStorage persistence. Swiping the app out of Android Recents must not sign the member out; only explicit sign-out, suspension, or credential revocation ends access.
+
+**Why:** Firebase React Native otherwise defaults to process-memory persistence, which loses the session whenever Android kills the app.
+
+**How to apply:** Keep web on `getAuth`; initialize native Auth once with Firebase’s React Native persistence adapter and the existing AsyncStorage package. An in-app update may require one final login before future launches persist.
 
 ## Firestore structure
 - Collection: `users/{uid}`
