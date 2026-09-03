@@ -49,17 +49,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       try {
         const Notifications = await import('expo-notifications');
 
-        // While the app is foregrounded the bell handles alerts — stay quiet.
-        Notifications.setNotificationHandler({
-          handleNotification: async () => ({
-            shouldShowAlert:   false,
-            shouldShowBanner:  false,
-            shouldShowList:    false,
-            shouldPlaySound:   false,
-            shouldSetBadge:    false,
-          }),
-        });
-
         const route = (data: unknown) => {
           const d = data as NotificationRoutingData | undefined;
           if (d && typeof d.type === 'string') routeNotification(d);

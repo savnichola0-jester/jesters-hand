@@ -7,10 +7,13 @@ description: Expo push architecture for Jester's Hand — client-driven relay, n
 - Sender's device writes the bell notification to Firestore, then best-effort POSTs to the api-server relay (`/api/push/send`), which forwards to Expo's push API. No server-side Firestore triggers (no Admin SDK / Cloud Functions in this project).
 - Recipients' Expo push tokens live on `users/{uid}.expoPushToken`, written by the owner on sign-in; all authed users can read user docs, so the sender fetches tokens client-side.
 - The relay verifies the caller's Firebase ID token with plain `node:crypto` against Google's securetoken x509 certs (aud/iss = `EXPO_PUBLIC_FIREBASE_PROJECT_ID` from shared env) — no admin credentials needed.
+- Native foreground pushes must show a system banner, notification-list entry, and sound. Keep foreground handling centralized at app startup; nested providers must not replace it with a suppressing handler.
 
 - Dead-token cleanup is server-side: the relay clears ticket-stage DeviceNotRegistered tokens immediately and schedules in-process delayed getReceipts polls (receipts can take ~15 min). Pending ticket ids are also persisted in a server-only Firestore collection (`pushReceiptQueue`, unmatched by client rules = default-deny) and a startup+interval sweeper finishes any polls a restart interrupted; entries expire after 24h (Expo drops receipts by then). Cleanup clears `users/{uid}.expoPushToken` via Firestore REST using the FIREBASE_TOKEN refresh-token → OAuth exchange (firebase-tools public CLI client). Deletes are guarded by a token-equality query + updateTime precondition so re-registrations aren't clobbered.
 
 **Why:** app is Firestore-client-only; api-server has no Firebase service account (FIREBASE_TOKEN exchange stands in for admin creds). Client-side receipt timers died when the sender closed the app, leaking dead tokens. Client-driven push means a push is only as reliable as the sender's connectivity — acceptable because the bell feed is the source of truth.
+
+**Why foreground alerts stay visible:** members require push alerts while the app is open as well as backgrounded or removed from Recents; the in-app bell is not a substitute for the requested system alert.
 
 **How to apply:** any new notification write path must also call the push send helper after commit (transactions can't, so capture recipients and send post-commit). Expo Go on Android SDK 53+ can't receive remote pushes — registration/sending must stay try/catch best-effort.
 
