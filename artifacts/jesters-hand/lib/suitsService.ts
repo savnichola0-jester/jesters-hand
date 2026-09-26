@@ -21,7 +21,6 @@ export const SUIT_TASK_ACTIONS = [
   { key: 'chamber', label: 'Chamber', route: '/(tabs)/chamber', actionable: true },
   { key: 'recruit', label: 'Recruit', route: '/(tabs)/recruit', actionable: true },
   { key: 'uniform', label: 'Uniform', route: '/(tabs)/uniform', actionable: true },
-  { key: 'jesters-hand', label: "Jester's Hand", route: '/(tabs)/jesters-hand', actionable: false },
   // A System task is specifically the required current-contract re-sign, not
   // changing account settings on the System screen.
   { key: 'system', label: 'System · Contract Re-sign', route: '/contract', actionable: true },
@@ -34,11 +33,14 @@ export interface SuitState {
   streaks: Partial<Record<SuitKey, number>>;
   notes: Partial<Record<SuitKey, string>>;
   inPlay: Partial<Record<SuitKey, SuitTask>>;
+  privateCards: Partial<Record<SuitKey, SuitTask>>;
   completed: Partial<Record<SuitKey, string>>;
 }
 export interface SuitTask {
   active: boolean;
   title: string;
+  visibility?: 'community' | 'private';
+  privateTargetUid?: string;
   instruction?: string;
   destination?: SuitTaskDestination;
   social?: string;
@@ -48,6 +50,7 @@ export interface SuitHolder {
   uid: string;
   jokerId: string;
   pips: SuitKey[];
+  privateCards?: Partial<Record<SuitKey, SuitTask>>;
   streaks?: Partial<Record<SuitKey, number>>;
 }
 
@@ -67,7 +70,7 @@ export const findSuitHolder = (jokerId: string) => request<{ holder: SuitHolder 
 export const getSuitAdmin = () => request<{ holders: SuitHolder[]; inPlay: Partial<Record<SuitKey, SuitTask>> }>('/admin');
 export const setSuitAssignment = (targetUid: string, jokerId: string, pip: SuitKey, assigned: boolean) =>
   request<{ ok: true }>('/assignment', { method: 'POST', body: JSON.stringify({ targetUid, jokerId, pip, assigned }) });
-export const setSuitInPlay = (pip: SuitKey, task: SuitTask) =>
-  request<void>('/in-play', { method: 'POST', body: JSON.stringify({ pip, task }) });
+export const setSuitInPlay = (pip: SuitKey, task: SuitTask, target?: Pick<SuitHolder, 'uid' | 'jokerId'>) =>
+  request<void>('/in-play', { method: 'POST', body: JSON.stringify({ pip, task, ...(target ? { targetUid: target.uid, jokerId: target.jokerId } : {}) }) });
 export const stampSuitCompletion = (targetUid: string, pip: SuitKey) =>
   request<void>('/stamp', { method: 'POST', body: JSON.stringify({ targetUid, pip }) });

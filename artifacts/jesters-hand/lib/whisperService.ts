@@ -12,6 +12,7 @@ import { sendPushToUsers } from './pushService';
 
 export interface Conversation {
   id: string;
+  kind?: string;
   memberUids: string[];
   isGroup: boolean;
   groupName?: string;
@@ -289,6 +290,7 @@ export function listenConversations(
       })
       .map(d => ({
         id:            d.id,
+        kind:          d.data().kind,
         memberUids:    d.data().memberUids   ?? [],
         isGroup:       d.data().isGroup      ?? false,
         groupName:     d.data().groupName,
@@ -385,6 +387,7 @@ export async function clearConversation(conversationId: string, uid: string): Pr
   // instead we delete the conversation and all of its messages.
   const snap = await getDoc(convRef);
   if (!snap.exists()) return;
+  if (conversationId.startsWith('checkins_') || snap.data().kind === 'check_ins') return;
   const members: string[] = snap.data().memberUids ?? [];
   const isLastMember = members.length === 1 && members[0] === uid;
 

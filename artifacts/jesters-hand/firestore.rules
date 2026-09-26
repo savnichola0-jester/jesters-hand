@@ -8,6 +8,18 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.jokerId in ['00-00', '01-54'];
     }
 
+    // Reserved exclusively for server-created, per-member check-in Pockets.
+    // Block the whole namespace so clients cannot impersonate a reserved id
+    // even before a server-created conversation exists.
+    function isCheckInConversation(conversationId) {
+      return conversationId.matches('^(checkins_.*|checkin-.*)$');
+    }
+
+    function hasCheckInMarkers(data) {
+      return data.get('kind', '') == 'check_ins'
+        || data.get('checkInProtected', false) == true;
+    }
+
     function isDealAdmin() {
       return isAdmin();
     }
@@ -410,58 +422,84 @@ service cloud.firestore {
       allow update: if activeUser()
         && request.auth.uid in resource.data.memberUids
         && (
-          // Narrow one-time migration for groups created before ownership
-          // metadata existed. Any member may trigger it, but it can only set
-          // createdBy to the deterministic first member and touch nothing
-          // else (in particular, it cannot fabricate createdAt).
+          // Check-in conversations are server-authored. Members may only
+          // clear/decrease their own unread counter; membership, preview and
+          // all other counters remain immutable to clients.
           (
-            !('createdBy' in resource.data)
-            && resource.data.isGroup == true
+            isCheckInConversation(conversationId)
+            && resource.data.get('kind', '') == 'check_ins'
+            && resource.data.get('checkInProtected', false) == true
+            && request.resource.data.memberUids == resource.data.memberUids
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['createdBy'])
-            && request.resource.data.createdBy == resource.data.memberUids[0]
+                 .hasOnly(['unreadCounts'])
+            && request.resource.data.unreadCounts is map
+            && resource.data.unreadCounts is map
+            && request.resource.data.unreadCounts.diff(resource.data.unreadCounts)
+                 .affectedKeys().hasOnly([request.auth.uid])
+            && request.resource.data.unreadCounts.get(request.auth.uid, 0)
+                 <= resource.data.unreadCounts.get(request.auth.uid, 0)
           )
-          // Canonical conversations keep both creation fields immutable and
-          // retain the existing membership/unread update constraints.
           || (
-            request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
-            && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+            !isCheckInConversation(conversationId)
+            && !hasCheckInMarkers(resource.data)
+            && !hasCheckInMarkers(request.resource.data)
             && (
-              // memberUids untouched…
-              !request.resource.data.diff(resource.data).affectedKeys()
-                 .hasAny(['memberUids'])
-              // …or the only change is removing your own uid (self-leave).
-              // The result must never be an EMPTY member list: the last member
-              // must DELETE the conversation instead (see delete rule below).
-              // This makes new zero-member orphans unreachable, so the orphan
-              // read allowance above only ever exposes pre-fix legacy leftovers.
-              || (
-                request.resource.data.memberUids is list
-                && request.resource.data.memberUids.size() > 0
-                && request.resource.data.memberUids.toSet()
-                     .difference(resource.data.memberUids.toSet()).size() == 0
-                && resource.data.memberUids.toSet()
-                     .difference(request.resource.data.memberUids.toSet())
-                     .hasOnly([request.auth.uid])
-                && !(request.auth.uid in request.resource.data.memberUids)
+              // Narrow one-time migration for groups created before ownership
+              // metadata existed. Any member may trigger it, but it can only set
+              // createdBy to the deterministic first member and touch nothing
+              // else (in particular, it cannot fabricate createdAt).
+              (
+                !('createdBy' in resource.data)
+                && resource.data.isGroup == true
+                && request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['createdBy'])
+                && request.resource.data.createdBy == resource.data.memberUids[0]
               )
-              // …or the group's creator is adding members (additions only,
-              // no removals). Direct chats have no createdBy path and stay locked.
+              // Canonical conversations keep both creation fields immutable and
+              // retain the existing membership/unread update constraints.
               || (
-                resource.data.isGroup == true
-                && resource.data.createdBy == request.auth.uid
-                && request.resource.data.memberUids is list
-                // nobody removed…
-                && resource.data.memberUids.toSet()
-                     .difference(request.resource.data.memberUids.toSet()).size() == 0
-                // …and at least one member actually added.
-                && request.resource.data.memberUids.toSet()
-                     .difference(resource.data.memberUids.toSet()).size() > 0
+                request.resource.data.get('createdBy', null) == resource.data.get('createdBy', null)
+                && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+                && (
+                  // memberUids untouched…
+                  !request.resource.data.diff(resource.data).affectedKeys()
+                     .hasAny(['memberUids'])
+                  // …or the only change is removing your own uid (self-leave).
+                  // The result must never be an EMPTY member list: the last member
+                  // must DELETE the conversation instead (see delete rule below).
+                  // This makes new zero-member orphans unreachable, so the orphan
+                  // read allowance above only ever exposes pre-fix legacy leftovers.
+                  || (
+                    request.resource.data.memberUids is list
+                    && request.resource.data.memberUids.size() > 0
+                    && request.resource.data.memberUids.toSet()
+                         .difference(resource.data.memberUids.toSet()).size() == 0
+                    && resource.data.memberUids.toSet()
+                         .difference(request.resource.data.memberUids.toSet())
+                         .hasOnly([request.auth.uid])
+                    && !(request.auth.uid in request.resource.data.memberUids)
+                  )
+                  // …or the group's creator is adding members (additions only,
+                  // no removals). Direct chats have no createdBy path and stay locked.
+                  || (
+                    resource.data.isGroup == true
+                    && resource.data.createdBy == request.auth.uid
+                    && request.resource.data.memberUids is list
+                    // nobody removed…
+                    && resource.data.memberUids.toSet()
+                         .difference(request.resource.data.memberUids.toSet()).size() == 0
+                    // …and at least one member actually added.
+                    && request.resource.data.memberUids.toSet()
+                         .difference(resource.data.memberUids.toSet()).size() > 0
+                  )
+                )
               )
             )
           )
         );
       allow create: if activeUser()
+        && !isCheckInConversation(conversationId)
+        && !hasCheckInMarkers(request.resource.data)
         && request.auth.uid in request.resource.data.memberUids
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.createdAt == request.time;
@@ -470,6 +508,9 @@ service cloud.firestore {
       // conversation is already an orphan with no members at all (anyone
       // signed in may sweep such zero-member leftovers).
       allow delete: if activeUser()
+        && !isCheckInConversation(conversationId)
+        && !hasCheckInMarkers(resource.data)
+        && resource.data.get('checkInProtected', false) != true
         && resource.data.memberUids.hasOnly([request.auth.uid]);
     }
 
@@ -491,6 +532,10 @@ service cloud.firestore {
       // without this split, any conversation member could rewrite anyone
       // else's message text.
       allow update: if activeUser()
+        && !isCheckInConversation(conversationId)
+        && !hasCheckInMarkers(get(/databases/$(database)/documents/conversations/$(conversationId)).data)
+        && !hasCheckInMarkers(resource.data)
+        && !hasCheckInMarkers(request.resource.data)
         && request.auth.uid in
           get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids
         && request.resource.data.senderUid == resource.data.senderUid
@@ -502,6 +547,9 @@ service cloud.firestore {
         && request.resource.data.get('imageUrl', null) == resource.data.get('imageUrl', null)
         && reactionsUntouchedOrOwnToggle();
       allow create: if activeUser()
+        && !isCheckInConversation(conversationId)
+        && !hasCheckInMarkers(get(/databases/$(database)/documents/conversations/$(conversationId)).data)
+        && !hasCheckInMarkers(request.resource.data)
         && request.auth.uid in
           get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids
         && request.resource.data.senderUid == request.auth.uid
@@ -517,6 +565,7 @@ service cloud.firestore {
           )
         );
       allow delete: if activeUser()
+        && !hasCheckInMarkers(resource.data)
         && (
           // Orphan sweep: the parent conversation is already gone, or is being
           // deleted in this same batch (last member leaving) — anyone signed
@@ -524,6 +573,9 @@ service cloud.firestore {
           !exists(/databases/$(database)/documents/conversations/$(conversationId))
           || !existsAfter(/databases/$(database)/documents/conversations/$(conversationId))
           || (
+            !isCheckInConversation(conversationId)
+            && !hasCheckInMarkers(get(/databases/$(database)/documents/conversations/$(conversationId)).data)
+            &&
             request.auth.uid in
               get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids
             && (resource.data.senderUid == request.auth.uid || isAdmin())
@@ -907,6 +959,31 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Check-in ledgers and one-time redemption-code indexes are written only
+    // by the authenticated API server using privileged Firestore REST.
+    match /checkInLedger/{userId} {
+      allow read, create, update, delete: if false;
+    }
+    match /checkInCodes/{codeHash} {
+      allow read, create, update, delete: if false;
+    }
+
+    // All game room state is written through the authenticated API. In
+    // particular, role assignments, ballots, card hands and invite codes must
+    // never be client-readable or client-writable.
+    match /gamesRooms/{roomId} {
+      allow read, create, update, delete: if false;
+    }
+    match /gameInvites/{inviteCode} {
+      allow read, create, update, delete: if false;
+    }
+    match /gamesContentReviews/{entryId} {
+      allow read, create, update, delete: if false;
+    }
+    match /gameMemberships/{userId}/rooms/{roomId} {
+      allow read, create, update, delete: if false;
+    }
+
     function validDealAward(userId) {
       let d = request.resource.data;
       return d.keys().hasOnly(
@@ -940,7 +1017,7 @@ service cloud.firestore {
     match /blackBook/{userId}/entries/{entryId} {
       function validBlackBookEntry() {
         let d = request.resource.data;
-        return d.tab in ['recruit', 'uniform', 'turn', 'royals']
+        return d.tab in ['recruit', 'uniform', 'turn', 'royals', 'checkins']
           && d.title is string && d.title.size() > 0 && d.title.size() <= 200
           && d.createdBy == request.auth.uid
           && (!('date' in d)     || (d.date is string && d.date.size() <= 200))
@@ -955,9 +1032,11 @@ service cloud.firestore {
       // Admin archive restores recreate non-Royal entries verbatim. Royal
       // creation/restoration remains exact-00-00.
       allow create: if (activeUser() && isAdmin()
+                          && request.resource.data.tab != 'checkins'
                           && (request.resource.data.tab != 'royals' || isKeeper()))
         || activeUser()
         && validBlackBookEntry()
+        && request.resource.data.tab != 'checkins'
         && request.resource.data.get('reactions', {}).size() == 0
         && request.resource.data.get('commentCount', 0) == 0
         && (
@@ -967,6 +1046,7 @@ service cloud.firestore {
           || (isKeeper() && request.resource.data.tab == 'royals')
         );
       allow update: if activeUser()
+        && resource.data.tab != 'checkins'
         && request.resource.data.tab == resource.data.tab
         && request.resource.data.createdBy == resource.data.createdBy
         && (
@@ -998,6 +1078,7 @@ service cloud.firestore {
         )
         && reactionsUntouchedOrOwnToggle();
       allow delete: if activeUser()
+        && resource.data.tab != 'checkins'
         && (
           (request.auth.uid == userId && resource.data.tab != 'royals')
           || (isKeeper() && resource.data.tab == 'royals')

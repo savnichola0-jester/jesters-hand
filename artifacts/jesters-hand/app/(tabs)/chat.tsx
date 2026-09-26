@@ -80,9 +80,11 @@ export default function ChatScreen() {
   const { user, isAdmin } = useAuth();
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const flatListRef = useRef<FlatList>(null);
+  const isCheckIns = !!conversationId?.startsWith('checkins_');
 
   const [messages,     setMessages]     = useState<Message[]>([]);
   const [conversation, setConversation] = useState<Conversation | null>(null);
+  const isReadOnlyCheckIns = isCheckIns || conversation?.kind === 'check_ins';
 
   // Shared live member caches from WhisperContext — one app-wide listener
   // keeps names + avatars fresh on every screen, so a Joker's updated mug
@@ -103,18 +105,19 @@ export default function ChatScreen() {
   const [selectedAdd,  setSelectedAdd]  = useState<Set<string>>(new Set());
   const [addingMembers, setAddingMembers] = useState(false);
 
-  const isGroupCreator = !!conversation?.isGroup
+  const isGroupCreator = !isReadOnlyCheckIns && !!conversation?.isGroup
     && !!user && conversation.createdBy === user.uid;
 
   const openAddModal = useCallback(async () => {
+    if (isReadOnlyCheckIns) return;
     setSelectedAdd(new Set());
     setShowAddModal(true);
     try { setAllMembers(await getAllMembers()); }
     catch (e) { console.error('[Chat] load members error:', e); }
-  }, []);
+  }, [isReadOnlyCheckIns]);
 
   const handleAddMembers = useCallback(async () => {
-    if (!conversationId || !conversation || selectedAdd.size === 0 || addingMembers) return;
+    if (isReadOnlyCheckIns || !conversationId || !conversation || selectedAdd.size === 0 || addingMembers) return;
     setAddingMembers(true);
     try {
       const uids = Array.from(selectedAdd);
@@ -127,7 +130,7 @@ export default function ChatScreen() {
     } finally {
       setAddingMembers(false);
     }
-  }, [conversationId, conversation, selectedAdd, addingMembers]);
+  }, [conversationId, conversation, selectedAdd, addingMembers, isReadOnlyCheckIns]);
 
   // Auth guard
   useEffect(() => { if (user === null) router.replace('/'); }, [user]);
@@ -143,7 +146,8 @@ export default function ChatScreen() {
 
       // Any current member may trigger this migration, but rules permit only
       // the first member to be recorded and only when createdBy is absent.
-      if (d.isGroup === true && !createdBy && memberUids.length > 0) {
+      if (d.kind !== 'check_ins' && !snap.id.startsWith('checkins_')
+        && d.isGroup === true && !createdBy && memberUids.length > 0) {
         void claimLegacyGroupOwnership(snap.id, memberUids[0]).catch(error => {
           // Non-fatal: another member may have won the one-time update race.
           console.warn('[Chat] legacy ownership backfill skipped:', error);
@@ -153,6 +157,7 @@ export default function ChatScreen() {
       setConversation({
         id:            snap.id,
         memberUids,
+        kind:          d.kind,
         isGroup:       d.isGroup       ?? false,
         groupName:     d.groupName,
         createdBy,
@@ -185,7 +190,7 @@ export default function ChatScreen() {
   }, [messages.length]);
 
   const handleSend = useCallback(async () => {
-    if (!user || !conversationId || !inputText.trim() || sending) return;
+    if (isReadOnlyCheckIns || !user || !conversationId || !inputText.trim() || sending) return;
     setSending(true);
     const text = inputText.trim();
     setInputText('');
@@ -198,11 +203,11 @@ export default function ChatScreen() {
     } finally {
       setSending(false);
     }
-  }, [user, conversationId, inputText, sending]);
+  }, [user, conversationId, inputText, sending, isReadOnlyCheckIns]);
 
   // Pick a photo/GIF and send it (with any typed text as the caption).
   const handleAttach = useCallback(async () => {
-    if (!user || !conversationId || sending) return;
+    if (isReadOnlyCheckIns || !user || !conversationId || sending) return;
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.85,
     });
@@ -223,14 +228,14 @@ export default function ChatScreen() {
     } finally {
       setSending(false);
     }
-  }, [user, conversationId, inputText, sending]);
+  }, [user, conversationId, inputText, sending, isReadOnlyCheckIns]);
 
   const handleReact = useCallback(async (emoji: string) => {
-    if (!user || !pickerMsgId || !conversationId) return;
+    if (isReadOnlyCheckIns || !user || !pickerMsgId || !conversationId) return;
     setPickerMsgId(null);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     await toggleReaction(conversationId, pickerMsgId, user.uid, emoji).catch(console.error);
-  }, [user, pickerMsgId, conversationId]);
+  }, [user, pickerMsgId, conversationId, isReadOnlyCheckIns]);
 
   const navTitle = conversation
     ? getConvDisplayName(conversation, user?.uid ?? '', labelCache)
@@ -252,7 +257,9 @@ export default function ChatScreen() {
   // ── Render one message bubble ─────────────────────────────────────────────
   const renderMessage = useCallback(({ item: msg, index }: { item: Message; index: number }) => {
     const isOwn        = msg.senderUid === user?.uid;
-    const senderLabel  = labelCache[msg.senderUid] ?? msg.senderUid.slice(0, 6);
+    const senderLabel  = msg.senderUid === 'checkin-system' || msg.senderUid === 'check-in-server'
+      ? 'CHECK-INS'
+      : labelCache[msg.senderUid] ?? msg.senderUid.slice(0, 6);
     const senderAvatar = avatarCache[msg.senderUid];
     const prevMsg      = messages[index - 1];
     const showSender   = !isOwn && (!prevMsg || prevMsg.senderUid !== msg.senderUid);
@@ -278,7 +285,7 @@ export default function ChatScreen() {
         )}
 
         <Pressable
-          onLongPress={(e) => {
+          onLongPress={!isReadOnlyCheckIns ? (e) => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
             const pageY = (e.nativeEvent as any).pageY ?? 200;
             setPickerPos({
@@ -286,7 +293,7 @@ export default function ChatScreen() {
               left: isOwn ? dynW - 260 : PANEL_MARGIN + SIDE_PAD,
             });
             setPickerMsgId(msg.id);
-          }}
+          } : undefined}
           style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleOther, { maxWidth: maxBubbleW }]}
         >
           {msg.imageUrl ? (
@@ -317,9 +324,11 @@ export default function ChatScreen() {
                 key={emoji}
                 style={[s.reactionPill, uids.includes(user?.uid ?? '') && s.reactionPillOwn]}
                 onPress={() => {
+                  if (isReadOnlyCheckIns) return;
                   if (user && conversationId)
                     toggleReaction(conversationId, msg.id, user.uid, emoji).catch(console.error);
                 }}
+                disabled={isReadOnlyCheckIns}
                 activeOpacity={0.75}
               >
                 <Text style={s.reactionEmoji}>{emoji}</Text>
@@ -334,7 +343,7 @@ export default function ChatScreen() {
         ) : null}
       </View>
     );
-  }, [user, labelCache, avatarCache, messages, conversationId, navBottom]);
+  }, [user, labelCache, avatarCache, messages, conversationId, navBottom, isReadOnlyCheckIns]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -385,7 +394,7 @@ export default function ChatScreen() {
             )}
           </View>
           <View style={s.navRight}>
-            {dmPartnerUid && (
+            {dmPartnerUid && !isReadOnlyCheckIns && (
               <TouchableOpacity
                 onPress={() => setCardVisible(true)}
                 activeOpacity={0.8}
@@ -394,7 +403,7 @@ export default function ChatScreen() {
                 <Text style={s.cardBtnText}>CARD</Text>
               </TouchableOpacity>
             )}
-            {isGroupCreator && (
+            {isGroupCreator && !isReadOnlyCheckIns && (
               <TouchableOpacity onPress={openAddModal} activeOpacity={0.75} style={s.addMemberBtn}>
                 <Feather name="user-plus" size={18} color={GOLD} />
               </TouchableOpacity>
@@ -419,7 +428,7 @@ export default function ChatScreen() {
           style={{
             position: 'absolute',
             top:    MSG_TOP,
-            bottom: MSG_BOTTOM,
+            bottom: isReadOnlyCheckIns ? 16 : MSG_BOTTOM,
             left:   SIDE_PAD,
             right:  SIDE_PAD,
           }}
@@ -440,25 +449,26 @@ export default function ChatScreen() {
         </View>
 
         {/* Dark backdrop behind the input bar */}
-        <View style={[s.inputCover, {
-          bottom: INPUT_BOT - 5,
-          left:   SIDE_PAD - 6,
-          right:  SIDE_PAD - 6,
-          height: INPUT_H + 10,
-        }]} />
+        {!isReadOnlyCheckIns && <>
+          <View style={[s.inputCover, {
+            bottom: INPUT_BOT - 5,
+            left:   SIDE_PAD - 6,
+            right:  SIDE_PAD - 6,
+            height: INPUT_H + 10,
+          }]} />
 
-        {/* Real input bar — overlaid on top of the cover */}
-        <View
-          style={[
-            s.inputBar,
-            {
-              bottom: INPUT_BOT,
-              left:   SIDE_PAD,
-              right:  SIDE_PAD,
-              height: INPUT_H,
-            },
-          ]}
-        >
+          {/* Real input bar — overlaid on top of the cover */}
+          <View
+            style={[
+              s.inputBar,
+              {
+                bottom: INPUT_BOT,
+                left:   SIDE_PAD,
+                right:  SIDE_PAD,
+                height: INPUT_H,
+              },
+            ]}
+          >
           <TouchableOpacity
             style={s.attachBtn}
             onPress={handleAttach}
@@ -488,11 +498,12 @@ export default function ChatScreen() {
               : <Text style={s.whisperBtnText}>Deal</Text>
             }
           </TouchableOpacity>
-        </View>
+          </View>
+        </>}
       </View>
 
       {/* ── Add-members modal (group creator only) ── */}
-      {showAddModal && (
+      {showAddModal && !isReadOnlyCheckIns && (
         <Pressable style={[StyleSheet.absoluteFill, s.addModalBackdrop]} onPress={() => setShowAddModal(false)}>
           <Pressable style={s.addModal} onPress={() => {}}>
             <Text style={s.addModalTitle}>ADD JOKERS</Text>
@@ -557,7 +568,7 @@ export default function ChatScreen() {
       )}
 
       {/* ── Reaction picker (full-screen overlay) ── */}
-      {pickerMsgId && (
+      {pickerMsgId && !isReadOnlyCheckIns && (
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setPickerMsgId(null)}>
           <View style={[s.reactionPicker, { top: pickerPos.top, left: pickerPos.left }]}>
             {REACTION_EMOJIS.map(emoji => (

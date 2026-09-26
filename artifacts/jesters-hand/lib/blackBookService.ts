@@ -1,6 +1,6 @@
 // ── Black Book (Street Art) ───────────────────────────────────────────────────
 // Per-member logs stored at blackBook/{uid}/entries/{entryId}.
-// Four tabs: recruit / uniform / turn / royals.
+// Five tabs: recruit / uniform / turn / checkins / royals.
 // Members write their own recruit/uniform/turn entries; royals entries are
 // awarded by the admin only (admin may also keep their own royals).
 import {
@@ -12,9 +12,9 @@ import { db, auth } from './firebase';
 import { broadcastToActiveMembers, writeNotification } from './notificationService';
 import { recordDealActivity } from './dealService';
 
-export type BlackBookTab = 'recruit' | 'uniform' | 'turn' | 'royals';
+export type BlackBookTab = 'recruit' | 'uniform' | 'turn' | 'checkins' | 'royals';
 
-export const BLACK_BOOK_TABS: BlackBookTab[] = ['recruit', 'uniform', 'turn', 'royals'];
+export const BLACK_BOOK_TABS: BlackBookTab[] = ['recruit', 'uniform', 'turn', 'checkins', 'royals'];
 
 export interface BlackBookEntry {
   id: string;

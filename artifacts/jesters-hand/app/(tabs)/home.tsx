@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { appWindow } from '@/lib/appWindow';
-import SuitsTile from '@/components/suits/SuitsTile';
 
 const { width: SW } = appWindow();
 const PAD    = 10;
@@ -21,17 +20,18 @@ const MARBLE   = require('../../assets/images/lace_bg.png');
 const ALL_TILES = [
   { src: require('../../assets/images/tile_ticket.png'),        route: '/(tabs)/ticket', adminOnly: false },
   { src: require('../../assets/images/tile_the_hand.png'),      route: '/(tabs)/hand',   adminOnly: false },
-  { src: require('../../assets/images/tile_6.png'),             route: '/(tabs)/street-art', adminOnly: false },
   { src: require('../../assets/images/icon_jesters_deal.png'),  route: '/(tabs)/jesters-deal', adminOnly: false },
-  { suits: true,                                                 route: '/(tabs)/suits', adminOnly: false },
+  { checkIns: true,                                              route: '/(tabs)/check-ins', adminOnly: false },
   { src: require('../../assets/images/tile_ante.png'),          route: '/(tabs)/ante',   adminOnly: false },
   { src: require('../../assets/images/tile_jesters_table.png'), route: '/(tabs)/table',  adminOnly: false },
+  { game: true,                                                  route: '/(tabs)/game', adminOnly: false },
   { src: require('../../assets/images/tile_target_ticket.png'), route: '/(tabs)/target-ticket', adminOnly: false },
   { src: require('../../assets/images/tile_9.png'),             route: '/(tabs)/recruit', adminOnly: false },
   { src: require('../../assets/images/tile_7.png'),             route: '/(tabs)/vault',  adminOnly: false },
   { src: require('../../assets/images/tile_8.png'),             route: '/(tabs)/chamber', adminOnly: false },
-  { src: require('../../assets/images/tile_11.png'),            route: '/(tabs)/system', adminOnly: false },
+  { src: require('../../assets/images/tile_6.png'),             route: '/(tabs)/street-art', adminOnly: false },
   { src: require('../../assets/images/tile_10.png'),            route: '/(tabs)/uniform', adminOnly: false },
+  { src: require('../../assets/images/tile_11.png'),            route: '/(tabs)/system', adminOnly: false },
   { src: require('../../assets/images/tile_12.png'),            route: '/(tabs)/jesters-hand', adminOnly: true },
 ];
 
@@ -67,7 +67,19 @@ export default function HomeScreen() {
             onPress={() => tile.route && navigateTo(tile.route)}
             activeOpacity={tile.route ? 0.85 : 1}
           >
-            {tile.suits ? <SuitsTile size={TILE_W} /> : <Image source={tile.src!} style={{ width: TILE_W, height: TILE_W }} resizeMode="contain" />}
+            {tile.checkIns ? (
+              <View style={{ width: TILE_W, height: TILE_W, alignItems: 'center', justifyContent: 'center' }}>
+                <Image source={require('../../assets/images/check_ins_frame.png')} style={StyleSheet.absoluteFill} resizeMode="contain" />
+                <Image source={require('../../assets/images/check_ins_icon.png')} style={{ width: TILE_W * 0.63, height: TILE_W * 0.63, marginBottom: 18 }} resizeMode="contain" />
+                <Text style={styles.checkInsLabel}>CHECK-INS</Text>
+              </View>
+            ) : tile.game ? (
+              <View style={{ width: TILE_W, height: TILE_W, alignItems: 'center', justifyContent: 'center' }}>
+                <Image source={require('../../assets/images/game_frame.png')} style={StyleSheet.absoluteFill} resizeMode="contain" />
+                <Image source={require('../../assets/images/game_icon.png')} style={{ width: TILE_W * 0.72, height: TILE_W * 0.72, marginBottom: 18 }} resizeMode="contain" />
+                <Text style={styles.checkInsLabel}>THE GAME</Text>
+              </View>
+            ) : <Image source={tile.src!} style={{ width: TILE_W, height: TILE_W }} resizeMode="contain" />}
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -82,4 +94,5 @@ const styles = StyleSheet.create({
   navTitle: { position: 'absolute', left: 14, color: '#EDE0C4', fontSize: 16, fontFamily: 'Cinzel_700Bold', letterSpacing: 1 },
   navIcons: { position: 'absolute', right: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   navIcon:  { width: 38, height: 38 },
+  checkInsLabel: { position: 'absolute', bottom: 15, color: '#EDE0C4', fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5 },
 });

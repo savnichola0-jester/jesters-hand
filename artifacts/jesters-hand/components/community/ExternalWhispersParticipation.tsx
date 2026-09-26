@@ -7,6 +7,7 @@ import { InWorldCard, CardPip, CardTitle } from '@/components/InWorldCard';
 import { appWindow } from '@/lib/appWindow';
 
 const WHISPERS_URL = 'https://54-ante-up-or-bleed-out-publishing-website.replit.app/whispers';
+const AUTHOR_URL = 'https://savnicholaofficial.com';
 const { width: SW } = appWindow();
 const CREAM = '#EDE0C4';
 const GOLD = '#D4A853';
@@ -26,6 +27,14 @@ export default function ExternalWhispersParticipation({ location = 'deal' }: { l
       await Linking.openURL(WHISPERS_URL);
     } catch {
       setOpenError('Could not open the publishing community. Please try again.');
+    }
+  };
+  const openAuthorSite = async () => {
+    setOpenError(null);
+    try {
+      await Linking.openURL(AUTHOR_URL);
+    } catch {
+      setOpenError('Could not open the author website. Visit savnicholaofficial.com in your browser.');
     }
   };
 
@@ -73,6 +82,20 @@ export default function ExternalWhispersParticipation({ location = 'deal' }: { l
       {openError && (
         <Text accessibilityRole="alert" style={s.error}>{openError}</Text>
       )}
+      <View style={s.authorSection}>
+        <View style={s.heading}>
+          <Feather name="external-link" size={16} color={GOLD} />
+          <Text style={s.sectionTitle}>SAV NICHOLA · AUTHOR SITE</Text>
+        </View>
+        <Text style={s.authorCopy}>
+          Read the blog and vlog, comment or react to newsletters, and find all of Sav’s social links in one place. Posting is not available there.
+        </Text>
+        <Text style={s.intro}>Activity on the author site does not count toward Deal or SUITS progress or awards.</Text>
+        <TouchableOpacity accessibilityRole="link" accessibilityLabel="Open Sav Nichola author website" testID="author-site-cta" style={s.authorCta} onPress={openAuthorSite}>
+          <Text style={s.ctaText}>OPEN AUTHOR SITE & SOCIALS</Text>
+          <Feather name="arrow-up-right" size={14} color={GOLD} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -93,4 +116,7 @@ const s = StyleSheet.create({
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1, borderColor: GOLD, borderRadius: 7, paddingVertical: 9, paddingHorizontal: 10, marginTop: 4, backgroundColor: 'rgba(0,0,0,0.45)' },
   ctaText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1 },
   error: { color: '#FF9A7A', fontFamily: 'Cinzel_600SemiBold', fontSize: 12, textAlign: 'center', marginTop: 10 },
+  authorSection: { marginTop: 28, padding: 16, borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', backgroundColor: 'rgba(0,0,0,0.55)' },
+  authorCopy: { color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 12, lineHeight: 19, textAlign: 'center', marginTop: 12 },
+  authorCta: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: GOLD, padding: 12, marginTop: 16 },
 });

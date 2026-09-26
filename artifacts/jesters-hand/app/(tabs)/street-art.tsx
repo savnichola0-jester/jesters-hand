@@ -146,6 +146,20 @@ const TABS: TabConfig[] = [
     },
   },
   {
+    id: 'checkins',
+    label: 'CHECK-INS',
+    member: {
+      subtitle: 'Your daily check-ins and Jester’s Choice awards',
+      empty: 'No daily check-ins yet. Your first verified check-in will appear here.',
+      fields: [],
+    },
+    admin: {
+      subtitle: 'Your daily check-ins and Jester’s Choice awards',
+      empty: 'No daily check-ins yet.',
+      fields: [],
+    },
+  },
+  {
     id: 'royals',
     label: 'ROYALS',
     member: {
@@ -174,6 +188,7 @@ const PEEK_SUBTITLES: Record<BlackBookTab, string> = {
   recruit: 'Events they attended',
   uniform: 'Merch they own',
   turn:    'Their read through the saga',
+  checkins: 'Their verified daily check-ins and awards',
   royals:  'Honors from the Jester',
 };
 
@@ -205,13 +220,13 @@ export default function StreetArtScreen() {
   const paramTab = typeof params.tab === 'string' ? params.tab : undefined;
 
   const [tabId, setTabId] = useState<BlackBookTab>(
-    paramTab && (['recruit', 'uniform', 'turn', 'royals'] as string[]).includes(paramTab)
+    paramTab && (['recruit', 'uniform', 'turn', 'checkins', 'royals'] as string[]).includes(paramTab)
       ? (paramTab as BlackBookTab)
       : 'recruit',
   );
 
   useEffect(() => {
-    if (paramTab && (['recruit', 'uniform', 'turn', 'royals'] as string[]).includes(paramTab)) {
+    if (paramTab && (['recruit', 'uniform', 'turn', 'checkins', 'royals'] as string[]).includes(paramTab)) {
       setTabId(paramTab as BlackBookTab);
     }
   }, [paramTab]);
@@ -240,6 +255,7 @@ export default function StreetArtScreen() {
   // Can the current user add/edit entries on this tab?
   // Peeking at someone else's book is always read-only.
   const canEdit = peeking ? false
+    : tabId === 'checkins' ? false
     : tabId !== 'royals' ? !!user
     : canAwardRoyals ? (!awarding || !!awardUid)
     : false; // royals is read-only for members

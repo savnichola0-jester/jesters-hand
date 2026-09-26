@@ -199,6 +199,25 @@ try {
     attachedFallbackFiles.get('GoogleDoc/Ebook.docx.xhtml')?.length,
     attachedFiles.get('GoogleDoc/Ebook.docx.xhtml')?.length,
   );
+  const corrected = await readFile(new URL(
+    '../../../attached_assets/Jesters-Whisper-54-Ante-Up-Or-Bleed-Out.epub',
+    import.meta.url,
+  ));
+  const correctedBuffer = corrected.buffer.slice(
+    corrected.byteOffset,
+    corrected.byteOffset + corrected.byteLength,
+  );
+  const correctedFiles = await context.extract(correctedBuffer);
+  const correctedFallbackFiles = await fallbackContext.extract(correctedBuffer);
+  assert.deepEqual(
+    Buffer.from(correctedFiles.get('GoogleDoc/Ebook.docx.xhtml')),
+    Buffer.from(attachedFiles.get('GoogleDoc/Ebook.docx.xhtml')),
+    'Logo replacement must not change the book text',
+  );
+  assert.equal(
+    correctedFallbackFiles.get('GoogleDoc/images/image1.png')?.length,
+    correctedFiles.get('GoogleDoc/images/image1.png')?.length,
+  );
   console.log('Actual attached EPUB parsed with browser and bundled fallback paths.');
 } catch (error) {
   if (error.code !== 'ENOENT') throw error;

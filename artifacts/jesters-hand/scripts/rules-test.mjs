@@ -1,6 +1,7 @@
 // Firestore rules tests for ante commentCount integrity.
 // Run with: firebase emulators:exec --only firestore "node scripts/rules-test.mjs"
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   doc, setDoc, writeBatch, deleteDoc, deleteField, updateDoc, increment,
@@ -1339,6 +1340,140 @@ await test('any signed-in member can read another member\'s book (peek)', async 
   await seedBlackBook();
   await assertSucceeds(getDoc(doc(mallory(), 'blackBook/alice/entries/e1')));
   await assertSucceeds(getDoc(doc(mallory(), 'blackBook/alice/entries/r1')));
+});
+
+await test('check-in Black Book entries are readable by peers but server-authoritative', async () => {
+  await seedBlackBook();
+  await env.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'blackBook/alice/entries/checkin_2025-04-03'), {
+      tab: 'checkins', title: 'Daily check-in', date: '2025-04-03',
+      notes: 'Streak: 7 days.', createdBy: 'alice', createdAt: new Date(),
+      reactions: {}, commentCount: 0,
+    });
+  });
+  const entry = doc(mallory(), 'blackBook/alice/entries/checkin_2025-04-03');
+  await assertSucceeds(getDoc(entry));
+  await assertFails(setDoc(doc(alice(), 'blackBook/alice/entries/checkin_2025-04-04'),
+    bbEntry('checkins', { date: '2025-04-04', notes: 'forged', reactions: {}, commentCount: 0 })));
+  await assertFails(updateDoc(entry, { notes: 'rewritten' }));
+  await assertFails(updateDoc(entry, { reactions: { '🔥': ['mallory'] } }));
+  await assertFails(deleteDoc(entry));
+});
+
+await test('daily check-in deterministic ID cannot convert a conflicting Pocket entry', async () => {
+  await seedBlackBook();
+  await env.withSecurityRulesDisabled(async ctx => {
+    for (const id of ['checkin_2025-04-03', 'checkin_milestone_2025-04-03']) {
+      await setDoc(doc(ctx.firestore(), `blackBook/alice/entries/${id}`), {
+        tab: 'recruit', title: 'Member-authored entry', date: '2025-04-03',
+        notes: 'Existing content', createdBy: 'alice', createdAt: new Date(),
+        reactions: {}, commentCount: 0,
+      });
+    }
+  });
+  for (const id of ['checkin_2025-04-03', 'checkin_milestone_2025-04-03']) {
+    const collision = doc(alice(), `blackBook/alice/entries/${id}`);
+    await assertSucceeds(getDoc(collision));
+    await assertSucceeds(updateDoc(collision, { notes: 'Still a normal editable entry' }));
+    await assertFails(updateDoc(collision, { tab: 'checkins', title: 'Check-in entry' }));
+  }
+});
+
+await test('check-in ledger and code index deny client reads and writes', async () => {
+  await seedBlackBook();
+  await env.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'checkInLedger/alice'), { streak: 7 });
+    await setDoc(doc(ctx.firestore(), 'checkInCodes/secret-hash'), { uid: 'alice', redeemed: false });
+  });
+  await assertFails(getDoc(doc(alice(), 'checkInLedger/alice')));
+  await assertFails(setDoc(doc(alice(), 'checkInLedger/alice'), { streak: 99 }));
+  await assertFails(getDoc(doc(alice(), 'checkInCodes/secret-hash')));
+  await assertFails(deleteDoc(doc(alice(), 'checkInCodes/secret-hash')));
+});
+
+await test('reserved check-in Pocket cannot be impersonated or changed except own unread marking', async () => {
+  await seedBlackBook();
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'conversations/checkins_alice'), {
+      memberUids: ['alice', 'admin', 'secondHand'], isGroup: true, kind: 'check_ins',
+      groupName: 'Private Check-In', createdBy: 'check-in-server',
+      createdAt: new Date(), lastMessage: 'A private code is ready.',
+      lastMessageAt: new Date(), unreadCounts: { alice: 1, admin: 1, secondHand: 0 },
+      checkInProtected: true,
+    });
+    await setDoc(doc(db, 'conversations/checkins_alice/messages/issued-2025-04-03'), {
+      senderUid: 'check-in-server', text: 'private code', reactions: {},
+      sentAt: new Date(), checkInProtected: true,
+    });
+  });
+  const db = alice(), conv = doc(db, 'conversations/checkins_alice');
+  const issuedMessage = doc(db, 'conversations/checkins_alice/messages/issued-2025-04-03');
+  await assertSucceeds(getDoc(conv));
+  await assertSucceeds(getDoc(issuedMessage));
+  await assertFails(getDoc(doc(mallory(), 'conversations/checkins_alice')));
+  await assertFails(getDoc(doc(mallory(), 'conversations/checkins_alice/messages/issued-2025-04-03')));
+  await assertSucceeds(updateDoc(conv, { 'unreadCounts.alice': 0 }));
+  await assertFails(updateDoc(conv, { lastMessage: 'leaked code' }));
+  await assertFails(updateDoc(conv, { 'unreadCounts.admin': 0 }));
+  await assertFails(deleteDoc(conv));
+  await assertFails(setDoc(doc(db, 'conversations/checkins_alice/messages/fake'), {
+    senderUid: 'alice', text: 'forged', reactions: {}, sentAt: new Date(),
+  }));
+  await assertFails(updateDoc(issuedMessage, {
+    text: 'changed',
+  }));
+  await assertFails(deleteDoc(issuedMessage));
+  await assertFails(setDoc(doc(db, 'conversations/checkin-fake'), {
+    memberUids: ['alice'], isGroup: false, createdBy: 'alice', createdAt: serverTimestamp(),
+  }));
+});
+
+await test('check-in markers are rejected on create and update for every ordinary Pocket ID', async () => {
+  await seedBlackBook();
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    const ordinary = {
+      memberUids: ['alice', 'bob'], isGroup: false,
+      createdBy: 'alice', createdAt: new Date(),
+      lastMessage: '', lastMessageAt: null, unreadCounts: { alice: 0, bob: 0 },
+    };
+    await setDoc(doc(db, 'conversations/ordinary'), ordinary);
+    await setDoc(doc(db, 'conversations/ordinary/messages/m1'), {
+      senderUid: 'alice', text: 'ordinary', sentAt: new Date(), reactions: {},
+    });
+    await setDoc(doc(db, 'conversations/legacy-marked'), {
+      ...ordinary, kind: 'check_ins',
+    });
+    await setDoc(doc(db, 'conversations/legacy-marked/messages/m1'), {
+      senderUid: 'alice', text: 'marked', sentAt: new Date(),
+      reactions: {}, checkInProtected: true,
+    });
+  });
+  const db = alice();
+  const conv = doc(db, 'conversations/ordinary');
+  const message = doc(db, 'conversations/ordinary/messages/m1');
+  await assertFails(setDoc(doc(db, 'conversations/create-kind'), {
+    memberUids: ['alice'], isGroup: false, createdBy: 'alice',
+    createdAt: serverTimestamp(), kind: 'check_ins',
+  }));
+  await assertFails(setDoc(doc(db, 'conversations/create-protected'), {
+    memberUids: ['alice'], isGroup: false, createdBy: 'alice',
+    createdAt: serverTimestamp(), checkInProtected: true,
+  }));
+  await assertFails(updateDoc(conv, { kind: 'check_ins' }));
+  await assertFails(updateDoc(conv, { checkInProtected: true }));
+  await assertFails(setDoc(doc(db, 'conversations/ordinary/messages/forged'), {
+    senderUid: 'alice', text: 'forged', sentAt: new Date(),
+    reactions: {}, checkInProtected: true,
+  }));
+  await assertFails(updateDoc(message, { checkInProtected: true }));
+  await assertFails(updateDoc(doc(db, 'conversations/legacy-marked'), {
+    lastMessage: 'cannot mutate a marked ordinary thread',
+  }));
+  await assertFails(updateDoc(doc(db, 'conversations/legacy-marked/messages/m1'), {
+    text: 'cannot mutate a marked message',
+  }));
 });
 
 await test('black book marks are own-uid-only and comments require an atomic counter', async () => {
@@ -3179,16 +3314,20 @@ await test('SUITS state is server-write-only with owner and both Hand reads', as
     const db = ctx.firestore();
     await setDoc(doc(db, 'suitAssignments/alice'), {
       pips: ['spade'], streaks: { spade: 3 }, completed: {},
+      privateCards: { spade: { active: true, title: 'Only Alice can read this', instruction: 'Personal instruction' } },
     });
     await setDoc(doc(db, 'suitConfig/current'), {
-      inPlay: { spade: { active: true, title: 'Table task', destination: 'table' } },
+      inPlay: { spade: { active: false, title: '', visibility: 'private', privateTargetUid: 'alice' } },
     });
   });
-  await assertSucceeds(getDoc(doc(alice(), 'suitAssignments/alice')));
+  const privateDoc = await assertSucceeds(getDoc(doc(alice(), 'suitAssignments/alice')));
+  assert.equal(privateDoc.data().privateCards.spade.title, 'Only Alice can read this');
   await assertFails(getDoc(doc(env.authenticatedContext('bob').firestore(), 'suitAssignments/alice')));
   await assertSucceeds(getDoc(doc(admin(), 'suitAssignments/alice')));
   await assertSucceeds(getDoc(doc(env.authenticatedContext('deputy').firestore(), 'suitAssignments/alice')));
-  await assertSucceeds(getDoc(doc(alice(), 'suitConfig/current')));
+  const sharedDoc = await assertSucceeds(getDoc(doc(alice(), 'suitConfig/current')));
+  assert.equal(sharedDoc.data().inPlay.spade.title, '');
+  assert.equal(JSON.stringify(sharedDoc.data()).includes('Only Alice can read this'), false);
   await assertFails(setDoc(doc(alice(), 'suitAssignments/alice'), {
     pips: ['heart'], streaks: { heart: 99 }, completed: {},
   }));
@@ -3221,6 +3360,21 @@ await test('only the two Hand admins read immutable Activity and Investigation e
     uid: 'alice', action: 'Forged', section: 'SUITS', occurredAt: serverTimestamp(),
   }));
   await assertFails(updateDoc(doc(admin(), 'investigationEvents/e1'), { action: 'Changed' }));
+});
+
+await test('game rooms, invitation codes and private content reviews are server-only', async () => {
+  for (const db of [alice(), mallory()]) {
+    await assertFails(getDoc(doc(db, 'gamesRooms/room-secret')));
+    await assertFails(setDoc(doc(db, 'gamesRooms/room-forged'), {
+      privateRoles: { alice: 'Recruit', mallory: 'Sweep' },
+    }));
+    await assertFails(getDoc(doc(db, 'gameInvites/ABCDEF0123')));
+    await assertFails(setDoc(doc(db, 'gameInvites/ABCDEF0123'), { roomId: 'room-forged' }));
+    await assertFails(getDoc(doc(db, 'gamesContentReviews/trivia-q1')));
+    await assertFails(setDoc(doc(db, 'gamesContentReviews/trivia-q1'), { status: 'approved' }));
+    await assertFails(getDoc(doc(db, 'gameMemberships/alice/rooms/room-secret')));
+    await assertFails(setDoc(doc(db, 'gameMemberships/alice/rooms/room-forged'), { roomId: 'room-forged' }));
+  }
 });
 
 await env.cleanup();

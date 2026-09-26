@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -41,20 +41,26 @@ export default function SuitsScreen() {
     if (!user) return;
     return onSnapshot(doc(db, 'suitAssignments', user.uid), snapshot => {
       setState(current => current
-        ? { ...current, pips: snapshot.data()?.pips ?? [] }
+         ? { ...current, pips: snapshot.data()?.pips ?? [], privateCards: snapshot.data()?.privateCards ?? {} }
         : current);
     }, () => setNote('Could not refresh your assignments. Reopen SUITS to try again.'));
   }, [user?.uid]);
   if (!state) return <View style={s.root}><Image source={require('../../assets/images/wood_bg.png')} style={StyleSheet.absoluteFill} /><View style={s.center}>{loading ? <ActivityIndicator color={GOLD} /> : <><Text style={s.errorTitle}>SUITS COULD NOT OPEN</Text><Text style={s.errorText}>{note}</Text><TouchableOpacity style={s.retry} onPress={() => void load()}><Text style={s.buttonText}>TRY AGAIN</Text></TouchableOpacity><TouchableOpacity onPress={() => router.back()}><Text style={s.errorBack}>BACK TO THE HAND</Text></TouchableOpacity></>}</View></View>;
   const mutate = async (work: () => Promise<void>) => { setNote(''); try { await work(); await load(); } catch (e: any) { setNote(e?.message ?? 'SUITS action failed.'); } };
    const selected = SUITS.find(suit => suit.key === selectedSuit);
-   const selectedTask = selectedSuit ? state.inPlay[selectedSuit] : undefined;
+    const visibleTask = (pip: SuitKey) => {
+      const shared = state.inPlay[pip];
+      return shared?.visibility === 'private'
+        ? (shared.privateTargetUid === user?.uid ? state.privateCards[pip] : undefined)
+        : shared;
+    };
+    const selectedTask = selectedSuit ? visibleTask(selectedSuit) : undefined;
    const selectedAction = SUIT_TASK_ACTIONS.find(action => action.key === selectedTask?.destination);
    const openDestination = () => {
-     if (selectedTask?.destination === 'social') {
-       void Clipboard.setStringAsync('#JestersHand')
-         .then(() => setNote('Copied: #JestersHand'))
-         .catch(() => setNote('Copy this: #JestersHand'));
+      if (selectedTask?.destination === 'social') {
+        void Clipboard.setStringAsync('#JestersHand').catch(() => {});
+        void Linking.openURL('https://savnicholaofficial.com')
+          .catch(() => setNote('Could not open the author website. Visit savnicholaofficial.com to find the social links.'));
      } else if (selectedAction?.route) {
        router.push(selectedAction.route as any);
      }
@@ -64,35 +70,36 @@ export default function SuitsScreen() {
     <Image source={require('../../assets/images/wood_bg.png')} style={StyleSheet.absoluteFill} />
     <View style={[s.nav, { paddingTop: inset.top + 8 }]}><TouchableOpacity onPress={() => router.back()}><Text style={s.back}>‹</Text></TouchableOpacity><Text style={s.navTitle}>SUITS</Text></View>
     <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.copy}>Community cards are dealt to the whole Hand. Tap a lit card to read it.</Text>
-         <Text style={s.personalPips}>YOUR ASSIGNED CARDS · {state.pips.length ? SUITS.filter(suit => state.pips.includes(suit.key)).map(suit => `${suit.pip} ${suit.name}`).join('  ·  ') : 'NONE YET'}</Text>
+         <Text style={s.copy}>Cards may be dealt to the whole Hand or privately to one Joker. Tap a lit card to read it.</Text>
+          <Text style={s.personalPips}>YOUR ASSIGNED CARDS · {SUITS.some(suit => state.pips.includes(suit.key) || (state.inPlay[suit.key]?.privateTargetUid === user?.uid && state.privateCards[suit.key]?.active)) ? SUITS.filter(suit => state.pips.includes(suit.key) || (state.inPlay[suit.key]?.privateTargetUid === user?.uid && state.privateCards[suit.key]?.active)).map(suit => `${suit.pip} ${suit.name}`).join('  ·  ') : 'NONE YET'}</Text>
       {note ? <Text style={s.note}>{note}</Text> : null}
         <View style={s.cards}>
         {SUITS.map(suit => {
-            const active = state.inPlay[suit.key];
+             const active = visibleTask(suit.key);
             const isLive = active?.active === true;
+             const isPrivate = state.inPlay[suit.key]?.visibility === 'private';
           return (
             <TouchableOpacity
                disabled={!isLive}
               key={suit.key}
                testID={`suits-community-${suit.key}`}
-               accessibilityLabel={`${suit.name} community card${isLive ? ', in play' : ', not dealt'}`}
+                accessibilityLabel={`${suit.name} ${isPrivate && isLive ? 'private' : 'community'} card${isLive ? ', in play' : ', not dealt'}`}
                onPress={() => setSelectedSuit(suit.key)}
                style={[s.cardWrapper, isLive && s.liveCard]}
             >
                <InWorldCard style={s.card} isDone={isLive} artworkFit="contain">
                  <CardPip style={{ fontSize: 48, minHeight: 56 }}>{suit.pip}</CardPip>
                 <CardTitle style={{ fontSize: 14 }}>{suit.name}</CardTitle>
-                 {state.pips.includes(suit.key) && <Text style={s.myAssignment}>ASSIGNED TO YOU</Text>}
+                  {(state.pips.includes(suit.key) || (isPrivate && isLive)) && <Text style={s.myAssignment}>ASSIGNED TO YOU</Text>}
 
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 12 }}>
                    {isLive ? (
                     <>
-                      <Text style={s.inPlay}>IN PLAY</Text>
+                      <Text style={s.inPlay}>{isPrivate ? 'DEALT TO YOU' : 'IN PLAY'}</Text>
                       <Text style={s.play}>{active.title}</Text>
                        <Text style={s.openHint}>TAP TO READ</Text>
                     </>
-                   ) : <Text style={s.notDealt}>NOT DEALT</Text>}
+                    ) : <Text style={s.notDealt}>NOT DEALT</Text>}
                 </View>
               </InWorldCard>
             </TouchableOpacity>
@@ -104,16 +111,16 @@ export default function SuitsScreen() {
     </ScrollView>
      <Modal visible={!!selected && !!selectedTask?.active} transparent animationType="fade" onRequestClose={() => setSelectedSuit(null)}>
        <View style={s.detailOverlay}>
-         <TouchableOpacity style={s.detailClose} onPress={() => setSelectedSuit(null)} accessibilityLabel="Close community card"><Text style={s.detailCloseText}>CLOSE ×</Text></TouchableOpacity>
+          <TouchableOpacity style={s.detailClose} onPress={() => setSelectedSuit(null)} accessibilityLabel="Close SUITS card"><Text style={s.detailCloseText}>CLOSE ×</Text></TouchableOpacity>
          {selected && selectedTask?.active && <InWorldCard style={s.detailCard} artworkFit="contain">
            <CardPip>{selected.pip}</CardPip>
            <CardTitle>{selected.name}</CardTitle>
            <View style={s.detailBody}>
-             <Text style={s.inPlay}>COMMUNITY CARD · IN PLAY</Text>
+              <Text style={s.inPlay}>{state.inPlay[selectedSuit!]?.visibility === 'private' ? 'PRIVATE CARD · FOR YOUR JOKER ID' : 'COMMUNITY CARD · IN PLAY'}</Text>
              <Text style={s.detailTitle}>{selectedTask.title}</Text>
              {selectedTask.instruction ? <Text style={s.detailInstruction}>{selectedTask.instruction}</Text> : null}
            </View>
-           {selectedAction?.actionable && <TouchableOpacity style={s.detailAction} onPress={openDestination}><Text style={s.actionText}>{selectedTask.destination === 'social' ? 'COPY COMMUNITY TAG' : `OPEN ${selectedAction.label.toUpperCase()}`}</Text></TouchableOpacity>}
+            {selectedAction?.actionable && <TouchableOpacity style={s.detailAction} onPress={openDestination}><Text style={s.actionText}>{selectedTask.destination === 'social' ? 'OPEN AUTHOR SOCIALS' : `OPEN ${selectedAction.label.toUpperCase()}`}</Text></TouchableOpacity>}
          </InWorldCard>}
        </View>
      </Modal>
@@ -126,7 +133,10 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
     const [assignmentNote, setAssignmentNote] = useState('');
     const [searching, setSearching] = useState(false);
     const [workingPip, setWorkingPip] = useState<SuitKey | null>(null);
-  const task = (pip: SuitKey): SuitTask => drafts[pip] ?? inPlay[pip] ?? { active: false, title: '', destination: 'table' };
+   const task = (pip: SuitKey): SuitTask => drafts[pip] ??
+     (inPlay[pip]?.visibility === 'private'
+       ? { active: false, title: '', ...(holder && holder.uid === inPlay[pip]?.privateTargetUid ? holder.privateCards?.[pip] : {}), visibility: 'private' }
+       : inPlay[pip]) ?? { active: false, title: '', destination: 'table', visibility: 'community' };
     const searchJoker = async () => {
       const exactId = jokerSearch.trim();
       if (!/^\d{2}-\d{2}$/.test(exactId)) {
@@ -138,7 +148,8 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
       setAssignmentNote('');
       try {
         const result = await findSuitHolder(exactId);
-        setHolder(result.holder);
+         setHolder(result.holder);
+         setDrafts({});
         if (!result.holder) setAssignmentNote(`No active member found for ${exactId}.`);
       } catch (e: any) {
         setHolder(null);
@@ -168,14 +179,37 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
         setWorkingPip(null);
       }
     };
-   return <View><Text style={s.section}>DEAL TO THE WHOLE HAND</Text>
-     <Text style={s.assignmentCopy}>Assignments track responsibility only. Community cards remain visible to every active member.</Text>
+    const saveCard = (pip: SuitKey, card: SuitTask) => {
+      if (card.visibility === 'private' && !holder) {
+        setAssignmentNote('Search and select one Joker before dealing a private card.');
+        return;
+      }
+      mutate(async () => {
+        await setSuitInPlay(pip, card, card.visibility === 'private' ? holder! : undefined);
+        setDrafts(current => {
+          const next = { ...current };
+          delete next[pip];
+          return next;
+        });
+        if (holder) {
+          try {
+            const refreshed = await findSuitHolder(holder.jokerId);
+            setHolder(refreshed.holder);
+          } catch {
+            setHolder(null);
+            setAssignmentNote('Card saved. Search for this Joker again to refresh their assignment.');
+          }
+        }
+      });
+    };
+    return <View><Text style={s.section}>DEAL A SUITS CARD</Text>
+      <Text style={s.assignmentCopy}>Choose whether the card is visible to everyone or only to the Joker you select below. Responsibility assignments are separate.</Text>
      <View style={s.assignmentPanel}>
        <Text style={s.assignmentTitle}>RESPONSIBILITY ASSIGNMENTS</Text>
        <TextInput
          value={jokerSearch}
          onChangeText={value => { setJokerSearch(value); setHolder(null); setAssignmentNote(''); }}
-         placeholder="Exact Joker ID · 00-00"
+          placeholder="Exact Joker ID · 12-34"
          placeholderTextColor="#8e8067"
          autoCapitalize="characters"
          autoCorrect={false}
@@ -213,6 +247,13 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
       return (
         <InWorldCard key={x.key} style={s.adminCard}>
           <CardPip>{x.pip} {x.name}</CardPip>
+           <View style={s.visibilityRow}>
+             <View style={s.visibilityCopy}>
+               <Text style={s.visibilityTitle}>VISIBLE TO COMMUNITY</Text>
+               <Text style={s.visibilityHint}>{d.visibility === 'private' ? `Only ${holder?.jokerId ?? 'your selected Joker'} can read this card` : 'Every active member can read this card'}</Text>
+             </View>
+             <Switch testID={`suits-visibility-${x.key}`} accessibilityLabel={`${x.name} visible to community`} value={d.visibility !== 'private'} onValueChange={community => setDrafts(a => ({ ...a, [x.key]: { ...d, visibility: community ? 'community' : 'private' } }))} trackColor={{ false: '#6b6251', true: GOLD }} thumbColor={CREAM} />
+           </View>
 
           <CardInput
             value={d.title}
@@ -242,9 +283,9 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
           </View>
 
           <View style={s.adminActions}>
-            <TouchableOpacity style={s.actionBtn} onPress={()=>mutate(()=>setSuitInPlay(x.key,{...d,active:false}))}><Text style={s.actionText}>SAVE</Text></TouchableOpacity>
-            <TouchableOpacity style={s.actionBtn} onPress={()=>mutate(()=>setSuitInPlay(x.key,{...d,active:true}))}><Text style={s.actionText}>IN PLAY</Text></TouchableOpacity>
-            <TouchableOpacity style={s.actionBtn} onPress={()=>mutate(()=>setSuitInPlay(x.key,{...d,active:false}))}><Text style={s.actionText}>CLOSE</Text></TouchableOpacity>
+             <TouchableOpacity style={s.actionBtn} onPress={()=>saveCard(x.key,{...d,active:false})}><Text style={s.actionText}>SAVE</Text></TouchableOpacity>
+             <TouchableOpacity style={s.actionBtn} onPress={()=>saveCard(x.key,{...d,active:true})}><Text style={s.actionText}>IN PLAY</Text></TouchableOpacity>
+             <TouchableOpacity style={s.actionBtn} onPress={()=>saveCard(x.key,{...d,active:false})}><Text style={s.actionText}>CLOSE</Text></TouchableOpacity>
           </View>
 
         </InWorldCard>
@@ -289,6 +330,10 @@ const s = StyleSheet.create({
   buttonText:{color:GOLD,fontSize:9,fontFamily:'Cinzel_700Bold'},
 
   adminCard: { width: '100%', marginBottom: 16 },
+  visibilityRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, paddingHorizontal: 8, gap: 12 },
+  visibilityCopy: { flex: 1 },
+  visibilityTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1 },
+  visibilityHint: { color: CREAM, fontSize: 10, marginTop: 5 },
   destRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12, justifyContent: 'center' },
   destBtn: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 10, backgroundColor: 'rgba(0,0,0,0.4)' },
   destSelected: { borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.15)' },

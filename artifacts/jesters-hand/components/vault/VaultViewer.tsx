@@ -7,7 +7,7 @@
 
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator,
+  AppState, View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator,
   Image, Platform, Dimensions, ScrollView,
 } from 'react-native';
 import { Feather } from '@/components/FIcon';
@@ -18,6 +18,11 @@ import { PDF_PARAGRAPH_HELPER_SOURCE } from '@/lib/pdfParagraphs';
 import { resolveVaultReaderEndState } from '@/lib/vaultReaderState';
 import { buildEpubReaderDocument } from '@/lib/epubReader';
 import { inflateRawBase64Bounded } from '@/lib/epubDeflateFallback';
+import {
+  isSequentialPageAdvance,
+  markVaultReadingPageSaved,
+  recordVaultReadingProgress,
+} from '@/lib/vaultReadingProgress';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CREAM = '#EDE0C4';
@@ -602,10 +607,44 @@ export default function VaultViewer({ entry, watermarkLabel, notice, fallbackCon
   const [currentPage, setCurrentPage] = useState<number | null>(null);
   const [livePage, setLivePage] = useState<number | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
+  const numPagesRef = useRef<number | null>(null);
   const pageRef = useRef<number | null>(null);
   const readerRef = useRef<HtmlReaderHandle>(null);
-  const onPage = useCallback((p: number) => { pageRef.current = p; setLivePage(p); }, []);
-  const onPages = useCallback((n: number) => setNumPages(n), []);
+  const readingSessionRef = useRef({
+    entryId: null as string | null,
+    previousPage: null as number | null,
+    maxPage: 0,
+    started: false,
+    elapsedMs: 0,
+    foregroundSince: null as number | null,
+    savedPage: 0,
+    saving: false,
+  });
+  const tocJumpTargetRef = useRef<number | null>(null);
+  const onPage = useCallback((p: number) => {
+    const session = readingSessionRef.current;
+    if (!entry?.id || session.entryId !== entry.id) return;
+    const previous = session.previousPage;
+    const isTocJump = tocJumpTargetRef.current === p;
+    if (isTocJump) tocJumpTargetRef.current = null;
+    if (!isTocJump && isSequentialPageAdvance(previous, p) && session.foregroundSince !== null) {
+      if (!session.started) {
+        session.elapsedMs = 0;
+        session.foregroundSince = Date.now();
+      }
+      session.started = true;
+      session.maxPage = Math.max(session.maxPage, Math.floor(p));
+    }
+    if (Number.isFinite(p) && p > 0) {
+      session.previousPage = Math.floor(p);
+      pageRef.current = Math.floor(p);
+      setLivePage(Math.floor(p));
+    }
+  }, [entry?.id]);
+  const onPages = useCallback((n: number) => {
+    numPagesRef.current = n;
+    setNumPages(n);
+  }, []);
   const onInflateRequest = useCallback(
     (request: { id: string; expectedSize: number; data: string }) =>
       inflateRawBase64Bounded(request.data, request.expectedSize),
@@ -657,8 +696,62 @@ export default function VaultViewer({ entry, watermarkLabel, notice, fallbackCon
   useEffect(() => {
     setDiscussOpen(false); pageRef.current = null;
     setCurrentPage(null); setLivePage(null); setNumPages(null); setChaptersOpen(false);
+    numPagesRef.current = null;
     setDiscussionTarget(null);
   }, [entry?.id]);
+
+  // Page reports are emitted on reader initialization and on TOC navigation,
+  // so neither starts a session. Only sequential advancement starts foreground
+  // timing; qualifying progress is persisted after 30 active seconds.
+  useEffect(() => {
+    const session = {
+      entryId: entry?.id ?? null,
+      previousPage: null as number | null,
+      maxPage: 0,
+      started: false,
+      elapsedMs: 0,
+      foregroundSince: AppState.currentState === 'active' ? Date.now() : null,
+      savedPage: 0,
+      saving: false,
+    };
+    readingSessionRef.current = session;
+    tocJumpTargetRef.current = null;
+    const appStateSubscription = AppState.addEventListener('change', nextState => {
+      const now = Date.now();
+      if (nextState === 'active') {
+        if (session.foregroundSince === null) session.foregroundSince = now;
+      } else if (session.foregroundSince !== null) {
+        if (session.started) session.elapsedMs += now - session.foregroundSince;
+        session.foregroundSince = null;
+      }
+    });
+    const timer = setInterval(() => {
+      const knownPageCount = numPagesRef.current;
+      if (!entry || session.entryId !== entry.id || !session.started || session.saving || !knownPageCount) return;
+      const activeElapsed = session.elapsedMs
+        + (session.foregroundSince === null ? 0 : Date.now() - session.foregroundSince);
+      if (activeElapsed < 30_000 || session.maxPage <= session.savedPage) return;
+      const page = session.maxPage;
+      session.saving = true;
+      recordVaultReadingProgress({
+        vaultEntryId: entry.id,
+        title: entry.title,
+        page,
+        numPages: knownPageCount,
+      }).then(() => {
+        markVaultReadingPageSaved(readingSessionRef.current, session, entry.id, page);
+      }).catch(error => {
+        console.warn('Could not save Vault reading progress.', error);
+      }).finally(() => {
+        session.saving = false;
+      });
+    }, 2500);
+    return () => {
+      clearInterval(timer);
+      appStateSubscription.remove();
+      session.foregroundSince = null;
+    };
+  }, [entry?.id, entry?.title]);
 
   // ── Manuscript chapters ──
   const [chaptersOpen, setChaptersOpen] = useState(false);
@@ -671,6 +764,7 @@ export default function VaultViewer({ entry, watermarkLabel, notice, fallbackCon
     return idx;
   }, [chapters, livePage]);
   const gotoChapter = useCallback((startPage: number) => {
+    tocJumpTargetRef.current = startPage;
     readerRef.current?.gotoPage(startPage);
     setChaptersOpen(false);
   }, []);

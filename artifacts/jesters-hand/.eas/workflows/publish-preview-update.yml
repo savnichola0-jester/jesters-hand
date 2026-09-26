@@ -16,7 +16,7 @@ jobs:
     params:
       platform: android
       channel: preview
-      message: Restore Vault and Chamber reading and photo uploads
+      message: Jester's Hand games and current Android fixes
     hooks:
       before_update:
         - run: node scripts/prepare-preview-update-env.mjs

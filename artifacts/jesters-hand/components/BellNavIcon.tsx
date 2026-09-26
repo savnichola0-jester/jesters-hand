@@ -136,7 +136,7 @@ export default function BellNavIcon({ size = 38 }: Props) {
         <View style={styles.rowIcon}>{icon}</View>
         <View style={styles.rowBody}>
           <Text style={styles.rowTitle} numberOfLines={1}>{title}</Text>
-          <Text style={styles.rowText} numberOfLines={2}>
+          <Text style={styles.rowText} numberOfLines={item.title === 'Daily Check-Ins need attention' ? undefined : 2}>
             {label ? <Text style={styles.rowSender}>{label} </Text> : null}
             {detail}
           </Text>
