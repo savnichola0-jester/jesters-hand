@@ -10,7 +10,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadChatImage } from '@/lib/chatMediaService';
+import { deleteChatImage, uploadChatImage } from '@/lib/chatMediaService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWhisper } from '@/contexts/WhisperContext';
 import {
@@ -21,6 +21,7 @@ import {
 } from '@/lib/whisperService';
 import BellNavIcon from '@/components/BellNavIcon';
 import GroupAvatarCollage from '@/components/GroupAvatarCollage';
+import { resolveMediaUrl } from '@/lib/mediaService';
 import ReportCardModal from '@/components/ReportCardModal';
 import ChatImageViewer from '@/components/ChatImageViewer';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -209,13 +210,16 @@ export default function ChatScreen() {
     setSending(true);
     const text = inputText.trim();
     setInputText('');
+    let uploadedImageUrl: string | null = null;
     try {
-      const url = await uploadChatImage(user.uid, res.assets[0].uri, res.assets[0].mimeType);
-      await sendMessage(conversationId, user.uid, text, url);
+      uploadedImageUrl = await uploadChatImage(user.uid, res.assets[0].uri, res.assets[0].mimeType);
+      await sendMessage(conversationId, user.uid, text, uploadedImageUrl);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     } catch (e) {
       console.error('[Chat] attach error:', e);
+      if (uploadedImageUrl) await deleteChatImage(uploadedImageUrl);
       setInputText(text);
+      Alert.alert('Could not attach image', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setSending(false);
     }
@@ -261,7 +265,7 @@ export default function ChatScreen() {
         {showSender && (
           <View style={s.senderRow}>
             {senderAvatar ? (
-              <Image source={{ uri: senderAvatar }} style={s.senderAvatar} />
+              <Image source={{ uri: resolveMediaUrl(senderAvatar) }} style={s.senderAvatar} />
             ) : (
               <View style={[s.senderAvatar, s.senderAvatarFallback]}>
                 <Text style={s.senderAvatarInitial}>
@@ -293,7 +297,7 @@ export default function ChatScreen() {
               accessibilityLabel="View full image"
             >
               <Image
-                source={{ uri: msg.imageUrl }}
+                source={{ uri: resolveMediaUrl(msg.imageUrl) }}
                 style={[s.bubbleImage, { width: Math.min(maxBubbleW - 8, 220) }]}
                 resizeMode="cover"
               />
@@ -360,7 +364,7 @@ export default function ChatScreen() {
             )}
             {dmPartnerUid && (
               dmPartnerAvatar ? (
-                <Image source={{ uri: dmPartnerAvatar }} style={s.navAvatar} />
+                <Image source={{ uri: resolveMediaUrl(dmPartnerAvatar) }} style={s.navAvatar} />
               ) : (
                 <View style={[s.navAvatar, s.navAvatarFallback]}>
                   <Text style={s.navAvatarInitial}>
@@ -515,7 +519,7 @@ export default function ChatScreen() {
                     }}
                   >
                     {m.mugUrl ? (
-                      <Image source={{ uri: m.mugUrl }} style={s.addMemberAvatar} />
+                      <Image source={{ uri: resolveMediaUrl(m.mugUrl) }} style={s.addMemberAvatar} />
                     ) : (
                       <View style={[s.addMemberAvatar, s.navAvatarFallback]}>
                         <Text style={s.navAvatarInitial}>

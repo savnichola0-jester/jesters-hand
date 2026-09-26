@@ -19,7 +19,7 @@ service cloud.firestore {
         && value.matches('^(0[1-9]|[1-4][0-9]|5[0-4])-54$');
     }
 
-    function validAdminCardState() {
+    function validAdminCardState(userId) {
       let cardId = request.resource.data.get('adminCardId', '');
       let photoUrl = request.resource.data.get('adminPhotoUrl', '');
       return cardId == ''
@@ -28,7 +28,29 @@ service cloud.firestore {
           || (
             photoUrl is string
             && photoUrl.size() <= 2048
-            && photoUrl.matches('https://.*')
+            && (
+              photoUrl.matches('https://.*')
+              || photoUrl.matches('jhmedia://users/' + userId
+                + '/admin-[a-z0-9]+-[a-z0-9]+[.]jpg[?]token=[A-Za-z0-9_-]+')
+            )
+          )
+        );
+    }
+
+    // Chat attachments may be legacy Firebase download URLs or portable
+    // App Storage pointers. Portable pointers are bound to the message sender
+    // so a member cannot attach another user's private chatMedia object.
+    function validChatImageUrl(imageUrl, senderUid) {
+      return imageUrl is string
+        && imageUrl.size() > 0
+        && imageUrl.size() <= 2048
+        && (
+          imageUrl.matches('^https://.*$')
+          || (
+            senderUid is string
+            && senderUid.matches('^[A-Za-z0-9:_-]{1,128}$')
+            && imageUrl.matches('^jhmedia://chatMedia/' + senderUid
+              + '/[a-z0-9]+-[a-z0-9]{8}[.](jpg|png|webp|gif)[?]token=[A-Za-z0-9_-]+$')
           )
         );
     }
@@ -182,7 +204,7 @@ service cloud.firestore {
             && isAdmin()
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['adminPhotoUrl', 'adminCardId'])
-            && validAdminCardState()
+            && validAdminCardState(userId)
           )
           // Suit marking remains separate so an admin-mark write can never
           // smuggle in even another otherwise-admin-controlled field.
@@ -485,14 +507,13 @@ service cloud.firestore {
         && request.resource.data.senderUid == request.auth.uid
         // New messages can't be planted with forged reactions.
         && request.resource.data.get('reactions', {}).size() == 0
-        // Optional photo/GIF attachment: bounded https URL string.
+        // Optional photo/GIF attachment: bounded legacy URL or sender-owned
+        // portable chatMedia pointer.
         && (
           !('imageUrl' in request.resource.data)
-          || (
-            request.resource.data.imageUrl is string
-            && request.resource.data.imageUrl.size() > 0
-            && request.resource.data.imageUrl.size() <= 2048
-            && request.resource.data.imageUrl.matches('https://.*')
+          || validChatImageUrl(
+            request.resource.data.imageUrl,
+            request.resource.data.senderUid
           )
         );
       allow delete: if activeUser()
@@ -1024,7 +1045,11 @@ service cloud.firestore {
               || d.filePath.matches('vault/' + entryId + '/file-[a-z0-9]+-[a-z0-9]+')
             )
           ))
-          && (!('coverPath' in d) || (d.coverPath is string && d.coverPath == 'vault/' + entryId + '/cover'))
+          && (!('coverPath' in d) || (d.coverPath is string
+            && (d.coverPath == 'vault/' + entryId + '/cover'
+              || d.coverPath.matches('vault/' + entryId + '/cover-[a-z0-9]+-[a-z0-9]+'))))
+          && (!('fileStorage' in d) || d.fileStorage == 'replit')
+          && (!('coverStorage' in d) || d.coverStorage == 'replit')
           && (!('fileName' in d) || (d.fileName is string && d.fileName.size() <= 300))
           && (!('contentType' in d) || (d.contentType is string && d.contentType.size() <= 150))
           // Manuscript chapter map (admin-authored): list of {title, startPage}.
@@ -1684,14 +1709,13 @@ service cloud.firestore {
         )
         // New messages can't be planted with forged reactions.
         && request.resource.data.get('reactions', {}).size() == 0
-        // Optional photo/GIF attachment: bounded https URL string.
+        // Optional photo/GIF attachment: bounded legacy URL or sender-owned
+        // portable chatMedia pointer.
         && (
           !('imageUrl' in request.resource.data)
-          || (
-            request.resource.data.imageUrl is string
-            && request.resource.data.imageUrl.size() > 0
-            && request.resource.data.imageUrl.size() <= 2048
-            && request.resource.data.imageUrl.matches('https://.*')
+          || validChatImageUrl(
+            request.resource.data.imageUrl,
+            request.resource.data.senderUid
           )
         );
       // Sender identity is immutable after create. Only the sender may touch

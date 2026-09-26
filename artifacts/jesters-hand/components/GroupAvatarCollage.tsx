@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { Feather } from '@/components/FIcon';
+import { resolveMediaUrl } from '@/lib/mediaService';
 
 const GOLD = '#D4A853';
 
@@ -67,7 +68,7 @@ export default function GroupAvatarCollage({
           >
             {photoUrl ? (
               <Image
-                source={{ uri: photoUrl }}
+                source={{ uri: resolveMediaUrl(photoUrl) }}
                 style={{ width: cell, height: cell, borderRadius: cell / 2 }}
               />
             ) : (

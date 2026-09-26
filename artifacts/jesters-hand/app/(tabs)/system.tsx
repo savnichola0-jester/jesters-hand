@@ -247,7 +247,7 @@ export default function SystemScreen() {
     try {
       const result = await Updates.checkForUpdateAsync();
       if (!result.isAvailable) {
-        setUpdateMessage(`Current release is installed (${updateId}).`);
+        setUpdateMessage(`No compatible app update is published for this device (${updateChannel}, runtime ${updateRuntime}). Publishing the server does not publish an app update.`);
         return;
       }
       await Updates.fetchUpdateAsync();
@@ -258,7 +258,7 @@ export default function SystemScreen() {
     } finally {
       setUpdateBusy(false);
     }
-  }, [updateBusy, updateId]);
+  }, [updateBusy, updateChannel, updateRuntime]);
 
   return (
     <View style={s.root}>

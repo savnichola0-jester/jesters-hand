@@ -18,6 +18,7 @@ import {
 } from '@/lib/whisperService';
 import BellNavIcon from '@/components/BellNavIcon';
 import GroupAvatarCollage from '@/components/GroupAvatarCollage';
+import { resolveMediaUrl } from '@/lib/mediaService';
 import { MARBLE_TEXT_SHADOW } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
 
@@ -273,7 +274,7 @@ export default function WhisperScreen() {
                     return (
                       <View style={s.avatar}>
                         {photoUrl ? (
-                          <Image source={{ uri: photoUrl }} style={s.avatarImage} />
+                          <Image source={{ uri: resolveMediaUrl(photoUrl) }} style={s.avatarImage} />
                         ) : (
                           <Text style={s.avatarText}>{name.slice(0, 2).toUpperCase()}</Text>
                         )}
@@ -406,7 +407,7 @@ export default function WhisperScreen() {
                       {/* Circular photo / initials */}
                       <View style={s.memberAvatar}>
                         {item.mugUrl ? (
-                          <Image source={{ uri: item.mugUrl }} style={s.memberAvatarImage} />
+                          <Image source={{ uri: resolveMediaUrl(item.mugUrl) }} style={s.memberAvatarImage} />
                         ) : (
                           <Text style={s.memberAvatarText}>{initials}</Text>
                         )}
@@ -495,7 +496,7 @@ export default function WhisperScreen() {
                       {/* Member photo / initials */}
                       <View style={s.memberAvatar}>
                         {item.mugUrl ? (
-                          <Image source={{ uri: item.mugUrl }} style={s.memberAvatarImage} />
+                          <Image source={{ uri: resolveMediaUrl(item.mugUrl) }} style={s.memberAvatarImage} />
                         ) : (
                           <Text style={s.memberAvatarText}>{initials}</Text>
                         )}

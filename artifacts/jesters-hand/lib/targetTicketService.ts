@@ -3,10 +3,10 @@ import {
   writeBatch, query, orderBy, onSnapshot,
   serverTimestamp, Timestamp, arrayUnion, arrayRemove, increment,
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage, auth } from './firebase';
+import { db, auth } from './firebase';
 import { broadcastToActiveMembers, writeNotification } from './notificationService';
 import { recordDealActivity } from './dealService';
+import { uploadMedia } from './mediaService';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -446,15 +446,10 @@ export async function setTicketMute(ticketId: string, uid: string, muted: boolea
 // ─── Photo upload for Spread elements ─────────────────────────────
 
 export async function uploadSpreadPhoto(uid: string, localUri: string): Promise<string> {
-  const resp = await fetch(localUri);
-  const blob = await resp.blob();
   const path = `targetTickets/${uid}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const storageRef = ref(storage, path);
-  await new Promise<void>((resolve, reject) => {
-    const task = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
-    task.on('state_changed', undefined, reject, () => resolve());
-  });
-  return getDownloadURL(storageRef);
+  const result = await uploadMedia(localUri, path, 'image/jpeg');
+  if (!result.url?.startsWith('jhmedia://')) throw new Error('Media upload did not return a portable public photo URL.');
+  return result.url;
 }
 
 export function formatTicketTimestamp(ts: Timestamp | null): string {

@@ -36,6 +36,7 @@ import {
   purgeArchive, formatArchiveTimestamp, archivePreview,
 } from '@/lib/archiveService';
 import { fetchProtectedDataUri } from '@/lib/vaultService';
+import { isReplitMediaUrl, resolveMediaUrl } from '@/lib/mediaService';
 import AppKeyQr from '@/components/admin/AppKeyQr';
 import { SignatureView } from '@/components/SignaturePad';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
@@ -333,11 +334,25 @@ export default function JestersHandScreen() {
   // Load image previews when an archived item is opened.
   useEffect(() => {
     if (!openArch) { setArchImages(null); setArchError(null); setPurgeArmed(false); return; }
-    const imgPaths = openArch.storagePaths.filter(p => !p.match(/^vault\/[^/]+\/file$/));
+    const imgPaths = openArch.storagePaths.filter(p => !p.match(/^(?:replit:)?vault\/[^/]+\/file(?:-[a-z0-9]+-[a-z0-9]+)?$/));
     if (imgPaths.length === 0) { setArchImages([]); return; }
     let live = true;
     setArchImages(null);
-    Promise.all(imgPaths.map(p => fetchProtectedDataUri(p, 'image/jpeg').catch(() => null)))
+    Promise.all(imgPaths.map(p => {
+      if (p.startsWith('replit:')) {
+        // Archived Target spreads retain the tokenized photo URL in their
+        // payload. The Vault uses private reads, never these public pointers.
+        try {
+          const spread = JSON.parse(openArch.payload.spread ?? '{}');
+          const uri = spread.elements?.find((e: { uri?: string }) =>
+            isReplitMediaUrl(e.uri, p.slice('replit:'.length)))?.uri;
+          return Promise.resolve(resolveMediaUrl(uri) ?? null);
+        } catch {
+          return Promise.resolve(null);
+        }
+      }
+      return fetchProtectedDataUri(p, 'image/jpeg').catch(() => null);
+    }))
       .then(uris => { if (live) setArchImages(uris); });
     return () => { live = false; };
   }, [openArch]);

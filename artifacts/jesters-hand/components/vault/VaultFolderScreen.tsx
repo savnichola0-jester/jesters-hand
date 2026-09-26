@@ -121,17 +121,21 @@ const STATUS_LABELS: Record<VaultStatus, string> = {
 };
 
 // Thumbnail that pulls its image through authenticated storage (no public URL).
-function ProtectedThumb({ path, style }: { path?: string; style: any }) {
+function ProtectedThumb({ path, storageProvider, style }: {
+  path?: string;
+  storageProvider?: 'replit';
+  style: any;
+}) {
   const [uri, setUri] = useState<string | null>(null);
   useEffect(() => {
     setUri(null);
     if (!path) return;
     let alive = true;
-    fetchProtectedDataUri(path, 'image/jpeg')
+    fetchProtectedDataUri(path, 'image/jpeg', storageProvider)
       .then(u => { if (alive) setUri(u); })
       .catch(() => {});
     return () => { alive = false; };
-  }, [path]);
+  }, [path, storageProvider]);
   if (!path) {
     return (
       <View style={[style, s.thumbFallback]}>
@@ -524,6 +528,7 @@ export default function VaultFolderScreen({ config }: { config: FolderConfig }) 
         <View style={s.cardRow}>
           <ProtectedThumb
             path={def.fileKind === 'image' ? (item.coverPath ?? item.filePath) : item.coverPath}
+            storageProvider={item.coverPath || def.fileKind !== 'image' ? item.coverStorage : item.fileStorage}
             style={s.thumb}
           />
           <View style={s.cardBody}>

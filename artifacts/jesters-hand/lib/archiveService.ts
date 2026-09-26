@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase';
+import { deleteMediaObject } from './mediaService';
 
 export type ArchiveType =
   | 'ante_post' | 'ante_comment'
@@ -90,6 +91,15 @@ export function extractStoragePaths(payload: Record<string, any>): string[] {
   while ((m = urlRe.exec(json))) {
     try { consider(decodeURIComponent(m[1])); } catch { /* malformed URL — skip */ }
   }
+  // Replit public pointers hold opaque read tokens, but Archives only needs
+  // the underlying path. Never copy the token into storagePaths.
+  const portableRe = /jhmedia:\/\/((?:targetTickets|users|chatMedia)\/[^?"\\]+)\?token=[^"\\]+/g;
+  while ((m = portableRe.exec(json))) {
+    try {
+      const path = decodeURIComponent(m[1]);
+      if (STORAGE_PREFIXES.some(pre => path.startsWith(pre))) found.add(`replit:${path}`);
+    } catch { /* malformed URL — skip */ }
+  }
   return [...found];
 }
 
@@ -118,6 +128,20 @@ export async function archiveItem(input: {
   rsvps?: ArchivedComment[];
 }): Promise<void> {
   const ownerJokerId = await lookupJokerId(input.ownerUid);
+  const storagePaths = extractStoragePaths({ p: input.payload, c: input.comments ?? [] });
+  if (input.type === 'vault_entry') {
+    for (const [pointer, provider] of [
+      ['filePath', 'fileStorage'],
+      ['coverPath', 'coverStorage'],
+    ] as const) {
+      const path = input.payload[pointer];
+      if (typeof path === 'string' && input.payload[provider] === 'replit') {
+        const index = storagePaths.indexOf(path);
+        if (index !== -1) storagePaths.splice(index, 1);
+        storagePaths.push(`replit:${path}`);
+      }
+    }
+  }
   await addDoc(collection(db, 'archives'), {
     type: input.type,
     section: input.section,
@@ -130,7 +154,7 @@ export async function archiveItem(input: {
     reviews: input.reviews ?? [],
     marks: input.marks ?? [],
     rsvps: input.rsvps ?? [],
-    storagePaths: extractStoragePaths({ p: input.payload, c: input.comments ?? [] }),
+    storagePaths,
     createdAtOriginal: (input.payload as any).createdAt ?? null,
     deletedAt: serverTimestamp(),
     deletedByUid: input.deletedByUid,
@@ -242,7 +266,9 @@ export async function restoreArchive(rec: ArchiveRecord): Promise<void> {
  *  vault archive) or transient failure keeps the record intact. */
 export async function purgeArchive(rec: ArchiveRecord): Promise<void> {
   await Promise.all(rec.storagePaths.map(p =>
-    deleteObject(ref(storage, p)).catch((e: { code?: string }) => {
+    p.startsWith('replit:')
+      ? deleteMediaObject(p.slice('replit:'.length))
+      : deleteObject(ref(storage, p)).catch((e: { code?: string }) => {
       if (e?.code === 'storage/object-not-found') return; // already gone
       throw e;
     })));

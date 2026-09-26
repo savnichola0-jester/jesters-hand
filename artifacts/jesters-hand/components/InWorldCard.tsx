@@ -5,10 +5,10 @@ const CARD_BG = require('@/assets/images/in_world_card.png');
 const GOLD = '#D4A853';
 const CREAM = '#EDE0C4';
 
-export function InWorldCard({ style, children, isDone }: { style?: StyleProp<ViewStyle>, children?: React.ReactNode, isDone?: boolean }) {
+export function InWorldCard({ style, children, isDone, artworkFit = 'cover' }: { style?: StyleProp<ViewStyle>, children?: React.ReactNode, isDone?: boolean, artworkFit?: 'cover' | 'contain' }) {
   return (
     <View style={[s.card, isDone && s.cardDone, style]}>
-      <ImageBackground source={CARD_BG} style={s.cardBack} imageStyle={s.cardBackImage} resizeMode="cover">
+      <ImageBackground source={CARD_BG} style={s.cardBack} imageStyle={s.cardBackImage} resizeMode={artworkFit}>
         <View style={s.cardInner}>
           {children}
         </View>

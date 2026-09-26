@@ -6,7 +6,7 @@ import {
   Keyboard, useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadChatImage } from '@/lib/chatMediaService';
+import { deleteChatImage, uploadChatImage } from '@/lib/chatMediaService';
 import { Feather } from '@/components/FIcon';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firest
 import { db } from '@/lib/firebase';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
 import { useAppDimensions } from '@/lib/appWindow';
+import { resolveMediaUrl } from '@/lib/mediaService';
 
 // ── Assets ────────────────────────────────────────────────────────────────────
 const NAV_DAGGER  = require('../../assets/images/nav_dagger.png');
@@ -216,13 +217,16 @@ export default function TableScreen() {
     const text = inputText.trim();
     setInputText('');
     setMentionQuery(null);
+    let uploadedImageUrl: string | null = null;
     try {
-      const url = await uploadChatImage(user.uid, res.assets[0].uri, res.assets[0].mimeType);
-      await sendTableMessage(active.id, user.uid, jokerId, text, url);
+      uploadedImageUrl = await uploadChatImage(user.uid, res.assets[0].uri, res.assets[0].mimeType);
+      await sendTableMessage(active.id, user.uid, jokerId, text, uploadedImageUrl);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     } catch (e) {
       console.error('[Table] attach error:', e);
+      if (uploadedImageUrl) await deleteChatImage(uploadedImageUrl);
       setInputText(text);
+      Alert.alert('Could not attach image', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setSending(false);
     }
@@ -374,7 +378,7 @@ export default function TableScreen() {
       <View style={s.msgRow}>
         <View style={s.msgAvatar}>
           {avatarUrl
-            ? <Image source={{ uri: avatarUrl }} style={s.msgAvatarImg} />
+            ? <Image source={{ uri: resolveMediaUrl(avatarUrl) }} style={s.msgAvatarImg} />
             : <Text style={s.msgAvatarText}>{initial}</Text>
           }
         </View>
@@ -402,7 +406,7 @@ export default function TableScreen() {
                 accessibilityRole="imagebutton"
                 accessibilityLabel="View full image"
               >
-                <Image source={{ uri: item.imageUrl }} style={s.msgImage} resizeMode="cover" />
+                <Image source={{ uri: resolveMediaUrl(item.imageUrl) }} style={s.msgImage} resizeMode="cover" />
               </TouchableOpacity>
             ) : null}
             {item.text ? renderMentionText(item.text) : null}

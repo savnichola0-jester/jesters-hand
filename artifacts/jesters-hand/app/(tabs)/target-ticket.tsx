@@ -8,6 +8,7 @@ import {
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
+import { resolveMediaUrl } from '@/lib/mediaService';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   TargetTicket, Suit, listenTargetTickets, formatTicketTimestamp, SUIT_LABELS,
@@ -71,7 +72,7 @@ export default function TargetTicketScreen() {
       onPress={() => router.push({ pathname: '/(tabs)/target-ticket-view', params: { id: item.id } })}
     >
       {mugs[item.senderUid] ? (
-        <Image source={{ uri: mugs[item.senderUid] }} style={s.mug} />
+        <Image source={{ uri: resolveMediaUrl(mugs[item.senderUid]) }} style={s.mug} />
       ) : (
         <View style={[s.mug, s.mugFallback]}>
           <Feather name="user" size={14} color="rgba(212,168,83,0.6)" />

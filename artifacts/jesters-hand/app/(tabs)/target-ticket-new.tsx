@@ -90,8 +90,8 @@ export default function TargetTicketNewScreen() {
     if (res.canceled || !res.assets?.[0]?.uri) return null;
     try {
       return await uploadSpreadPhoto(user.uid, res.assets[0].uri);
-    } catch {
-      showAlert('Upload failed', 'Could not upload the photo.');
+    } catch (error) {
+      showAlert('Upload failed', error instanceof Error ? error.message : 'Could not upload the photo.');
       return null;
     }
   }, [user]);

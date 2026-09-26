@@ -13,6 +13,7 @@ import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
+import { resolveMediaUrl } from '@/lib/mediaService';
 import { fetchSeatActivitySummary, SeatActivitySummary, SeatTemperature } from '@/lib/activityService';
 import { SeatThermometer } from '@/components/SeatThermometer';
 
@@ -173,7 +174,7 @@ function MemberCard({ member, royalsCount, temperature, onPress }: {
       {/* Circular mug photo or initials fallback */}
       <View style={s.mugWrap}>
         {hasMug ? (
-          <Image source={{ uri: member.mugUrl }} style={s.mug} resizeMode="cover" />
+          <Image source={{ uri: resolveMediaUrl(member.mugUrl) }} style={s.mug} resizeMode="cover" />
         ) : (
           <View style={s.mugEmpty}>
             <Text style={s.mugInitials}>{initials}</Text>

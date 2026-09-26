@@ -251,7 +251,22 @@ await test('whisper message with valid imageUrl succeeds; malformed rejected', a
     senderUid: 'alice', text: '', imageUrl: 'https://firebasestorage.example/x.gif',
     sentAt: new Date(), reactions: {},
   }));
-  // Non-string / non-https / oversized attachment URLs are rejected.
+  await assertSucceeds(setDoc(doc(alice(), 'conversations/conv1/messages/img5'), {
+    senderUid: 'alice', text: '',
+    imageUrl: 'jhmedia://chatMedia/alice/abc123-abcdefgh.gif?token=Abc_123',
+    sentAt: new Date(), reactions: {},
+  }));
+  await assertFails(setDoc(doc(alice(), 'conversations/conv1/messages/img6'), {
+    senderUid: 'alice', text: '',
+    imageUrl: 'jhmedia://chatMedia/bob/abc123-abcdefgh.gif?token=Abc_123',
+    sentAt: new Date(), reactions: {},
+  }));
+  await assertFails(setDoc(doc(alice(), 'conversations/conv1/messages/img7'), {
+    senderUid: 'alice', text: '',
+    imageUrl: 'jhmedia://chatMedia/alice/abc123-abcdefgh.jpeg?token=Abc_123',
+    sentAt: new Date(), reactions: {},
+  }));
+  // Non-string / unsupported-scheme / oversized attachment URLs are rejected.
   await assertFails(setDoc(doc(alice(), 'conversations/conv1/messages/img2'), {
     senderUid: 'alice', text: '', imageUrl: 12345, sentAt: new Date(), reactions: {},
   }));
@@ -303,6 +318,21 @@ await test('table message with valid imageUrl succeeds; malformed rejected', asy
   await assertSucceeds(setDoc(doc(alice(), 'tableMessages/general/messages/img1'), {
     senderUid: 'alice', senderJokerId: '01-01', text: 'look',
     imageUrl: 'https://firebasestorage.example/y.jpg', sentAt: new Date(), reactions: {},
+  }));
+  await assertSucceeds(setDoc(doc(alice(), 'tableMessages/general/messages/img3'), {
+    senderUid: 'alice', senderJokerId: '01-01', text: 'look',
+    imageUrl: 'jhmedia://chatMedia/alice/abc123-abcdefgh.webp?token=Abc_123',
+    sentAt: new Date(), reactions: {},
+  }));
+  await assertFails(setDoc(doc(alice(), 'tableMessages/general/messages/img4'), {
+    senderUid: 'alice', senderJokerId: '01-01', text: 'look',
+    imageUrl: 'jhmedia://chatMedia/bob/abc123-abcdefgh.webp?token=Abc_123',
+    sentAt: new Date(), reactions: {},
+  }));
+  await assertFails(setDoc(doc(alice(), 'tableMessages/general/messages/img5'), {
+    senderUid: 'alice', senderJokerId: '01-01', text: 'look',
+    imageUrl: 'jhmedia://chatMedia/alice/abc123-abcdefgh.webp',
+    sentAt: new Date(), reactions: {},
   }));
   await assertFails(setDoc(doc(alice(), 'tableMessages/general/messages/img2'), {
     senderUid: 'alice', senderJokerId: '01-01', text: '',
@@ -1437,6 +1467,13 @@ await test('admin can set another member adminPhotoUrl and nothing else', async 
   // Admin places the admin portrait on Alice's ticket.
   await assertSucceeds(updateDoc(doc(admin(), 'users/alice'),
     { adminPhotoUrl: 'https://x/a.jpg' }));
+  await assertSucceeds(updateDoc(doc(admin(), 'users/alice'), {
+    adminPhotoUrl: 'jhmedia://users/alice/admin-mabc1234-k9x7p2q1.jpg?token=opaque123',
+    adminCardId: '',
+  }));
+  await assertFails(updateDoc(doc(admin(), 'users/alice'), {
+    adminPhotoUrl: 'jhmedia://users/mallory/admin-mabc1234-k9x7p2q1.jpg?token=opaque123',
+  }));
   // The member's own mug and ticket fields are off-limits to the admin.
   await assertFails(updateDoc(doc(admin(), 'users/alice'), { mugUrl: 'https://x/m.jpg' }));
   await assertFails(updateDoc(doc(admin(), 'users/alice'), { coffee: 'Black' }));

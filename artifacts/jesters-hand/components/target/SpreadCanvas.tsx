@@ -26,6 +26,7 @@ import {
   SpreadState, SpreadElement, SpreadConnector, DotColor, DOT_META,
 } from '@/lib/targetTicketService';
 import { StatusDot, DotPickerModal } from './StatusDot';
+import { resolveMediaUrl } from '@/lib/mediaService';
 
 const GOLD = '#D4A853';
 const CREAM = '#F5E8C8';
@@ -135,7 +136,7 @@ function RegionPhoto({ el, x0, x1, y0, y1, active, onPress, framed }: {
   const fs = Math.max(6, el.w * 0.05);
   const box = [fbox(el, x0, x1, y0, y1), framed && styles.regionPhotoWell];
   const inner = el.uri
-    ? <Image source={{ uri: el.uri }} style={StyleSheet.absoluteFill as any} resizeMode="cover" />
+    ? <Image source={{ uri: resolveMediaUrl(el.uri) }} style={StyleSheet.absoluteFill as any} resizeMode="cover" />
     : (active && framed
         ? <Text style={[styles.regionPhotoHint, { fontSize: fs }]}>Tap to{'\n'}upload</Text>
         : null);

@@ -21,6 +21,7 @@ import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
+import { resolveMediaUrl } from '@/lib/mediaService';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -267,7 +268,7 @@ export default function AnteScreen() {
       <View style={s.postHead}>
         <View style={s.postAvatar}>
           {mug
-            ? <Image source={{ uri: mug }} style={s.postAvatarImg} />
+            ? <Image source={{ uri: resolveMediaUrl(mug) }} style={s.postAvatarImg} />
             : <Text style={s.postAvatarText}>{label.slice(0, 2).toUpperCase()}</Text>
           }
         </View>
@@ -426,10 +427,19 @@ export default function AnteScreen() {
                 return (
                   <Pressable
                     style={s.postCard}
+                    testID={`ante-post-${item.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${isPlace ? 'ante card' : 'standoff'}: ${item.title}`}
                     onPress={() => { setPickerTarget(null); setComments([]); setOpenPostId(item.id); }}
                   >
                     {renderSenderHead(item.senderUid, item.createdAt)}
-                    {renderPostBody(item)}
+                    <Text style={s.postKind}>{isPlace ? 'CARD THROWN DOWN' : 'STANDOFF'}</Text>
+                    <Text style={s.postTitle} numberOfLines={2}>{item.title}</Text>
+                    <Text style={s.postPreview} numberOfLines={2}>
+                      {item.description.trim() || (item.options.length > 0
+                        ? `${item.options.length} choices inside`
+                        : 'Open to read and respond')}
+                    </Text>
                     <View style={s.postFootRow}>
                       <View style={s.footBtn}>
                         <Feather name="message-circle" size={13} color="rgba(212,168,83,0.7)" />
@@ -613,7 +623,7 @@ export default function AnteScreen() {
                       </TouchableOpacity>
                     </View>
                   </Pressable>
-                  <Text style={s.commentsSectionTitle}>SPEAK YOUR PIECE</Text>
+                   <Text style={s.commentsSectionTitle}>COMMENTS & REACTIONS</Text>
                 </>
               ) : null}
               ListEmptyComponent={
@@ -768,8 +778,10 @@ const s = StyleSheet.create({
   postAvatarText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10 },
   postSender: { flex: 1, color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 12, letterSpacing: 1 },
   postTime:   { color: 'rgba(237,224,196,0.3)', fontFamily: 'Cinzel_400Regular', fontSize: 10 },
+  postKind:   { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.8, marginBottom: 7 },
   postTitle:  { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 1, marginBottom: 6 },
   postText:   { color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 13, lineHeight: 20 },
+  postPreview: { color: 'rgba(237,224,196,0.62)', fontFamily: 'Cinzel_400Regular', fontSize: 12, lineHeight: 18 },
 
   optionsWrap: { marginTop: 8, gap: 6 },
   optionRow: {

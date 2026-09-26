@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { useAppDimensions } from '@/lib/appWindow';
+import { resolveMediaUrl } from '@/lib/mediaService';
 
 interface ChatImageViewerProps {
   uri: string | null;
@@ -42,7 +43,7 @@ export default function ChatImageViewer({ uri, onClose }: ChatImageViewerProps) 
               showsVerticalScrollIndicator={false}
             >
               <Image
-                source={{ uri }}
+                source={{ uri: resolveMediaUrl(uri) }}
                 style={{ width, height }}
                 resizeMode="contain"
                 {...(Platform.OS === 'web' ? { draggable: false } as any : {})}

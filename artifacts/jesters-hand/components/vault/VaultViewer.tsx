@@ -16,6 +16,8 @@ import VaultDiscussion, { VaultDiscussionTarget } from '@/components/vault/Vault
 import { appWindow, APP_MAX_W } from '@/lib/appWindow';
 import { PDF_PARAGRAPH_HELPER_SOURCE } from '@/lib/pdfParagraphs';
 import { resolveVaultReaderEndState } from '@/lib/vaultReaderState';
+import { buildEpubReaderDocument } from '@/lib/epubReader';
+import { inflateRawBase64Bounded } from '@/lib/epubDeflateFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CREAM = '#EDE0C4';
@@ -149,7 +151,8 @@ function buildReaderHtml(fetchInfo: { url: string; token: string }, contentType:
           if (window.__pendingGoto != null) { const pg = window.__pendingGoto; window.__pendingGoto = null; go(Math.floor(pg) - 1); }
           else apply();
         }
-        return { init, go, cur: () => idx };
+        function setTotal(n){ total=Math.max(1,n);idx=Math.min(idx,total-1);apply(); }
+        return { init, go, cur: () => idx, setTotal };
       })();
     </script>`;
   const guard = `
@@ -285,6 +288,10 @@ function buildReaderHtml(fetchInfo: { url: string; token: string }, contentType:
             onShow(window.__flip.cur());
           }).catch(()=>{document.getElementById('msg').textContent='Could not open this file.';});
       </script></body></html>`;
+  }
+
+  if (contentType.includes('epub')) {
+    return buildEpubReaderDocument(fetchInfo, chrome, overlay, guard, flipJs, baseCss);
   }
 
   // Word documents (.docx) — converted to HTML in the sandbox with mammoth,
@@ -434,9 +441,25 @@ const HtmlReader = React.forwardRef<HtmlReaderHandle, {
   onPages?: (numPages: number) => void;
   onQuote?: (quote: string) => void;
   onPassage?: (passage: { targetId: string; page: number; quote: string }) => void;
-}>(function HtmlReader({ html, onPage, onPages, onQuote, onPassage }, ref) {
+  onInflateRequest?: (request: { id: string; expectedSize: number; data: string }) => string;
+}>(function HtmlReader({ html, onPage, onPages, onQuote, onPassage, onInflateRequest }, ref) {
   const iframeRef = useRef<any>(null);
   const webviewRef = useRef<any>(null);
+  const answerInflate = useCallback((request: { id: string; expectedSize: number; data: string }) => {
+    let response: { id: string; data?: string; error?: string };
+    try {
+      if (!onInflateRequest) throw new Error('No local EPUB deflate fallback is available.');
+      response = { id: request.id, data: onInflateRequest(request) };
+    } catch {
+      response = { id: request.id, error: 'Could not decompress this EPUB entry safely.' };
+    }
+    const encoded = JSON.stringify(response);
+    if (Platform.OS === 'web') {
+      iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ vaultInflateResult: response }), '*');
+    } else {
+      webviewRef.current?.injectJavaScript(`window.__vaultInflateResult&&window.__vaultInflateResult(${encoded});true;`);
+    }
+  }, [onInflateRequest]);
 
   React.useImperativeHandle(ref, () => ({
     gotoPage: (page: number) => {
@@ -459,6 +482,22 @@ const HtmlReader = React.forwardRef<HtmlReaderHandle, {
         if (data && typeof data.vaultPage === 'number') onPage?.(data.vaultPage);
         if (data && typeof data.vaultPages === 'number') onPages?.(data.vaultPages);
         if (data && typeof data.vaultQuote === 'string') onQuote?.(data.vaultQuote);
+        const inflate = data?.vaultInflateRequest;
+        if (
+          inflate
+          && typeof inflate.id === 'string'
+          && typeof inflate.expectedSize === 'number'
+          && inflate.expectedSize >= 0
+          && inflate.expectedSize <= 4 * 1024 * 1024
+          && typeof inflate.data === 'string'
+          && inflate.data.length <= 6 * 1024 * 1024
+        ) {
+          answerInflate({
+            id: inflate.id.slice(0, 80),
+            expectedSize: Math.floor(inflate.expectedSize),
+            data: inflate.data,
+          });
+        }
         if (
           data?.vaultPassage
           && typeof data.vaultPassage.targetId === 'string'
@@ -475,7 +514,7 @@ const HtmlReader = React.forwardRef<HtmlReaderHandle, {
     };
     window.addEventListener('message', listener);
     return () => window.removeEventListener('message', listener);
-  }, [onPage, onPages, onQuote, onPassage]);
+  }, [onPage, onPages, onQuote, onPassage, answerInflate]);
 
   if (Platform.OS === 'web') {
     return React.createElement('iframe', {
@@ -502,6 +541,22 @@ const HtmlReader = React.forwardRef<HtmlReaderHandle, {
           if (data && typeof data.vaultPage === 'number') onPage?.(data.vaultPage);
           if (data && typeof data.vaultPages === 'number') onPages?.(data.vaultPages);
           if (data && typeof data.vaultQuote === 'string') onQuote?.(data.vaultQuote);
+        const inflate = data?.vaultInflateRequest;
+        if (
+          inflate
+          && typeof inflate.id === 'string'
+          && typeof inflate.expectedSize === 'number'
+          && inflate.expectedSize >= 0
+          && inflate.expectedSize <= 4 * 1024 * 1024
+          && typeof inflate.data === 'string'
+          && inflate.data.length <= 6 * 1024 * 1024
+        ) {
+          answerInflate({
+            id: inflate.id.slice(0, 80),
+            expectedSize: Math.floor(inflate.expectedSize),
+            data: inflate.data,
+          });
+        }
           if (
             data?.vaultPassage
             && typeof data.vaultPassage.targetId === 'string'
@@ -551,6 +606,11 @@ export default function VaultViewer({ entry, watermarkLabel, notice, fallbackCon
   const readerRef = useRef<HtmlReaderHandle>(null);
   const onPage = useCallback((p: number) => { pageRef.current = p; setLivePage(p); }, []);
   const onPages = useCallback((n: number) => setNumPages(n), []);
+  const onInflateRequest = useCallback(
+    (request: { id: string; expectedSize: number; data: string }) =>
+      inflateRawBase64Bounded(request.data, request.expectedSize),
+    [],
+  );
   const chapters = entry?.chapters?.length ? entry.chapters : null;
 
   const chapterAtPage = useCallback((page: number) => {
@@ -657,6 +717,7 @@ export default function VaultViewer({ entry, watermarkLabel, notice, fallbackCon
     const map: Record<string, string> = {
       pdf: 'application/pdf',
       docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      epub: 'application/epub+zip',
       txt: 'text/plain', md: 'text/plain',
       png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', heic: 'image/heic',
     };
@@ -680,7 +741,7 @@ export default function VaultViewer({ entry, watermarkLabel, notice, fallbackCon
     if (isImage) {
       // Images: temp cache file (native) / blob object URL (web) — no base64
       // data URI, so multi-MB artwork doesn't triple memory during load.
-      fetchProtectedImage(entry.filePath, contentType)
+      fetchProtectedImage(entry.filePath, contentType, entry.fileStorage)
         .then(h => {
           if (alive) { handle = h; setImage(h); }
           else h.release();
@@ -689,7 +750,7 @@ export default function VaultViewer({ entry, watermarkLabel, notice, fallbackCon
     } else {
       // Documents: the sandboxed reader streams the bytes itself with a
       // short-lived ID token, so large books never pass through base64.
-      getProtectedFetchInfo(entry.filePath)
+      getProtectedFetchInfo(entry.filePath, entry.fileStorage)
         .then(info => { if (alive) setFetchInfo(info); })
         .catch(() => { if (alive) setError(true); });
     }
@@ -782,6 +843,7 @@ export default function VaultViewer({ entry, watermarkLabel, notice, fallbackCon
               onPages={onPages}
               onQuote={onQuote}
               onPassage={onPassage}
+              onInflateRequest={onInflateRequest}
             />
           ) : null}
 

@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@/components/FIcon';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTicket, saveTicket, uploadMug, uploadAdminPhoto, deleteMug } from '@/lib/ticketService';
+import { getTicket, saveTicket, uploadMug, uploadAdminPhoto, deleteMug, deleteAdminPhoto } from '@/lib/ticketService';
 import { listenOwnStats, DealMemberStats } from '@/lib/dealService';
 import { broadcastToActiveMembers } from '@/lib/notificationService';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
@@ -19,6 +19,7 @@ import { fieldsForJokerId, SUIT_GLYPHS, SUIT_GENRES } from '@/lib/ticketFields';
 import { appWindow } from '@/lib/appWindow';
 import { fetchSeatActivitySummary, SeatActivitySummary } from '@/lib/activityService';
 import { SeatThermometer } from '@/components/SeatThermometer';
+import { resolveMediaUrl } from '@/lib/mediaService';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -176,11 +177,13 @@ export default function TicketScreen() {
       if (target === 'admin') {
         const url = await uploadAdminPhoto(user.uid, res.assets[0].uri, progress);
         await saveTicket(user.uid, { adminPhotoUrl: url, adminCardId: '' });
+        if (adminPhoto && adminPhoto !== url) void deleteAdminPhoto(user.uid, adminPhoto).catch(() => {});
         setTimeout(refreshSeat, 750);
         setAdminPhoto(url);
       } else {
         const url = await uploadMug(user.uid, res.assets[0].uri, progress);
         await saveTicket(user.uid, { mugUrl: url });
+        if (userPhoto && userPhoto !== url) void deleteMug(user.uid, userPhoto).catch(() => {});
         setTimeout(refreshSeat, 750);
         setUserPhoto(url);
       }
@@ -196,16 +199,21 @@ export default function TicketScreen() {
     } finally {
       setUploading(false);
     }
-  }, [jokerId, uploading, user]);
+  }, [jokerId, uploading, user, userPhoto, adminPhoto]);
 
   // ── Go Dark ──────────────────────────────────────────────────────────────
   const goDark = useCallback(async () => {
-    setUserPhoto(null);
     if (user) {
-      await deleteMug(user.uid).catch(() => {});
-      await saveTicket(user.uid, { mugUrl: '' }).catch(() => {});
-    }
-  }, [user]);
+      try {
+        await saveTicket(user.uid, { mugUrl: '' });
+        setUserPhoto(null);
+        await deleteMug(user.uid, userPhoto);
+      } catch {
+        Alert.alert('Photo removal failed', 'Could not remove your photo. Try again.');
+        return;
+      }
+    } else setUserPhoto(null);
+  }, [user, userPhoto]);
 
   // ── Locked until "Review Intel" is pressed ────────────────────────────────
   const [unlocked, setUnlocked] = useState(false);
@@ -258,7 +266,7 @@ export default function TicketScreen() {
     }
   }, [user]);
 
-  const displayedAdminCard = adminPhoto ? { uri: adminPhoto } : undefined;
+  const displayedAdminCard = adminPhoto ? { uri: resolveMediaUrl(adminPhoto) } : undefined;
 
   return (
     <View style={s.root}>
@@ -334,7 +342,7 @@ export default function TicketScreen() {
                 activeOpacity={0.85}
               >
                 {userPhoto
-                  ? <Image source={{ uri: userPhoto }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                  ? <Image source={{ uri: resolveMediaUrl(userPhoto) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
                   : <View style={s.cardEmpty}>
                       <Feather name="camera" size={26} color="rgba(237,224,196,0.4)" />
                       <Text style={s.cardLabel}>Your Mug</Text>

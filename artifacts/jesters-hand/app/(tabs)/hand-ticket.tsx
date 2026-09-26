@@ -7,7 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@/components/FIcon';
-import { getTicket, saveTicket, uploadAdminPhoto, TicketData } from '@/lib/ticketService';
+import { getTicket, saveTicket, uploadAdminPhoto, deleteAdminPhoto, TicketData } from '@/lib/ticketService';
 import { useAuth } from '@/contexts/AuthContext';
 import { listenOwnStats, DealMemberStats } from '@/lib/dealService';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
@@ -18,6 +18,7 @@ import { appWindow } from '@/lib/appWindow';
 import { writeNotification } from '@/lib/notificationService';
 import { fetchSeatActivitySummary, SeatActivitySummary } from '@/lib/activityService';
 import { SeatThermometer } from '@/components/SeatThermometer';
+import { resolveMediaUrl } from '@/lib/mediaService';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -138,6 +139,8 @@ export default function HandTicketScreen() {
       setUploading(true);
       const url = await uploadAdminPhoto(uid, res.assets[0].uri);
       await saveTicket(uid, { adminPhotoUrl: url, adminCardId: '' });
+      if (ticket?.adminPhotoUrl && ticket.adminPhotoUrl !== url)
+        void deleteAdminPhoto(uid, ticket.adminPhotoUrl).catch(() => {});
       setTicket(t => (t ? { ...t, adminPhotoUrl: url, adminCardId: '' } : t));
       setSaveMsg('Admin card updated.');
     } catch (error: any) {
@@ -152,7 +155,7 @@ export default function HandTicketScreen() {
     } finally {
       setUploading(false);
     }
-  }, [uid, uploading, isHandAdmin]);
+  }, [uid, uploading, isHandAdmin, ticket?.adminPhotoUrl]);
 
   // ── Admin: mark the member's suit on their ticket ─────────────────────────
   const [suitBusy, setSuitBusy] = useState(false);
@@ -194,7 +197,7 @@ export default function HandTicketScreen() {
   };
 
   const displayedAdminCard = ticket?.adminPhotoUrl
-    ? { uri: ticket.adminPhotoUrl }
+    ? { uri: resolveMediaUrl(ticket.adminPhotoUrl) }
     : undefined;
 
   return (
@@ -267,7 +270,7 @@ export default function HandTicketScreen() {
                   {/* Mug photo — the member's own; view-only here */}
                   <View style={[s.card, { width: CARD_W, height: CARD_H }]}>
                     {ticket.mugUrl ? (
-                      <Image source={{ uri: ticket.mugUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                      <Image source={{ uri: resolveMediaUrl(ticket.mugUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />
                     ) : (
                       <View style={s.cardEmpty}>
                         <Feather name="user" size={26} color="rgba(237,224,196,0.2)" />

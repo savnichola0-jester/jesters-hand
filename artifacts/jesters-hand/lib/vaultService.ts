@@ -1,10 +1,7 @@
 // ── Vault service ─────────────────────────────────────────────────────────────
 // The Vault holds admin-published reading files (The Stack) and artwork
-// (The Wall). Files live in PRIVATE Firebase Storage under vault/{entryId}/…
-// and are NEVER exposed through permanent/tokenized download URLs. Members
-// fetch bytes through the authenticated Storage REST endpoint with their
-// short-lived Firebase ID token; Storage rules re-verify (admin OR entry
-// published) on every request via a cross-service Firestore lookup.
+// (The Wall). New files live in private Replit App Storage and are only
+// reachable through the authenticated API after its entry-pointer check.
 
 import {
   collection, doc, onSnapshot, query, where,
@@ -12,9 +9,9 @@ import {
   serverTimestamp, Timestamp, deleteField, getDocs, orderBy, limit,
 } from 'firebase/firestore';
 import { Platform } from 'react-native';
-import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
-import { auth, db, storage } from './firebase';
+import { auth, db } from './firebase';
 import { broadcastToActiveMembers } from './notificationService';
+import { deleteMediaObject, mediaApiUrl, uploadMedia } from './mediaService';
 
 export type VaultSection = 'stack' | 'wall' | 'margins' | 'cut';
 export type VaultStatus = 'published' | 'hidden' | 'archived';
@@ -36,10 +33,14 @@ export interface VaultEntry {
   chapters?: VaultChapter[];
   /** Private storage path of the main file (document or artwork). */
   filePath?: string;
+  /** Missing means this entry still points to legacy Firebase Storage. */
+  fileStorage?: 'replit';
   fileName?: string;
   contentType?: string;
   /** Optional private storage path of a cover/thumbnail image. */
   coverPath?: string;
+  /** Missing means this cover still points to legacy Firebase Storage. */
+  coverStorage?: 'replit';
   /**
    * Decoder game lock (Chamber): sha256 hex of the normalized secret answer.
    * Members must enter the answer to open the entry; absent = no lock.
@@ -149,15 +150,10 @@ export function listenVaultActivity(
   }, e => onError?.(e));
 }
 
-// ── Uploads / CRUD (admin only — enforced by Firestore & Storage rules) ──────
+// ── Uploads / CRUD (admin authorization is enforced by the API) ───────────────
 
 async function uploadToPath(path: string, localUri: string, contentType?: string): Promise<void> {
-  const res = await fetch(localUri);
-  const blob = await res.blob();
-  const task = uploadBytesResumable(ref(storage, path), blob, contentType ? { contentType } : undefined);
-  await new Promise<void>((resolve, reject) => {
-    task.on('state_changed', undefined, reject, () => resolve());
-  });
+  await uploadMedia(localUri, path, contentType ?? 'application/octet-stream');
 }
 
 export interface VaultFilePick {
@@ -192,9 +188,11 @@ export async function addVaultEntry(
     ...(input.chapters?.length ? { chapters: normalizeChapters(input.chapters) } : {}),
     ...(input.decoderHash ? { decoderHash: input.decoderHash } : {}),
     filePath,
+    fileStorage: 'replit',
     ...(file.name ? { fileName: file.name } : {}),
     ...(file.mimeType ? { contentType: file.mimeType } : {}),
     ...(coverPath ? { coverPath } : {}),
+    ...(coverPath ? { coverStorage: 'replit' } : {}),
     createdBy: uid,
     reactions: {},
     commentCount: 0,
@@ -235,6 +233,11 @@ function replacementFilePath(entryId: string): string {
   return `vault/${entryId}/file-${version}`;
 }
 
+function replacementCoverPath(entryId: string): string {
+  const version = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `vault/${entryId}/cover-${version}`;
+}
+
 /** Replace the main file (or cover) while keeping the same entry/card. */
 export async function replaceVaultFile(
   entry: VaultEntry,
@@ -242,40 +245,39 @@ export async function replaceVaultFile(
   which: 'file' | 'cover',
   replacementChapters?: VaultChapter[] | null,
 ): Promise<void> {
-  // Main-file replacements use an immutable object name. Until the final
-  // Firestore switch, Storage rules expose only entry.filePath (the old file);
-  // after it, the old object becomes unreadable even to a stale client.
+  // Replacements use immutable object names so clients only gain access after
+  // the matching Firestore pointer is switched.
   const path = which === 'file'
     ? replacementFilePath(entry.id)
-    : `vault/${entry.id}/cover`;
+    : replacementCoverPath(entry.id);
   const entryRef = doc(db, 'vault', entry.id);
   await uploadToPath(path, file.uri, file.mimeType);
   const patch: Record<string, unknown> = { updatedAt: serverTimestamp() };
   if (which === 'file') {
     patch.filePath = path;
+    patch.fileStorage = 'replit';
     patch.fileName = file.name ?? deleteField();
     patch.contentType = file.mimeType ?? deleteField();
     const normalized = replacementChapters ? normalizeChapters(replacementChapters) : [];
     patch.chapters = normalized.length ? normalized : deleteField();
   } else {
     patch.coverPath = path;
+    patch.coverStorage = 'replit';
   }
   try {
     // One atomic document update publishes the new object pointer, metadata,
     // and its matching chapter map together.
     await updateDoc(entryRef, patch);
   } catch (error) {
-    if (which === 'file') {
-      // The staged object was never published. Best-effort cleanup; Storage
-      // rules deny reads because entry.filePath still points at the old file.
-      await deleteObject(ref(storage, path)).catch(() => {});
-    }
+    // The staged object was never published, so it is safe to remove.
+    await deleteMediaObject(path).catch(() => {});
     throw error;
   }
-  if (which === 'file' && entry.filePath && entry.filePath !== path) {
-    // Once the pointer switched, the previous object is no longer readable.
-    // Physical cleanup is best-effort and cannot compromise consistency.
-    deleteObject(ref(storage, entry.filePath)).catch(() => {});
+  const previousPath = which === 'file' ? entry.filePath : entry.coverPath;
+  const previousStorage = which === 'file' ? entry.fileStorage : entry.coverStorage;
+  if (previousPath && previousPath !== path && previousStorage === 'replit') {
+    // Never delete legacy Firebase originals during replacement.
+    void deleteMediaObject(previousPath).catch(() => {});
   }
 }
 
@@ -320,24 +322,28 @@ export async function deleteVaultEntry(entry: VaultEntry): Promise<void> {
 }
 
 // ── Protected content fetch ───────────────────────────────────────────────────
-// Downloads bytes through the Storage REST endpoint using the caller's
-// short-lived Firebase ID token. No download token / permanent URL is ever
-// created or stored; Storage rules re-check permission on every request.
+// New marked objects download through the authenticated API; unmarked legacy
+// entries retain their Firebase request path and may need to be reuploaded.
 
 const BUCKET = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET as string;
 
 /**
  * Short-lived fetch parameters for protected content. The URL alone grants
  * nothing — the Authorization header with the caller's ID token is required,
- * and Storage rules re-verify on every request. Used by the document reader
+ * and the API re-verifies the live Firestore pointer on every request. Used by the document reader
  * to stream bytes directly inside its sandboxed WebView (no base64 data URI,
  * so large files don't triple memory use in JS before reaching the reader).
  */
-export async function getProtectedFetchInfo(path: string): Promise<{ url: string; token: string }> {
+export async function getProtectedFetchInfo(
+  path: string,
+  storageProvider?: 'replit',
+): Promise<{ url: string; token: string }> {
   const user = auth.currentUser;
   if (!user) throw new Error('Not signed in');
   const token = await user.getIdToken();
-  const url = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(path)}?alt=media`;
+  const url = storageProvider === 'replit'
+    ? mediaApiUrl(`private?path=${encodeURIComponent(path)}`)
+    : `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(path)}?alt=media`;
   return { url, token };
 }
 
@@ -355,8 +361,12 @@ export interface ProtectedImageHandle {
   release: () => void;
 }
 
-export async function fetchProtectedImage(path: string, fallbackMime = 'image/jpeg'): Promise<ProtectedImageHandle> {
-  const { url, token: idToken } = await getProtectedFetchInfo(path);
+export async function fetchProtectedImage(
+  path: string,
+  fallbackMime = 'image/jpeg',
+  storageProvider?: 'replit',
+): Promise<ProtectedImageHandle> {
+  const { url, token: idToken } = await getProtectedFetchInfo(path, storageProvider);
   if (Platform.OS === 'web') {
     const res = await fetch(url, { headers: { Authorization: `Firebase ${idToken}` } });
     if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
@@ -410,8 +420,12 @@ export async function sweepVaultTempFiles(): Promise<void> {
   }
 }
 
-export async function fetchProtectedDataUri(path: string, fallbackMime = 'application/octet-stream'): Promise<string> {
-  const { url, token: idToken } = await getProtectedFetchInfo(path);
+export async function fetchProtectedDataUri(
+  path: string,
+  fallbackMime = 'application/octet-stream',
+  storageProvider?: 'replit',
+): Promise<string> {
+  const { url, token: idToken } = await getProtectedFetchInfo(path, storageProvider);
   const res = await fetch(url, { headers: { Authorization: `Firebase ${idToken}` } });
   if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
   const blob = await res.blob();

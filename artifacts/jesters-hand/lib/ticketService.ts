@@ -3,13 +3,8 @@
  * All functions are async and safe to call from React components.
  */
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
+import { deleteMediaObject, replitMediaPath, uploadMedia } from './mediaService';
 
 export interface TicketData {
   jokerId?: string;
@@ -61,22 +56,10 @@ export async function uploadMug(
   localUri: string,
   onProgress?: (pct: number) => void
 ): Promise<string> {
-  const res  = await fetch(localUri);
-  const blob = await res.blob();
-  const path = `users/${uid}/mug.jpg`;
-  const storageRef = ref(storage, path);
-  return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
-    task.on(
-      'state_changed',
-      (snap) => onProgress && onProgress(snap.bytesTransferred / snap.totalBytes),
-      reject,
-      async () => {
-        const url = await getDownloadURL(storageRef);
-        resolve(url);
-      }
-    );
-  });
+  const path = `users/${uid}/mug-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}.jpg`;
+  const result = await uploadMedia(localUri, path, 'image/jpeg', onProgress);
+  if (!result.url?.startsWith('jhmedia://')) throw new Error('Media upload did not return a portable public photo URL.');
+  return result.url;
 }
 
 // ── Upload admin photo ────────────────────────────────────────────────────────
@@ -85,22 +68,10 @@ export async function uploadAdminPhoto(
   localUri: string,
   onProgress?: (pct: number) => void
 ): Promise<string> {
-  const res  = await fetch(localUri);
-  const blob = await res.blob();
-  const path = `users/${uid}/admin.jpg`;
-  const storageRef = ref(storage, path);
-  return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
-    task.on(
-      'state_changed',
-      (snap) => onProgress && onProgress(snap.bytesTransferred / snap.totalBytes),
-      reject,
-      async () => {
-        const url = await getDownloadURL(storageRef);
-        resolve(url);
-      }
-    );
-  });
+  const path = `users/${uid}/admin-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}.jpg`;
+  const result = await uploadMedia(localUri, path, 'image/jpeg', onProgress);
+  if (!result.url?.startsWith('jhmedia://')) throw new Error('Media upload did not return a portable public photo URL.');
+  return result.url;
 }
 
 // ── Get ALL members for The Hand directory (filed or not) ─────────────────────
@@ -113,10 +84,16 @@ export async function getAllMembers(): Promise<Array<TicketData & { uid: string 
 }
 
 // ── Delete mug ────────────────────────────────────────────────────────────────
-export async function deleteMug(uid: string): Promise<void> {
-  try {
-    await deleteObject(ref(storage, `users/${uid}/mug.jpg`));
-  } catch {
-    // File may not exist — that's fine
+export async function deleteMug(uid: string, currentUrl?: string | null): Promise<void> {
+  const path = replitMediaPath(currentUrl);
+  if (path && path.startsWith(`users/${uid}/mug-`) && path.endsWith('.jpg')) {
+    await deleteMediaObject(path);
+  }
+}
+
+export async function deleteAdminPhoto(uid: string, currentUrl?: string | null): Promise<void> {
+  const path = replitMediaPath(currentUrl);
+  if (path && path.startsWith(`users/${uid}/admin-`) && path.endsWith('.jpg')) {
+    await deleteMediaObject(path);
   }
 }
