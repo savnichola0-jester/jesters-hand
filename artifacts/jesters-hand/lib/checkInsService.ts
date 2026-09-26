@@ -27,7 +27,7 @@ export interface CheckInMember {
   streak: number;
   checkedInToday: boolean;
   issuedToday: boolean;
-  pendingMilestones: Array<{ milestoneId: string; streak: number }>;
+  pendingMilestones?: Array<{ milestoneId: string; streak: number }>;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -50,6 +50,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const getMyCheckIns = () => request<{ state: CheckInState }>('/me');
 export const getCheckInMembers = () => request<{ members: CheckInMember[] }>('/admin');
+export const getCheckInRoster = () => request<{ members: CheckInMember[] }>('/members');
 export const redeemCheckInCode = (code: string) =>
   request<{ state: CheckInState }>('/redeem', { method: 'POST', body: JSON.stringify({ code }) });
 export const chooseCheckInReward = (targetUid: string, milestoneId: string, kind: 'royal' | 'merch', description: string) =>

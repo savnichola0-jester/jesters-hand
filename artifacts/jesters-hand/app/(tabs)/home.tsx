@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, ScrollView, StyleSheet, Dimensions, Platform, Text, TouchableOpacity } from 'react-native';
+import { View, Image, ScrollView, StyleSheet, Platform, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFileTransition } from '@/contexts/FileTransition';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,16 +68,16 @@ export default function HomeScreen() {
             activeOpacity={tile.route ? 0.85 : 1}
           >
             {tile.checkIns ? (
-              <View style={{ width: TILE_W, height: TILE_W, alignItems: 'center', justifyContent: 'center' }}>
-                <Image source={require('../../assets/images/check_ins_frame.png')} style={StyleSheet.absoluteFill} resizeMode="contain" />
-                <Image source={require('../../assets/images/check_ins_icon.png')} style={{ width: TILE_W * 0.63, height: TILE_W * 0.63, marginBottom: 18 }} resizeMode="contain" />
-                <Text style={styles.checkInsLabel}>CHECK-INS</Text>
+              <View style={styles.newTile}>
+                <Image source={require('../../assets/images/check_ins_frame.png')} style={styles.tileFrame} resizeMode="contain" />
+                <Image source={require('../../assets/images/check_ins_icon.png')} style={styles.checkInsIcon} resizeMode="contain" />
+                <Text style={styles.tileLabel}>CHECK-INS</Text>
               </View>
             ) : tile.game ? (
-              <View style={{ width: TILE_W, height: TILE_W, alignItems: 'center', justifyContent: 'center' }}>
-                <Image source={require('../../assets/images/game_frame.png')} style={StyleSheet.absoluteFill} resizeMode="contain" />
-                <Image source={require('../../assets/images/game_icon.png')} style={{ width: TILE_W * 0.72, height: TILE_W * 0.72, marginBottom: 18 }} resizeMode="contain" />
-                <Text style={styles.checkInsLabel}>THE GAME</Text>
+              <View style={styles.newTile}>
+                <Image source={require('../../assets/images/game_frame.png')} style={styles.tileFrame} resizeMode="contain" />
+                <Image source={require('../../assets/images/game_icon.png')} style={styles.gameIcon} resizeMode="contain" />
+                <Text style={styles.tileLabel}>THE GAME</Text>
               </View>
             ) : <Image source={tile.src!} style={{ width: TILE_W, height: TILE_W }} resizeMode="contain" />}
           </TouchableOpacity>
@@ -94,5 +94,9 @@ const styles = StyleSheet.create({
   navTitle: { position: 'absolute', left: 14, color: '#EDE0C4', fontSize: 16, fontFamily: 'Cinzel_700Bold', letterSpacing: 1 },
   navIcons: { position: 'absolute', right: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   navIcon:  { width: 38, height: 38 },
-  checkInsLabel: { position: 'absolute', bottom: 15, color: '#EDE0C4', fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5 },
+  newTile: { width: TILE_W, height: TILE_W, alignItems: 'center', justifyContent: 'center' },
+  tileFrame: { position: 'absolute', width: TILE_W * 0.88, height: TILE_W * 0.88 },
+  checkInsIcon: { width: TILE_W * 0.53, height: TILE_W * 0.53, marginBottom: TILE_W * 0.08 },
+  gameIcon: { width: TILE_W * 0.58, height: TILE_W * 0.58, marginBottom: TILE_W * 0.08 },
+  tileLabel: { position: 'absolute', bottom: TILE_W * 0.12, color: '#EDE0C4', fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5 },
 });

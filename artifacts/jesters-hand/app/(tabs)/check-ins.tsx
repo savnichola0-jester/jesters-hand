@@ -5,15 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   CheckInMember, CheckInState, chooseCheckInReward, getCheckInMembers,
-  getMyCheckIns, redeemCheckInCode,
+  getCheckInRoster, getMyCheckIns, redeemCheckInCode,
 } from '@/lib/checkInsService';
 
 const GOLD = '#D4A853';
 const CREAM = '#EDE0C4';
 const DIM = '#a89a80';
 const FONT = 'Cinzel_700Bold';
-const FRAME = require('../../assets/images/check_ins_frame.png');
-const ICON = require('../../assets/images/check_ins_icon.png');
 
 export default function CheckInsScreen() {
   const { user, isHandAdmin, jokerId } = useAuth();
@@ -32,19 +30,19 @@ export default function CheckInsScreen() {
 
   const refresh = useCallback(async () => {
     if (!user) return;
-    try {
-      if (isDealer) {
-        const result = await getCheckInMembers();
-        setMembers(result.members.sort((a, b) => a.jokerId.localeCompare(b.jokerId)));
-      } else {
-        setMine((await getMyCheckIns()).state);
-      }
-      setError('');
-    } catch (e: any) {
-      setError(e?.message ?? 'Check-Ins could not load.');
-    } finally {
-      setLoading(false);
+    const [own, roster] = await Promise.allSettled([
+      getMyCheckIns(),
+      isDealer ? getCheckInMembers() : getCheckInRoster(),
+    ]);
+    if (own.status === 'fulfilled') setMine(own.value.state);
+    if (roster.status === 'fulfilled') {
+      setMembers(roster.value.members.sort((a, b) => a.jokerId.localeCompare(b.jokerId)));
+    } else {
+      setMembers([]);
     }
+    const failure = own.status === 'rejected' ? own.reason : roster.status === 'rejected' ? roster.reason : null;
+    setError(failure ? (failure instanceof Error ? failure.message : 'Check-Ins could not load.') : '');
+    setLoading(false);
   }, [user?.uid, isDealer]);
 
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
@@ -92,34 +90,54 @@ export default function CheckInsScreen() {
         <TouchableOpacity onPress={openBook} accessibilityLabel="Open Black Book Check-Ins"><Text style={styles.bookLink}>BOOK ›</Text></TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: inset.bottom + 65 }]} keyboardShouldPersistTaps="handled">
-        <View style={styles.hero}>
-          <Image source={FRAME} style={StyleSheet.absoluteFill} resizeMode="stretch" />
-          <Image source={ICON} style={styles.heroIcon} resizeMode="contain" />
-          <Text style={styles.heroTitle}>THE DAILY MARK</Text>
-          <Text style={styles.heroSubtitle}>{isDealer ? 'Daily codes are issued automatically to every active Joker.' : 'Your code arrives automatically in your private Pocket each Denver day. Redeem it manually before the day ends.'}</Text>
-        </View>
+        <Text style={styles.introTitle}>THE DAILY MARK</Text>
+        <Text style={styles.intro}>Every Joker, including both Hand seats, checks in. See who has marked today below.</Text>
 
         {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
         {notice ? <Text style={styles.notice}>{notice}</Text> : null}
-        {loading ? <ActivityIndicator color={GOLD} style={{ marginTop: 30 }} /> : isDealer ? (
+        {loading ? <ActivityIndicator color={GOLD} style={{ marginTop: 30 }} /> : (
           <>
             <View style={styles.panel}>
-              <Text style={styles.heading}>AUTOMATIC DAILY ISSUE</Text>
-              <Text style={styles.copy}>A private code is issued automatically to each active Joker's read-only Pocket thread each Denver day. Codes are valid only for the Denver calendar day shown; Jokers redeem them manually.</Text>
+              <Text style={styles.heading}>YOUR CHECK-IN · {mine?.dateKey ?? '—'}</Text>
+              <Text style={styles.status}>{mine?.checkedInToday ? 'YOUR MARK IS IN' : mine?.issuedToday ? 'YOUR CODE IS WAITING IN POCKET' : 'AWAITING TODAY’S CODE'}</Text>
+              <View style={styles.stats}>
+                <View><Text style={styles.statNumber}>{mine?.streak ?? 0}</Text><Text style={styles.statLabel}>DAY STREAK</Text></View>
+                <View><Text style={styles.statNumber}>{mine?.bestStreak ?? 0}</Text><Text style={styles.statLabel}>BEST</Text></View>
+                <View><Text style={styles.statNumber}>{mine?.total ?? 0}</Text><Text style={styles.statLabel}>TOTAL MARKS</Text></View>
+              </View>
+              <Text style={styles.copy}>Your private daily code appears in your Check-Ins Pocket when it is issued. Enter it here before the Denver day ends. Missing a day resets your streak.</Text>
+              {mine?.issuedToday && !mine.checkedInToday ? (
+                <>
+                  <TouchableOpacity style={styles.button} onPress={openPocket}><Text style={styles.buttonText}>OPEN MY CHECK-INS POCKET ›</Text></TouchableOpacity>
+                  <TextInput value={code} onChangeText={setCode} style={styles.input} placeholder="Paste your private code" placeholderTextColor={DIM} autoCapitalize="none" autoCorrect={false} maxLength={64} accessibilityLabel="Private daily check-in code" />
+                  <TouchableOpacity style={styles.button} disabled={working || !code.trim()} onPress={submitCode}>
+                    {working ? <ActivityIndicator color={GOLD} /> : <Text style={styles.buttonText}>MARK TODAY'S CHECK-IN</Text>}
+                  </TouchableOpacity>
+                </>
+              ) : null}
             </View>
-            <Text style={styles.heading}>JOKERS · {members.length}</Text>
+            {mine?.milestones?.length ? (
+              <View style={styles.panel}>
+                <Text style={styles.heading}>JESTER'S CHOICE</Text>
+                {mine.milestones.slice().reverse().map(m => (
+                  <Text key={m.milestoneId} style={styles.reward}>{m.streak} DAYS · {m.rewardType ? `${m.rewardType.toUpperCase()} — ${m.description ?? ''}` : "AWAITING THE JESTER'S CHOICE"}</Text>
+                ))}
+              </View>
+            ) : null}
+            <TouchableOpacity style={styles.button} onPress={openBook}><Text style={styles.buttonText}>SEE MY BLACK BOOK CHECK-INS ›</Text></TouchableOpacity>
+            <Text style={styles.heading}>TODAY'S JOKERS · {members.length}</Text>
             {members.map(member => (
               <View key={member.uid} style={styles.memberCard}>
-                <TouchableOpacity onPress={() => setSelectedUid(selectedUid === member.uid ? null : member.uid)} style={styles.memberHead}>
+                <TouchableOpacity disabled={!isDealer} onPress={() => setSelectedUid(selectedUid === member.uid ? null : member.uid)} style={styles.memberHead}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.memberName}>{member.jokerId}</Text>
-                    <Text style={styles.helper}>{member.checkedInToday ? 'MARKED TODAY' : member.issuedToday ? 'CODE SENT · AWAITING MARK' : 'AUTOMATIC ISSUE PENDING'} · {member.streak} DAY STREAK</Text>
+                    <Text style={styles.memberName}>{member.jokerId}{member.uid === user?.uid ? ' · YOU' : ''}</Text>
+                    <Text style={styles.helper}>{member.checkedInToday ? 'CHECKED IN TODAY' : member.issuedToday ? 'NOT CHECKED IN YET' : 'TODAY’S CODE NOT ISSUED'} · {member.streak} DAY STREAK</Text>
                   </View>
-                  <Text style={styles.chevron}>{selectedUid === member.uid ? '−' : '+'}</Text>
+                  {isDealer ? <Text style={styles.chevron}>{selectedUid === member.uid ? '−' : '+'}</Text> : null}
                 </TouchableOpacity>
-                {selectedUid === member.uid ? (
+                {isDealer && selectedUid === member.uid ? (
                   <View style={styles.memberDetails}>
-                    {member.pendingMilestones.length ? member.pendingMilestones.map(milestone => (
+                    {member.pendingMilestones?.length ? member.pendingMilestones.map(milestone => (
                       <View key={milestone.milestoneId} style={styles.awardBox}>
                         <Text style={styles.heading}>{milestone.streak} DAY MILESTONE · JESTER'S CHOICE</Text>
                         <View style={styles.choiceRow}>
@@ -142,39 +160,7 @@ export default function CheckInsScreen() {
                 ) : null}
               </View>
             ))}
-            <TouchableOpacity onPress={() => void refresh()}><Text style={styles.link}>REFRESH JOKERS</Text></TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <View style={styles.panel}>
-              <Text style={styles.heading}>TODAY'S CHECK-IN · {mine?.dateKey ?? '—'}</Text>
-              <Text style={styles.status}>{mine?.checkedInToday ? 'YOUR MARK IS IN' : mine?.issuedToday ? 'YOUR CODE IS WAITING IN POCKET' : 'YOUR DAILY CODE ARRIVES AUTOMATICALLY'}</Text>
-              <View style={styles.stats}>
-                <View><Text style={styles.statNumber}>{mine?.streak ?? 0}</Text><Text style={styles.statLabel}>DAY STREAK</Text></View>
-                <View><Text style={styles.statNumber}>{mine?.bestStreak ?? 0}</Text><Text style={styles.statLabel}>BEST</Text></View>
-                <View><Text style={styles.statNumber}>{mine?.total ?? 0}</Text><Text style={styles.statLabel}>TOTAL MARKS</Text></View>
-              </View>
-              <Text style={styles.copy}>A fresh code arrives automatically in your private Pocket each Denver day. Open Pocket to copy it here and redeem manually before the day ends. Mark seven consecutive Denver calendar days to reach Jester's Choice. Missing a day resets your current streak.</Text>
-              {mine?.issuedToday && !mine.checkedInToday ? (
-                <>
-                  <TouchableOpacity style={styles.button} onPress={openPocket}><Text style={styles.buttonText}>OPEN MY CHECK-INS POCKET ›</Text></TouchableOpacity>
-                  <TextInput value={code} onChangeText={setCode} style={styles.input} placeholder="Paste your private code" placeholderTextColor={DIM} autoCapitalize="none" autoCorrect={false} maxLength={64} accessibilityLabel="Private daily check-in code" />
-                  <TouchableOpacity style={styles.button} disabled={working || !code.trim()} onPress={submitCode}>
-                    {working ? <ActivityIndicator color={GOLD} /> : <Text style={styles.buttonText}>MARK TODAY'S CHECK-IN</Text>}
-                  </TouchableOpacity>
-                </>
-              ) : null}
-            </View>
-            {mine?.milestones?.length ? (
-              <View style={styles.panel}>
-                <Text style={styles.heading}>JESTER'S CHOICE</Text>
-                {mine.milestones.slice().reverse().map(m => (
-                  <Text key={m.milestoneId} style={styles.reward}>{m.streak} DAYS · {m.rewardType ? `${m.rewardType.toUpperCase()} — ${m.description ?? ''}` : "AWAITING THE JESTER'S CHOICE"}</Text>
-                ))}
-              </View>
-            ) : null}
-            <TouchableOpacity style={styles.button} onPress={openBook}><Text style={styles.buttonText}>SEE MY BLACK BOOK CHECK-INS ›</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => void refresh()}><Text style={styles.link}>REFRESH TODAY'S STATUS</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => void refresh()}><Text style={styles.link}>REFRESH CHECK-INS</Text></TouchableOpacity>
           </>
         )}
       </ScrollView>
@@ -189,11 +175,9 @@ const styles = StyleSheet.create({
   navTitle: { flex: 1, color: CREAM, textAlign: 'center', fontSize: 16, letterSpacing: 2, fontFamily: FONT },
   bookLink: { color: GOLD, fontSize: 11, fontFamily: FONT },
   content: { padding: 16, gap: 14 },
-  hero: { width: '100%', aspectRatio: 1.35, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 35 },
-  heroIcon: { width: 105, height: 105, marginBottom: 2 },
-  heroTitle: { color: GOLD, fontSize: 18, fontFamily: FONT, letterSpacing: 2 },
-  heroSubtitle: { color: CREAM, fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 7 },
-  panel: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.52)', backgroundColor: 'rgba(0,0,0,0.85)', padding: 16, gap: 13 },
+  introTitle: { color: GOLD, fontSize: 19, fontFamily: FONT, letterSpacing: 2, marginTop: 8 },
+  intro: { color: CREAM, fontSize: 13, lineHeight: 20, marginBottom: 5 },
+  panel: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.52)', backgroundColor: 'rgba(0,0,0,0.65)', padding: 16, gap: 13 },
   heading: { color: GOLD, fontSize: 12, fontFamily: FONT, letterSpacing: 1.2 },
   copy: { color: CREAM, fontSize: 12, lineHeight: 19 },
   status: { color: CREAM, fontSize: 12, fontFamily: FONT, textAlign: 'center', letterSpacing: 1 },
@@ -206,7 +190,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.48)', color: CREAM, padding: 12, fontSize: 14, minHeight: 44, backgroundColor: 'rgba(0,0,0,0.7)' },
   link: { color: GOLD, textAlign: 'center', padding: 10, fontSize: 11, fontFamily: FONT },
   reward: { color: CREAM, lineHeight: 20, fontSize: 12 },
-  memberCard: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.35)', backgroundColor: 'rgba(0,0,0,0.8)' },
+  memberCard: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.35)', backgroundColor: 'rgba(0,0,0,0.62)' },
   memberHead: { flexDirection: 'row', alignItems: 'center', padding: 13, minHeight: 58 },
   memberName: { color: CREAM, fontFamily: FONT, fontSize: 14, marginBottom: 3 },
   chevron: { color: GOLD, fontSize: 24, marginLeft: 12 },
