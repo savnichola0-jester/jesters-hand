@@ -19,6 +19,7 @@ export default function CheckInsScreen() {
   const inset = useSafeAreaInsets();
   const [mine, setMine] = useState<CheckInState | null>(null);
   const [members, setMembers] = useState<CheckInMember[]>([]);
+  const [rosterLoaded, setRosterLoaded] = useState(false);
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [rewardType, setRewardType] = useState<'royal' | 'merch'>('royal');
@@ -37,8 +38,10 @@ export default function CheckInsScreen() {
     if (own.status === 'fulfilled') setMine(own.value.state);
     if (roster.status === 'fulfilled') {
       setMembers(roster.value.members.sort((a, b) => a.jokerId.localeCompare(b.jokerId)));
+      setRosterLoaded(true);
     } else {
       setMembers([]);
+      setRosterLoaded(false);
     }
     const failure = own.status === 'rejected' ? own.reason : roster.status === 'rejected' ? roster.reason : null;
     setError(failure ? (failure instanceof Error ? failure.message : 'Check-Ins could not load.') : '');
@@ -125,13 +128,13 @@ export default function CheckInsScreen() {
               </View>
             ) : null}
             <TouchableOpacity style={styles.button} onPress={openBook}><Text style={styles.buttonText}>SEE MY BLACK BOOK CHECK-INS ›</Text></TouchableOpacity>
-            <Text style={styles.heading}>TODAY'S JOKERS · {members.length}</Text>
-            {members.map(member => (
+            {rosterLoaded ? <Text style={styles.heading}>TODAY'S JOKERS · {members.length}</Text> : null}
+            {rosterLoaded ? members.map(member => (
               <View key={member.uid} style={styles.memberCard}>
                 <TouchableOpacity disabled={!isDealer} onPress={() => setSelectedUid(selectedUid === member.uid ? null : member.uid)} style={styles.memberHead}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.memberName}>{member.jokerId}{member.uid === user?.uid ? ' · YOU' : ''}</Text>
-                    <Text style={styles.helper}>{member.checkedInToday ? 'CHECKED IN TODAY' : member.issuedToday ? 'NOT CHECKED IN YET' : 'TODAY’S CODE NOT ISSUED'} · {member.streak} DAY STREAK</Text>
+                    <Text style={styles.helper}>{member.checkedInToday ? 'CHECKED IN TODAY' : member.issuedToday ? 'NOT CHECKED IN YET' : 'NOT CHECKED IN · CODE NOT ISSUED'} · {member.streak} DAY STREAK</Text>
                   </View>
                   {isDealer ? <Text style={styles.chevron}>{selectedUid === member.uid ? '−' : '+'}</Text> : null}
                 </TouchableOpacity>
@@ -159,7 +162,7 @@ export default function CheckInsScreen() {
                   </View>
                 ) : null}
               </View>
-            ))}
+            )) : null}
             <TouchableOpacity onPress={() => void refresh()}><Text style={styles.link}>REFRESH CHECK-INS</Text></TouchableOpacity>
           </>
         )}
