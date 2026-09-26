@@ -1,5 +1,10 @@
 name: Send Android fixes to the existing preview app
 
+defaults:
+  tools:
+    node: '20.18.0'
+    pnpm: '10.26.1'
+
 on:
   workflow_dispatch: {}
 
