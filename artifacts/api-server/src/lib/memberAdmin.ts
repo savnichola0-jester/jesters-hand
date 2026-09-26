@@ -13,7 +13,14 @@
  * writes is listed here. New per-user collections MUST be added to wipeUser.
  */
 import { getAccessToken, firestoreBase } from "./firestoreAdmin";
-import { attachmentPathFor } from "./chatMediaPath";
+import {
+  appStorageAttachmentPathFor,
+  attachmentPathFor,
+} from "./chatMediaPath";
+import {
+  deleteAppStorageChatObject,
+  deleteAppStorageChatPrefix,
+} from "./chatMediaStorageCleanup";
 import { logger } from "./logger";
 
 const IDT = "https://identitytoolkit.googleapis.com/v1";
@@ -423,6 +430,17 @@ async function listTableChannelIds(
   return docs.map((d) => relPath(d.name).split("/").pop() ?? "").filter(Boolean);
 }
 
+function archivedTableAttachmentPath(doc: RestDoc): string | null {
+  const fields = doc.fields;
+  if (!fields || str(fields["type"]) !== "table_message") return null;
+  const payload = fields["payload"]?.mapValue?.fields;
+  if (!payload) return null;
+  return appStorageAttachmentPathFor(
+    str(payload["senderUid"]),
+    str(payload["imageUrl"]),
+  );
+}
+
 /**
  * Permanently erase everything tied to `uid`, keeping only the Joker ID on a
  * clean users/{uid} doc. Storage prefixes are wiped too. Throws on the first
@@ -488,13 +506,18 @@ export async function wipeUser(
 
   // 1c. Archived (soft-deleted) content owned by or referencing the member.
   const archiveDocs = await listDocs(projectId, token, "archives");
-  await deleteByName(
-    projectId,
-    token,
-    archiveDocs
-      .filter((d) => d.fields && JSON.stringify(d.fields).includes(`"${uid}"`))
-      .map((d) => d.name),
+  const archivesToDelete = archiveDocs.filter(
+    (d) => d.fields && JSON.stringify(d.fields).includes(`"${uid}"`),
   );
+  // Keep App Storage media referenced by any archive that survives this wipe.
+  // A table-message archive remains restorable until that archive is purged.
+  const archivedTableMedia = new Set(
+    archiveDocs
+      .filter((d) => !archivesToDelete.includes(d))
+      .map(archivedTableAttachmentPath)
+      .filter((path): path is string => path !== null),
+  );
+  await deleteByName(projectId, token, archivesToDelete.map((d) => d.name));
 
   // 1b. Notifications the member generated in *other* inboxes (fromUid).
   //     Inbox parent docs are "missing" docs, so showMissing enumerates them.
@@ -549,7 +572,18 @@ export async function wipeUser(
   for (const ch of await listTableChannelIds(projectId, token)) {
     const msgs = await listDocs(projectId, token, `tableMessages/${ch}/messages`);
     const own = msgs.filter((m) => m.fields && str(m.fields["senderUid"]) === uid);
+    const appMedia = new Set(
+      own
+        .map((m) => appStorageAttachmentPathFor(
+          str(m.fields?.["senderUid"]),
+          str(m.fields?.["imageUrl"]),
+        ))
+        .filter((path): path is string => path !== null),
+    );
     await deleteByName(projectId, token, own.map((m) => m.name));
+    for (const path of appMedia) {
+      if (!archivedTableMedia.has(path)) await deleteAppStorageChatObject(path);
+    }
     for (const m of msgs) {
       if (!m.fields || str(m.fields["senderUid"]) === uid) continue;
       const s = scrubFields(m.fields, uid);
@@ -586,6 +620,7 @@ export async function wipeUser(
       // sender's own folder). The wiped member's own files are covered by
       // the chatMedia/{uid}/ prefix wipe below.
       const attachments = new Set<string>();
+      const appAttachments = new Set<string>();
       for (const m of msgs) {
         if (!m.fields) continue;
         const p = attachmentPathFor(
@@ -593,9 +628,17 @@ export async function wipeUser(
           str(m.fields["imageUrl"]),
         );
         if (p) attachments.add(p);
+        const appPath = appStorageAttachmentPathFor(
+          str(m.fields["senderUid"]),
+          str(m.fields["imageUrl"]),
+        );
+        if (appPath) appAttachments.add(appPath);
       }
       await deleteByName(projectId, token, [...msgs.map((m) => m.name), conv.name]);
       for (const p of attachments) await deleteStorageObject(bucket, token, p);
+      for (const p of appAttachments) {
+        if (!archivedTableMedia.has(p)) await deleteAppStorageChatObject(p);
+      }
       continue;
     }
     const own = msgs.filter((m) => m.fields && str(m.fields["senderUid"]) === uid);
@@ -682,6 +725,7 @@ export async function wipeUser(
   await deleteStoragePrefix(bucket, token, `users/${uid}/`);
   await deleteStoragePrefix(bucket, token, `targetTickets/${uid}/`);
   await deleteStoragePrefix(bucket, token, `chatMedia/${uid}/`);
+  await deleteAppStorageChatPrefix(uid, archivedTableMedia);
 
   // 8. Reset the profile to a clean slot — Joker ID survives, nothing else.
   await replaceDoc(projectId, token, docName(projectId, `users/${uid}`), {

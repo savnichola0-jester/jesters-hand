@@ -23,7 +23,11 @@ import {
   deleteStorageObject,
 } from "./memberAdmin";
 import { getAccessToken } from "./firestoreAdmin";
-import { attachmentPathFor } from "./chatMediaPath";
+import {
+  appStorageAttachmentPathFor,
+  attachmentPathFor,
+} from "./chatMediaPath";
+import { deleteAppStorageChatObject } from "./chatMediaStorageCleanup";
 
 interface Value {
   stringValue?: string;
@@ -88,12 +92,15 @@ export async function teardownConversation(
   // inside the message SENDER's own chatMedia folder (imageUrl is
   // client-controlled and could otherwise name a victim's object).
   const mediaPaths = new Set<string>();
+  const appStoragePaths = new Set<string>();
   for (const m of msgs) {
     const url = (m.fields?.["imageUrl"] as Value | undefined)?.stringValue ?? "";
     const sender = (m.fields?.["senderUid"] as Value | undefined)?.stringValue ?? "";
     if (url && sender) {
       const p = attachmentPathFor(sender, url);
       if (p) mediaPaths.add(p);
+      const appPath = appStorageAttachmentPathFor(sender, url);
+      if (appPath) appStoragePaths.add(appPath);
     }
   }
 
@@ -105,6 +112,13 @@ export async function teardownConversation(
   for (const p of mediaPaths) {
     await deleteStorageObject(bucket, token, p);
   }
+  for (const p of appStoragePaths) {
+    await deleteAppStorageChatObject(p);
+  }
 
-  return { ok: true, deletedMessages: msgs.length, deletedFiles: mediaPaths.size };
+  return {
+    ok: true,
+    deletedMessages: msgs.length,
+    deletedFiles: mediaPaths.size + appStoragePaths.size,
+  };
 }

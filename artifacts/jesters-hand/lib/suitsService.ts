@@ -65,8 +65,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const getMySuits = () => request<{ state: SuitState }>('/me');
 export const findSuitHolder = (jokerId: string) => request<{ holder: SuitHolder | null }>(`/lookup/${encodeURIComponent(jokerId)}`);
 export const getSuitAdmin = () => request<{ holders: SuitHolder[]; inPlay: Partial<Record<SuitKey, SuitTask>> }>('/admin');
-export const setSuitAssignment = (targetUid: string, pip: SuitKey, assigned: boolean) =>
-  request<void>('/assignment', { method: 'POST', body: JSON.stringify({ targetUid, pip, assigned }) });
+export const setSuitAssignment = (targetUid: string, jokerId: string, pip: SuitKey, assigned: boolean) =>
+  request<{ ok: true }>('/assignment', { method: 'POST', body: JSON.stringify({ targetUid, jokerId, pip, assigned }) });
 export const setSuitInPlay = (pip: SuitKey, task: SuitTask) =>
   request<void>('/in-play', { method: 'POST', body: JSON.stringify({ pip, task }) });
 export const stampSuitCompletion = (targetUid: string, pip: SuitKey) =>

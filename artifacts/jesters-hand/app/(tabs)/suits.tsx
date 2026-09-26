@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { getMySuits, SUITS, SUIT_TASK_ACTIONS, SuitKey, SuitState, SuitTask, setSuitInPlay } from '@/lib/suitsService';
+import { findSuitHolder, getMySuits, setSuitAssignment, SUITS, SUIT_TASK_ACTIONS, SuitHolder, SuitKey, SuitState, SuitTask, setSuitInPlay } from '@/lib/suitsService';
 import { InWorldCard, CardPip, CardTitle, CardInput } from '@/components/InWorldCard';
+import ExternalWhispersParticipation from '@/components/community/ExternalWhispersParticipation';
 
 const GOLD = '#D4A853'; const CREAM = '#EDE0C4';
 export default function SuitsScreen() {
@@ -36,6 +37,14 @@ export default function SuitsScreen() {
         : current);
     }, () => setNote('Could not refresh community cards. Reopen SUITS to try again.'));
   }, [user?.uid]);
+  useEffect(() => {
+    if (!user) return;
+    return onSnapshot(doc(db, 'suitAssignments', user.uid), snapshot => {
+      setState(current => current
+        ? { ...current, pips: snapshot.data()?.pips ?? [] }
+        : current);
+    }, () => setNote('Could not refresh your assignments. Reopen SUITS to try again.'));
+  }, [user?.uid]);
   if (!state) return <View style={s.root}><Image source={require('../../assets/images/wood_bg.png')} style={StyleSheet.absoluteFill} /><View style={s.center}>{loading ? <ActivityIndicator color={GOLD} /> : <><Text style={s.errorTitle}>SUITS COULD NOT OPEN</Text><Text style={s.errorText}>{note}</Text><TouchableOpacity style={s.retry} onPress={() => void load()}><Text style={s.buttonText}>TRY AGAIN</Text></TouchableOpacity><TouchableOpacity onPress={() => router.back()}><Text style={s.errorBack}>BACK TO THE HAND</Text></TouchableOpacity></>}</View></View>;
   const mutate = async (work: () => Promise<void>) => { setNote(''); try { await work(); await load(); } catch (e: any) { setNote(e?.message ?? 'SUITS action failed.'); } };
    const selected = SUITS.find(suit => suit.key === selectedSuit);
@@ -56,6 +65,7 @@ export default function SuitsScreen() {
     <View style={[s.nav, { paddingTop: inset.top + 8 }]}><TouchableOpacity onPress={() => router.back()}><Text style={s.back}>‹</Text></TouchableOpacity><Text style={s.navTitle}>SUITS</Text></View>
     <ScrollView contentContainerStyle={s.content}>
         <Text style={s.copy}>Community cards are dealt to the whole Hand. Tap a lit card to read it.</Text>
+         <Text style={s.personalPips}>YOUR ASSIGNED CARDS · {state.pips.length ? SUITS.filter(suit => state.pips.includes(suit.key)).map(suit => `${suit.pip} ${suit.name}`).join('  ·  ') : 'NONE YET'}</Text>
       {note ? <Text style={s.note}>{note}</Text> : null}
         <View style={s.cards}>
         {SUITS.map(suit => {
@@ -73,6 +83,7 @@ export default function SuitsScreen() {
                <InWorldCard style={s.card} isDone={isLive} artworkFit="contain">
                  <CardPip style={{ fontSize: 48, minHeight: 56 }}>{suit.pip}</CardPip>
                 <CardTitle style={{ fontSize: 14 }}>{suit.name}</CardTitle>
+                 {state.pips.includes(suit.key) && <Text style={s.myAssignment}>ASSIGNED TO YOU</Text>}
 
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 12 }}>
                    {isLive ? (
@@ -88,6 +99,7 @@ export default function SuitsScreen() {
           );
         })}
         </View>
+         <ExternalWhispersParticipation location="suits" />
         {canDeal && <Admin inPlay={state.inPlay} mutate={mutate} />}
     </ScrollView>
      <Modal visible={!!selected && !!selectedTask?.active} transparent animationType="fade" onRequestClose={() => setSelectedSuit(null)}>
@@ -109,8 +121,93 @@ export default function SuitsScreen() {
 }
 function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>; mutate: (fn: () => Promise<void>) => void }) {
    const [drafts, setDrafts] = useState<Partial<Record<SuitKey, SuitTask>>>({});
+    const [jokerSearch, setJokerSearch] = useState('');
+    const [holder, setHolder] = useState<SuitHolder | null>(null);
+    const [assignmentNote, setAssignmentNote] = useState('');
+    const [searching, setSearching] = useState(false);
+    const [workingPip, setWorkingPip] = useState<SuitKey | null>(null);
   const task = (pip: SuitKey): SuitTask => drafts[pip] ?? inPlay[pip] ?? { active: false, title: '', destination: 'table' };
+    const searchJoker = async () => {
+      const exactId = jokerSearch.trim();
+      if (!/^\d{2}-\d{2}$/.test(exactId)) {
+        setHolder(null);
+        setAssignmentNote('Enter an exact Joker ID in the form 00-00.');
+        return;
+      }
+      setSearching(true);
+      setAssignmentNote('');
+      try {
+        const result = await findSuitHolder(exactId);
+        setHolder(result.holder);
+        if (!result.holder) setAssignmentNote(`No active member found for ${exactId}.`);
+      } catch (e: any) {
+        setHolder(null);
+        setAssignmentNote(e?.message ?? 'Joker lookup failed. Try again.');
+      } finally {
+        setSearching(false);
+      }
+    };
+    const toggleAssignment = async (pip: SuitKey) => {
+      if (!holder) return;
+      const assigned = !holder.pips.includes(pip);
+      setWorkingPip(pip);
+      setAssignmentNote('');
+      try {
+        await setSuitAssignment(holder.uid, holder.jokerId, pip, assigned);
+        const refreshed = await findSuitHolder(holder.jokerId);
+        if (!refreshed.holder) {
+          setHolder(null);
+          setAssignmentNote('The member is no longer available. Search again.');
+        } else {
+          setHolder(refreshed.holder);
+          setAssignmentNote(`${SUITS.find(suit => suit.key === pip)?.name} ${assigned ? 'assigned to' : 'removed from'} ${holder.jokerId}.`);
+        }
+      } catch (e: any) {
+        setAssignmentNote(e?.message ?? 'Assignment was rejected. Try again.');
+      } finally {
+        setWorkingPip(null);
+      }
+    };
    return <View><Text style={s.section}>DEAL TO THE WHOLE HAND</Text>
+     <Text style={s.assignmentCopy}>Assignments track responsibility only. Community cards remain visible to every active member.</Text>
+     <View style={s.assignmentPanel}>
+       <Text style={s.assignmentTitle}>RESPONSIBILITY ASSIGNMENTS</Text>
+       <TextInput
+         value={jokerSearch}
+         onChangeText={value => { setJokerSearch(value); setHolder(null); setAssignmentNote(''); }}
+         placeholder="Exact Joker ID · 00-00"
+         placeholderTextColor="#8e8067"
+         autoCapitalize="characters"
+         autoCorrect={false}
+         maxLength={5}
+         accessibilityLabel="Search exact Joker ID"
+         testID="suits-joker-search"
+         style={s.jokerInput}
+       />
+       <TouchableOpacity style={s.searchButton} onPress={() => void searchJoker()} disabled={searching} accessibilityLabel="Search Joker">
+         {searching ? <ActivityIndicator color={GOLD} /> : <Text style={s.actionText}>SEARCH JOKER</Text>}
+       </TouchableOpacity>
+       {assignmentNote ? <Text style={s.assignmentNote}>{assignmentNote}</Text> : null}
+       {holder && <>
+         <Text style={s.selectedMember}>SELECTED JOKER · {holder.jokerId}</Text>
+         <Text style={s.assignedPips}>ASSIGNED PIPS · {holder.pips.length ? SUITS.filter(suit => holder.pips.includes(suit.key)).map(suit => suit.pip).join('  ') : 'NONE'}</Text>
+         <View style={s.assignmentPips}>
+           {SUITS.map(suit => {
+             const assigned = holder.pips.includes(suit.key);
+             return <TouchableOpacity
+               key={suit.key}
+               testID={`suits-assignment-${suit.key}`}
+               accessibilityLabel={`${assigned ? 'Remove' : 'Assign'} ${suit.name} for ${holder.jokerId}`}
+               style={[s.assignmentButton, assigned && s.assignedButton]}
+               disabled={workingPip !== null}
+               onPress={() => void toggleAssignment(suit.key)}
+             >
+               {workingPip === suit.key ? <ActivityIndicator color={GOLD} /> : <Text style={[s.assignmentButtonText, assigned && s.assignedButtonText]}>{suit.pip} {assigned ? 'REMOVE' : 'ASSIGN'} {suit.name.toUpperCase()}</Text>}
+             </TouchableOpacity>;
+           })}
+         </View>
+       </>}
+     </View>
     {SUITS.map(x => {
       const d=task(x.key);
       return (
@@ -168,6 +265,8 @@ const s = StyleSheet.create({
   navTitle:{flex:1,textAlign:'center',color:CREAM,fontFamily:'Cinzel_700Bold',letterSpacing:3,fontSize:16},
   content:{padding:16,paddingBottom:80},
   copy:{color:CREAM,textAlign:'center',fontFamily:'Cinzel_400Regular',marginBottom:15},
+   personalPips:{color:GOLD,textAlign:'center',fontFamily:'Cinzel_700Bold',fontSize:10,letterSpacing:1,marginBottom:16},
+   myAssignment:{color:GOLD,fontSize:8,letterSpacing:1,marginTop:5,textAlign:'center'},
   note:{color:'#ff9b75',textAlign:'center',marginBottom:12},
   cards:{flexDirection:'row',flexWrap:'wrap',gap:12,justifyContent:'center'},
    cardWrapper:{width:'47%',aspectRatio:2/3},
@@ -198,4 +297,17 @@ const s = StyleSheet.create({
   adminActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
   actionBtn: { flex: 1, borderWidth: 1, borderColor: GOLD, borderRadius: 6, paddingVertical: 12, alignItems: 'center', backgroundColor: 'rgba(212,168,83,0.1)' },
   actionText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1 },
+  assignmentCopy: { color: CREAM, fontSize: 12, lineHeight: 18, textAlign: 'center', marginBottom: 12 },
+  assignmentPanel: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', backgroundColor: 'rgba(0,0,0,0.55)', padding: 14, marginBottom: 20 },
+  assignmentTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5, fontSize: 12, textAlign: 'center', marginBottom: 12 },
+  jokerInput: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', color: CREAM, fontSize: 15, paddingHorizontal: 12, paddingVertical: 11, textAlign: 'center' },
+  searchButton: { borderWidth: 1, borderColor: GOLD, padding: 12, alignItems: 'center', marginTop: 8 },
+  assignmentNote: { color: '#ff9b75', textAlign: 'center', marginTop: 10, fontSize: 12 },
+  selectedMember: { color: CREAM, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.2, textAlign: 'center', marginTop: 16 },
+  assignedPips: { color: GOLD, fontSize: 12, letterSpacing: 1, textAlign: 'center', marginTop: 8, marginBottom: 12 },
+  assignmentPips: { gap: 8 },
+  assignmentButton: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', padding: 11, alignItems: 'center' },
+  assignedButton: { borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.13)' },
+  assignmentButtonText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1 },
+  assignedButtonText: { color: GOLD },
 });

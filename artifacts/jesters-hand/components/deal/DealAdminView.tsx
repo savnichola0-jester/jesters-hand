@@ -14,6 +14,7 @@ import { InWorldCard, CardPip, CardInput } from '@/components/InWorldCard';
 import { appWindow } from '@/lib/appWindow';
 import DealMemberView from '@/components/deal/DealMemberView';
 import { fetchSeatActivitySummary, SeatActivitySummary } from '@/lib/activityService';
+import ExternalWhispersParticipation from '@/components/community/ExternalWhispersParticipation';
 
 const { width: SW } = appWindow();
 
@@ -308,6 +309,7 @@ export default function DealAdminView() {
             )}
           </View>
           </View>
+          <ExternalWhispersParticipation />
         </>
       </ScrollView>
       )}

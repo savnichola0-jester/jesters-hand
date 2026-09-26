@@ -39,6 +39,20 @@ await build({
   platform: "node",
   format: "esm",
   external: ["pino"],
+  // Never let an emulator test reach the real App Storage bucket. Stub only
+  // its deletion boundary; Firestore and Firebase Storage still use emulators.
+  plugins: [{
+    name: "app-storage-emulator-boundary",
+    setup(builder) {
+      builder.onResolve({ filter: /chatMediaStorageCleanup$/ }, args => ({
+        path: args.path, namespace: "app-storage-test",
+      }));
+      builder.onLoad({ filter: /.*/, namespace: "app-storage-test" }, () => ({
+        contents: "export async function deleteAppStorageChatObject() {} export async function deleteAppStorageChatPrefix() {}",
+        loader: "js",
+      }));
+    },
+  }],
   outfile: bundle,
   logLevel: "silent",
 });

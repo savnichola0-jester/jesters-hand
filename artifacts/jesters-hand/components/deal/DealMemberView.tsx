@@ -11,6 +11,7 @@ import { MARBLE_TEXT_SHADOW } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
 import { useLiveDeal } from '@/components/deal/useLiveDeal';
 import { InWorldCard, CardPip, CardTitle } from '@/components/InWorldCard';
+import ExternalWhispersParticipation from '@/components/community/ExternalWhispersParticipation';
 
 const { width: SW } = appWindow();
 const CREAM = '#EDE0C4';
@@ -156,6 +157,8 @@ export default function DealMemberView() {
           </View>
         )}
       </View>
+
+      <ExternalWhispersParticipation />
 
     </ScrollView>
   );

@@ -1,19 +1,17 @@
 // ── Recruit service ───────────────────────────────────────────────────────────
 // Recruit/Verdict posts are admin-designed layouts built on the official
 // template images. The design itself (text boxes + photo frames) is stored as
-// JSON in Firestore; uploaded photos live in PRIVATE Firebase Storage under
-// recruitPosts/{postId}/img_… and are fetched with the caller's short-lived
-// ID token — no permanent URL ever exists. Storage rules re-verify (admin OR
-// post published) on every request, exactly like the Vault.
+// JSON in Firestore; uploaded photos use portable App Storage pointers, while
+// older designs may still contain protected Firebase Storage paths.
 
 import {
   collection, doc, onSnapshot, query, where,
   setDoc, updateDoc, deleteDoc, getDoc, getDocs, serverTimestamp, Timestamp, writeBatch,
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
-import { db, storage, auth } from './firebase';
+import { db, auth } from './firebase';
 import { fetchProtectedDataUri } from './vaultService';
 import { broadcastToActiveMembers } from './notificationService';
+import { deleteMediaObject, replitMediaPath, resolveMediaUrl, uploadMedia } from './mediaService';
 
 export type RecruitSection = 'recruit' | 'verdict';
 export type RecruitStatus = 'draft' | 'published';
@@ -55,7 +53,7 @@ export interface TextElement extends ElementBase {
 
 export interface PhotoElement extends ElementBase {
   type: 'photo';
-  /** Private storage path (recruitPosts/{postId}/img_…) once uploaded. */
+  /** Portable App Storage pointer, or a legacy Firebase Storage path. */
   path?: string;
   /** Local uri while editing, before/alongside upload. */
   localUri?: string;
@@ -121,11 +119,15 @@ export function parseDesign(json: string): DesignElement[] {
         uppercase: e.uppercase === true,
       });
     } else if (e.type === 'photo') {
-      const path = typeof e.path === 'string' && /^recruitPosts\/[\w-]+\/img_[A-Za-z0-9]+$/.test(e.path)
+      const legacyPath = typeof e.path === 'string' && /^recruitPosts\/[\w-]+\/img_[A-Za-z0-9]+$/.test(e.path)
+        ? e.path : undefined;
+      const mediaPath = typeof e.path === 'string' ? replitMediaPath(e.path) : null;
+      const appStoragePointer = typeof e.path === 'string' && e.path.startsWith('jhmedia://')
+        && !!mediaPath && /^users\/[\w-]+\/admin-[\w-]+-[\w-]+\.jpg$/.test(mediaPath)
         ? e.path : undefined;
       out.push({
         ...base, type: 'photo',
-        path,
+        path: appStoragePointer ?? legacyPath,
         imgScale: num(e.imgScale, 1, 1, 8),
         imgDX: num(e.imgDX, 0, -DESIGN_W * 2, DESIGN_W * 2),
         imgDY: num(e.imgDY, 0, -DESIGN_H * 2, DESIGN_H * 2),
@@ -276,20 +278,22 @@ export async function setRecruitRsvp(postId: string, uid: string, status: Recrui
 
 // ── Photos ────────────────────────────────────────────────────────────────────
 
-export async function uploadRecruitPhoto(postId: string, localUri: string, mime?: string): Promise<string> {
-  const imgId = `img_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-  const path = `recruitPosts/${postId}/${imgId}`;
-  const res = await fetch(localUri);
-  const blob = await res.blob();
-  const task = uploadBytesResumable(ref(storage, path), blob, { contentType: mime ?? 'image/jpeg' });
-  await new Promise<void>((resolve, reject) => {
-    task.on('state_changed', undefined, reject, () => resolve());
-  });
-  return path;
+export async function uploadRecruitPhoto(_postId: string, localUri: string, mime?: string): Promise<string> {
+  const adminUid = auth.currentUser?.uid;
+  if (!adminUid) throw new Error('Not signed in');
+  const path = `users/${adminUid}/admin-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}.jpg`;
+  const result = await uploadMedia(localUri, path, mime ?? 'image/jpeg');
+  if (!result.url?.startsWith('jhmedia://')) {
+    throw new Error('Media upload did not return a portable Recruit photo URL.');
+  }
+  return result.url;
 }
 
 export async function deleteRecruitPhoto(path: string): Promise<void> {
-  await deleteObject(ref(storage, path)).catch(() => {});
+  const mediaPath = replitMediaPath(path);
+  if (mediaPath && /^users\/[\w-]+\/admin-[\w-]+-[\w-]+\.jpg$/.test(mediaPath)) {
+    await deleteMediaObject(mediaPath);
+  }
 }
 
 // Simple in-memory cache so cards/viewer don't refetch the same photo bytes.
@@ -298,10 +302,13 @@ const photoCache = new Map<string, Promise<string>>();
 export function getRecruitPhotoUri(path: string): Promise<string> {
   let p = photoCache.get(path);
   if (!p) {
-    p = fetchProtectedDataUri(path, 'image/jpeg').catch(e => {
-      photoCache.delete(path);
-      throw e;
-    });
+    const mediaUrl = path.startsWith('jhmedia://') ? resolveMediaUrl(path) : undefined;
+    p = mediaUrl
+      ? Promise.resolve(mediaUrl)
+      : fetchProtectedDataUri(path, 'image/jpeg').catch(e => {
+        photoCache.delete(path);
+        throw e;
+      });
     photoCache.set(path, p);
   }
   return p;

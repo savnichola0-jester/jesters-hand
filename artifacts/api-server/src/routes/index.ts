@@ -10,6 +10,7 @@ import hiddenJestRouter from "./hiddenJest";
 import suitsRouter from "./suits";
 import auditRouter from "./audit";
 import activityRouter from "./activity";
+import mediaRouter from "./media";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(hiddenJestRouter);
 router.use(suitsRouter);
 router.use(auditRouter);
 router.use(activityRouter);
+router.use(mediaRouter);
 
 export default router;

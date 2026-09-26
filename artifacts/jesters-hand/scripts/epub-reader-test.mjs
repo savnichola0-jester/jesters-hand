@@ -97,6 +97,21 @@ const archive = zip([
   { name: 'mimetype', text: 'application/epub+zip' },
   { name: 'OEBPS/chapter.xhtml', text: '<html>safe</html>', method: 8 },
 ]);
+const unstreamed = {
+  body: null,
+  headers: { get: () => String(archive.length) },
+  arrayBuffer: async () => archive.buffer.slice(archive.byteOffset, archive.byteOffset + archive.byteLength),
+};
+assert.equal(Buffer.from(await context.readBounded(unstreamed, 4 * 1024 * 1024)).length, archive.length);
+await assert.rejects(context.readBounded({
+  ...unstreamed,
+  headers: { get: () => String(5 * 1024 * 1024) },
+  arrayBuffer: () => { throw new Error('Oversized response must not be buffered'); },
+}, 4 * 1024 * 1024), /exceeds/);
+await assert.rejects(context.readBounded({
+  ...unstreamed,
+  headers: { get: () => null },
+}, archive.length - 1), /exceeds/);
 const extracted = await context.extract(archive.buffer.slice(
   archive.byteOffset,
   archive.byteOffset + archive.byteLength,
@@ -213,7 +228,7 @@ assert.match(html, /image\/png/);
 assert.match(html, /readBoundedArchiveResponse\(response,4\*1024\*1024\)/);
 assert.match(html, /Math\.ceil\(scrollWidth\/pageStep\)/);
 assert.doesNotMatch(html, /cdnjs\.cloudflare|<script\s+src=/i);
-assert.doesNotMatch(html, /response\.arrayBuffer\(\)/);
+assert.match(html, /response\.arrayBuffer\(\)/);
 assert.doesNotMatch(html, /\.innerHTML\s*=/);
 assert.doesNotMatch(html, /eval\s*\(/);
 

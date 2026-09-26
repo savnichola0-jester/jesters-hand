@@ -3,7 +3,7 @@ import { Router, type IRouter, type Request } from "express";
 import { verifyFirebaseIdToken } from "../lib/firebaseAuth";
 import { adminConfigured, firestoreBase, getAccessToken, getUserPushTargets } from "../lib/firestoreAdmin";
 import { logger } from "../lib/logger";
-import { canAwardRoyal, canChangeSuitAssignment } from "../lib/suitsPermissions";
+import { canAwardRoyal, canChangeSuitAssignment, withSuitAssignment } from "../lib/suitsPermissions";
 
 const router: IRouter = Router();
 const PIPS = new Set(["spade", "diamond", "heart", "club"]);
@@ -47,17 +47,17 @@ async function caller(req: Request, role: "member" | "dealer" = "member"): Promi
 }
 async function assignment(a: Auth, uid: string) { const doc = await getDoc(a, `suitAssignments/${enc(uid)}`); return { doc, data: doc ? read(doc) : { pips: [], streaks: {}, notes: {}, completed: {} } }; }
 const precondition = (doc: Doc | null) => doc?.updateTime ? { updateTime: doc.updateTime } : { exists: false };
-const auditWrites = (a: Auth, id: string, uid: string, action: string, context: Record<string, unknown>) => [
+const auditWrites = (a: Auth, id: string, uid: string, action: string, context: Record<string, unknown>, includeInvestigation = a.jokerId === "00-00") => [
   { update: { name: `${root(a.project)}/activityEvents/${id}`, fields: fields({ uid, action, section: "suits" }) }, updateTransforms: [{ fieldPath: "occurredAt", setToServerValue: "REQUEST_TIME" }], currentDocument: { exists: false } },
-  ...(a.jokerId === "00-00" ? [
+  ...(includeInvestigation ? [
     { update: { name: `${root(a.project)}/investigationEvents/${id}`, fields: fields({ uid, action, section: "suits", context }) }, updateTransforms: [{ fieldPath: "occurredAt", setToServerValue: "REQUEST_TIME" }], currentDocument: { exists: false } },
   ] : []),
 ];
 async function commit(a: Auth, writes: unknown[]) { return api(`${firestoreBase(a.project)}:commit`, a.token, { method: "POST", body: JSON.stringify({ writes }) }); }
-async function auditExists(a: Auth, id: string) {
+async function auditExists(a: Auth, id: string, includeInvestigation = a.jokerId === "00-00") {
   const activity = await getDoc(a, `activityEvents/${id}`);
   if (!activity) return false;
-  return a.jokerId !== "00-00" || Boolean(await getDoc(a, `investigationEvents/${id}`));
+  return !includeInvestigation || Boolean(await getDoc(a, `investigationEvents/${id}`));
 }
 async function holders(a: Auth) {
   const r = await api(`${firestoreBase(a.project)}:runQuery`, a.token, { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "suitAssignments" }] } }) });
@@ -71,40 +71,80 @@ async function notifyRecipients(a: Auth, recipients: string[], pip: string, titl
     const targets = await Promise.all(recipients.map(uid => getUserPushTargets(a.project, uid)));
     const messages = targets.filter(t => t && !t.alertsMuted && t.expoPushToken).map(t => ({ to: t!.expoPushToken, title, ...(body ? { body } : {}), sound: "default", channelId: "dispatches", priority: "high", data: { section: "suits", pip } }));
     if (messages.length) await fetch("https://exp.host/--/api/v2/push/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(messages) });
-  } catch (err) { logger.warn({ err, pip }, "suits holder push failed"); }
+  } catch (err) { logger.warn({ err, pip }, "suits push failed"); }
 }
-async function notifyHolders(a: Auth, pip: string) {
-  const recipients = (await holders(a)).filter((h: any) => h.pips.includes(pip)).map((h: any) => h.uid);
-  await notifyRecipients(a, recipients, pip);
+async function notifyCommunity(a: Auth, pip: string) {
+  const r = await api(`${firestoreBase(a.project)}:runQuery`, a.token, {
+    method: "POST",
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "users" }] } }),
+  });
+  if (!r.ok) throw new Error("Unable to load community notification recipients");
+  const recipients = (await r.json() as Array<{ document?: Doc }>)
+    .map(x => x.document)
+    .filter((d): d is Doc => Boolean(d?.name))
+    .filter(d => read(d).suspended !== true)
+    .map(d => d.name!.split("/").pop()!);
+  await notifyRecipients(a, recipients, pip, "SUITS · Community card dealt", "A new card is in play for the whole Hand.");
 }
 
 router.get("/suits/me", async (req, res) => { try { const a = await caller(req); if (!a) return void res.status(403).json({ error: "active member required" }); const [x, c] = await Promise.all([assignment(a, a.uid), getDoc(a, "suitConfig/current")]); const config = read(c); res.json({ state: { pips: x.data.pips ?? [], streaks: x.data.streaks ?? {}, notes: x.data.notes ?? {}, completed: x.data.completed ?? {}, inPlay: config.inPlay ?? {} } }); } catch (err) { logger.error({ err }, "suits me failed"); res.status(500).json({ error: "SUITS unavailable" }); } });
-router.get("/suits/lookup/:jokerId", async (req, res) => { try { const a = await caller(req); if (!a) return void res.status(403).json({ error: "active member required" }); const id = String(req.params.jokerId); if (!/^\d{2}-\d{2}$/.test(id)) return void res.status(400).json({ error: "use a Joker ID" }); const r = await api(`${firestoreBase(a.project)}:runQuery`, a.token, { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "users" }], where: { fieldFilter: { field: { fieldPath: "jokerId" }, op: "EQUAL", value: { stringValue: id } } }, limit: 1 } }) }); const d = r.ok ? (await r.json() as Array<{ document?: Doc }>).find(x => x.document)?.document : null; if (!d) return void res.json({ holder: null }); const uid = d.name!.split("/").pop()!; const x = await assignment(a, uid); res.json({ holder: { uid, jokerId: id, pips: x.data.pips ?? [], streaks: x.data.streaks ?? {} } }); } catch { res.status(500).json({ error: "lookup unavailable" }); } });
+router.get("/suits/lookup/:jokerId", async (req, res) => { try { const a = await caller(req, "dealer"); if (!a) return void res.status(403).json({ error: "dealer seat required" }); const id = String(req.params.jokerId); if (!/^\d{2}-\d{2}$/.test(id)) return void res.status(400).json({ error: "use a Joker ID" }); const r = await api(`${firestoreBase(a.project)}:runQuery`, a.token, { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "users" }], where: { fieldFilter: { field: { fieldPath: "jokerId" }, op: "EQUAL", value: { stringValue: id } } }, limit: 1 } }) }); const d = r.ok ? (await r.json() as Array<{ document?: Doc }>).find(x => x.document)?.document : null; if (!d || read(d).suspended === true) return void res.json({ holder: null }); const uid = d.name!.split("/").pop()!; const x = await assignment(a, uid); res.json({ holder: { uid, jokerId: id, pips: x.data.pips ?? [], streaks: x.data.streaks ?? {} } }); } catch { res.status(500).json({ error: "lookup unavailable" }); } });
 router.get("/suits/admin", async (req, res) => { const a = await caller(req, "dealer"); if (!a) return void res.status(403).json({ error: "dealer seat required" }); try { const c = read(await getDoc(a, "suitConfig/current")); res.json({ holders: await holders(a), inPlay: c.inPlay ?? {} }); } catch (err) { logger.error({ err }, "suits admin read failed"); res.status(500).json({ error: "SUITS unavailable" }); } });
 
 router.post("/suits/assignment", async (req, res) => {
   const a = await caller(req, "dealer"), b = req.body;
   if (!a) return void res.status(403).json({ error: "dealer seat required" });
-  if (!b || typeof b.targetUid !== "string" || !PIPS.has(b.pip) || typeof b.assigned !== "boolean") return void res.status(400).json({ error: "invalid assignment" });
+  if (!b || typeof b.targetUid !== "string" || !/^\d{2}-\d{2}$/.test(b.jokerId) || !PIPS.has(b.pip) || typeof b.assigned !== "boolean") {
+    return void res.status(400).json({ error: "invalid SUITS assignment" });
+  }
+  if (!canChangeSuitAssignment(a.jokerId, b.jokerId)) return void res.status(403).json({ error: "pinned Hand seat required" });
   try {
     const target = await getDoc(a, `users/${enc(b.targetUid)}`);
-    if (!target) return void res.status(404).json({ error: "member not found" });
-    if (!canChangeSuitAssignment(a.jokerId, String(read(target).jokerId ?? ""))) {
-      return void res.status(403).json({ error: "dealer seat required" });
+    const targetUser = read(target);
+    if (!target || targetUser.jokerId !== b.jokerId || targetUser.suspended === true) {
+      return void res.status(404).json({ error: "active Joker not found; search again" });
     }
     for (let attempt = 0; attempt < 3; attempt++) {
-      const x = await assignment(a, b.targetUid); const pips = new Set<string>(x.data.pips ?? []);
-      const intended = b.assigned ? pips.has(b.pip) : !pips.has(b.pip);
-      const priorMarker = x.data.auditMutation?.[b.pip];
-      if (intended && typeof priorMarker === "string" && await auditExists(a, priorMarker)) return void res.json({ ok: true, idempotent: true });
-      b.assigned ? pips.add(b.pip) : pips.delete(b.pip);
-      const id = hashId("assignment", a.uid, b.targetUid, b.pip, String(b.assigned), x.doc?.updateTime ?? "missing");
-      const data = { ...x.data, pips: [...pips].slice(0, 4), auditMutation: { ...(x.data.auditMutation ?? {}), [b.pip]: id } };
-      const writes = [{ update: { name: `${root(a.project)}/suitAssignments/${enc(b.targetUid)}`, fields: fields(data) }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }], currentDocument: precondition(x.doc) }, ...auditWrites(a, id, b.targetUid, b.assigned ? "suit_assigned" : "suit_removed", { pip: b.pip, actorUid: a.uid })];
-      const r = await commit(a, writes); if (r.ok) return void res.json({ ok: true }); if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
+      const x = await assignment(a, b.targetUid);
+      const next = withSuitAssignment(x.data, b.pip, b.assigned);
+      const marker = x.data.auditMutation?.[b.pip];
+      if (
+        JSON.stringify(x.data.pips ?? []) === JSON.stringify(next.pips) &&
+        typeof marker === "string" &&
+        await auditExists(a, marker, true)
+      ) return void res.json({ ok: true, idempotent: true });
+
+      const id = hashId("assignment", a.uid, b.targetUid, b.jokerId, b.pip, String(b.assigned), x.doc?.updateTime ?? "missing");
+      next.auditMutation = { ...(x.data.auditMutation ?? {}), [b.pip]: id };
+      // Preserve raw Firestore types in historical completion/streak fields.
+      // read()/wire() would otherwise turn timestampValue into stringValue.
+      const writes = [
+        {
+          update: {
+            name: `${root(a.project)}/suitAssignments/${enc(b.targetUid)}`,
+            fields: fields({ pips: next.pips, auditMutation: next.auditMutation }),
+          },
+          updateMask: { fieldPaths: ["pips", "auditMutation"] },
+          updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }],
+          currentDocument: precondition(x.doc),
+        },
+        ...auditWrites(a, id, b.targetUid, "suit_assignment_updated", {
+          actorUid: a.uid,
+          actorJokerId: a.jokerId,
+          targetJokerId: b.jokerId,
+          pip: b.pip,
+          assigned: b.assigned,
+        }, true),
+      ];
+      const r = await commit(a, writes);
+      if (r.ok) return void res.json({ ok: true });
+      if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
     }
     return void res.status(409).json({ error: "assignment changed concurrently; retry" });
-  } catch (err) { logger.error({ err }, "assignment failed"); res.status(500).json({ error: "assignment failed" }); }
+  } catch (err) {
+    logger.error({ err }, "suit assignment failed");
+    res.status(500).json({ error: "SUITS assignment failed" });
+  }
 });
 
 router.post("/suits/in-play", async (req, res) => {
@@ -123,7 +163,7 @@ router.post("/suits/in-play", async (req, res) => {
       const id = hashId("task", a.uid, b.pip, JSON.stringify(intended), old?.updateTime ?? "missing");
       const next = { ...data, inPlay: { ...(data.inPlay ?? {}), [b.pip]: intended }, auditMutation: { ...(data.auditMutation ?? {}), [b.pip]: id } };
       const writes = [{ update: { name: `${root(a.project)}/suitConfig/current`, fields: fields(next) }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }], currentDocument: precondition(old) }, ...auditWrites(a, id, a.uid, "suit_task_updated", { pip: b.pip, active: task.active, destination: task.destination ?? null })];
-      const r = await commit(a, writes); if (r.ok) { if (task.active && current?.active !== true) await notifyHolders(a, b.pip); return void res.json({ ok: true }); } if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
+      const r = await commit(a, writes); if (r.ok) { if (task.active && current?.active !== true) await notifyCommunity(a, b.pip).catch(err => logger.warn({ err, pip: b.pip }, "suits community push failed")); return void res.json({ ok: true }); } if (r.status !== 409 && r.status !== 412) throw new Error(`commit failed (${r.status})`);
     }
     return void res.status(409).json({ error: "configuration changed concurrently; retry" });
   } catch (err) { logger.error({ err }, "configuration failed"); res.status(500).json({ error: "configuration failed" }); }

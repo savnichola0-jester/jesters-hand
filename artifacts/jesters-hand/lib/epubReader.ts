@@ -194,7 +194,18 @@ function requestPakoInflate(compressed, expectedSize) {
 
 async function readBoundedArchiveResponse(response, maxBytes) {
   if (!response.body || typeof response.body.getReader !== 'function') {
-    throw new Error('This device cannot stream the protected EPUB within the safety limit.');
+    // Some Android WebViews expose arrayBuffer() but no readable fetch stream.
+    // The protected media endpoint provides Content-Length; reject oversized
+    // responses before buffering, and verify the actual bytes afterward too.
+    const declared=Number(response.headers.get('content-length'));
+    if (Number.isFinite(declared)&&declared>maxBytes) {
+      throw new Error('EPUB archive exceeds the protected reader size limit.');
+    }
+    const bytes=await response.arrayBuffer();
+    if (bytes.byteLength>maxBytes) {
+      throw new Error('EPUB archive exceeds the protected reader size limit.');
+    }
+    return bytes;
   }
   const reader = response.body.getReader();
   const chunks = [];

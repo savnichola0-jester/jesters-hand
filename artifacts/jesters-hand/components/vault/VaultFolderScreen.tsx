@@ -127,19 +127,28 @@ function ProtectedThumb({ path, storageProvider, style }: {
   style: any;
 }) {
   const [uri, setUri] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     setUri(null);
+    setFailed(false);
     if (!path) return;
     let alive = true;
     fetchProtectedDataUri(path, 'image/jpeg', storageProvider)
       .then(u => { if (alive) setUri(u); })
-      .catch(() => {});
+      .catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
   }, [path, storageProvider]);
   if (!path) {
     return (
       <View style={[style, s.thumbFallback]}>
         <Feather name="file-text" size={22} color="rgba(212,168,83,0.45)" />
+      </View>
+    );
+  }
+  if (failed) {
+    return (
+      <View style={[style, s.thumbFallback]}>
+        <Feather name="image" size={22} color="rgba(212,168,83,0.45)" />
       </View>
     );
   }
@@ -205,8 +214,9 @@ export default function VaultFolderScreen({ config }: { config: FolderConfig }) 
       .catch(() => {});
   }, [user]);
   const isLocked = useCallback(
-    (e: VaultEntry) => !!e.decoderHash && !isAdmin && !decoded[e.id],
-    [isAdmin, decoded],
+    (e: VaultEntry) => config.sections.some(s => s.id === e.section && s.hasDecoder)
+      && !!e.decoderHash && !decoded[e.id],
+    [config.sections, decoded],
   );
   // Decoder prompt state
   const [decoderFor, setDecoderFor]   = useState<VaultEntry | null>(null);
@@ -224,12 +234,12 @@ export default function VaultFolderScreen({ config }: { config: FolderConfig }) 
     // Persist before reporting: the server independently verifies this flag
     // and the locked Chamber entry before it notifies the Jester.
     await updateDoc(doc(db, 'users', user.uid), { [`decodedJests.${decoderFor.id}`]: true });
-    void reportHiddenJestFound(decoderFor.id).catch(() => {});
+    if (!isAdmin) void reportHiddenJestFound(decoderFor.id).catch(() => {});
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     const e = decoderFor;
     setDecoderFor(null); setDecoderTry(''); setDecoderWrong(false);
     openEntryUnchecked(e);
-  }, [user, decoderFor, decoderTry]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, isAdmin, decoderFor, decoderTry]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Viewer ──
   const [viewing, setViewing] = useState<VaultEntry | null>(null);

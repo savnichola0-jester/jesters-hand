@@ -252,8 +252,9 @@ export default function RecruitEditor({
     try {
       const path = await uploadRecruitPhoto(postId, img.uri, img.mime);
       setElements(cur => cur.map(e => e.id === el.id ? { ...e, path } as DesignElement : e));
-    } catch {
-      Alert.alert('Upload failed', 'The photo could not be uploaded. It will not be saved with the design.');
+    } catch (error) {
+      const detail = error instanceof Error ? `\n\n${error.message}` : '';
+      Alert.alert('Upload failed', `The photo could not be uploaded. It will not be saved with the design.${detail}`);
     } finally { setBusy(null); }
   };
 
@@ -268,8 +269,9 @@ export default function RecruitEditor({
     try {
       const path = await uploadRecruitPhoto(postId, img.uri, img.mime);
       setElements(cur => cur.map(e => e.id === id ? { ...e, path } as DesignElement : e));
-    } catch {
-      Alert.alert('Upload failed', 'The photo could not be uploaded.');
+    } catch (error) {
+      const detail = error instanceof Error ? `\n\n${error.message}` : '';
+      Alert.alert('Upload failed', `The photo could not be uploaded.${detail}`);
     } finally { setBusy(null); }
   };
 
