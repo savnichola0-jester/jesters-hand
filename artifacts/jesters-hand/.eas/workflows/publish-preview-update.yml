@@ -1,0 +1,17 @@
+name: Send Android fixes to the existing preview app
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  publish_android_update:
+    name: Publish Android preview update
+    type: update
+    environment: preview
+    params:
+      platform: android
+      channel: preview
+      message: Restore Vault and Chamber reading and photo uploads
+    hooks:
+      before_update:
+        - run: node scripts/prepare-preview-update-env.mjs

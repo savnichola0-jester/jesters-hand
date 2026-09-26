@@ -210,7 +210,10 @@ const html = buildEpubReaderDocument(
 assert.match(html, /extractEpubArchive/);
 assert.match(html, /allowedTags/);
 assert.match(html, /image\/png/);
+assert.match(html, /readBoundedArchiveResponse\(response,4\*1024\*1024\)/);
+assert.match(html, /Math\.ceil\(scrollWidth\/pageStep\)/);
 assert.doesNotMatch(html, /cdnjs\.cloudflare|<script\s+src=/i);
+assert.doesNotMatch(html, /response\.arrayBuffer\(\)/);
 assert.doesNotMatch(html, /\.innerHTML\s*=/);
 assert.doesNotMatch(html, /eval\s*\(/);
 

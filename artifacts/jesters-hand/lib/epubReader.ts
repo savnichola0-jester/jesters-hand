@@ -259,6 +259,7 @@ export function buildEpubReaderDocument(
         TABLE:1,THEAD:1,TBODY:1,TFOOT:1,TR:1,TD:1,TH:1,BLOCKQUOTE:1,
         PRE:1,CODE:1,SPAN:1,DIV:1,A:1,IMG:1,FIGURE:1,FIGCAPTION:1,CAPTION:1};
       const forbiddenTags={SCRIPT:1,STYLE:1,IFRAME:1,OBJECT:1,EMBED:1,SVG:1,FOREIGNOBJECT:1};
+      let safeNodeCount=0;
       function normalizePath(path) {
         let decoded;
         try { decoded=decodeURIComponent(path); } catch (_) { return null; }
@@ -295,6 +296,7 @@ export function buildEpubReaderDocument(
       }
       function addSafeContent(destination, source, sourcePath, archive, manifest, idTargets) {
         for (const node of Array.from(source.childNodes)) {
+          if(++safeNodeCount>120000)throw new Error('EPUB contains too much markup to render safely.');
           if (node.nodeType===3) { destination.appendChild(document.createTextNode(node.nodeValue||'')); continue; }
           if (node.nodeType!==1) continue;
           const tag=String(node.localName||node.nodeName).toUpperCase();
@@ -394,7 +396,7 @@ export function buildEpubReaderDocument(
               (nav.getAttributeNS('http://www.idpf.org/2007/ops','type')||'').split(/\\s+/).includes('toc'),
             )||localElements(navDoc,'nav')[0];
             if(tocNav) {
-              for(const anchor of localElements(tocNav,'a')) {
+              for(const anchor of localElements(tocNav,'a').slice(0,1000)) {
                 const label=(anchor.textContent||'').trim().slice(0,180);
                 const target=resolveReference(navPath,anchor.getAttribute('href'));
                 if(!label||!target)continue;
