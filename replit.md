@@ -32,6 +32,7 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 ## Product
 
 - Daily Check-Ins apply to **every active Joker account**, including Hand seats 00-00 and 01-54. Everyone sees who has and has not checked in today; each person's code stays private. The pinned Hand seats alone can record milestone rewards. This is a member-safety check-in in the book's lore, not an admin-only activity.
+- The author-supplied 100 prompt / 150 response Jester's Whisper deck is the live canonical card bank; do not regenerate or replace it with generic AI cards. Game generation may create `.generated.json` review candidates only, never overwrite the live cards or corrected trivia. Add unverified manuscript trivia only after checking the source; do not guess answers.
 
 ## User preferences
 

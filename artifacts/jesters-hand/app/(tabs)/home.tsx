@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   navIcon:  { width: 38, height: 38 },
   newTile: { width: TILE_W, height: TILE_W, alignItems: 'center', justifyContent: 'center' },
   tileFrame: { position: 'absolute', width: TILE_W * 0.88, height: TILE_W * 0.88 },
-  checkInsIcon: { width: TILE_W * 0.53, height: TILE_W * 0.53, marginBottom: TILE_W * 0.08 },
-  gameIcon: { width: TILE_W * 0.58, height: TILE_W * 0.58, marginBottom: TILE_W * 0.08 },
-  tileLabel: { position: 'absolute', bottom: TILE_W * 0.12, color: '#EDE0C4', fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5 },
+  checkInsIcon: { width: TILE_W * 0.53, height: TILE_W * 0.53, marginBottom: TILE_W * 0.08, transform: [{ translateY: -TILE_W * 0.07 }] },
+  gameIcon: { width: TILE_W * 0.58, height: TILE_W * 0.58, marginBottom: TILE_W * 0.08, transform: [{ translateY: -TILE_W * 0.07 }] },
+  tileLabel: { position: 'absolute', bottom: TILE_W * 0.21, color: '#EDE0C4', fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5 },
 });

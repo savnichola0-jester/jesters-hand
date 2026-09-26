@@ -1,0 +1,752 @@
+[
+  {
+    "id": "supplied-response-001",
+    "text": "A dagger left somewhere it really shouldn't be",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-002",
+    "text": "Corey's deadpan commentary, right on cue",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-003",
+    "text": "A promise nobody asked him to make",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-004",
+    "text": "Izzy, refusing to be told to stay home",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-005",
+    "text": "A card dealt to the wrong person entirely",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-006",
+    "text": "\"You can invoice me\"",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-007",
+    "text": "Foster's absolute refusal to explain himself",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-008",
+    "text": "A recruit who says yes way too fast",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-009",
+    "text": "The Scrub finding something nobody wanted found",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-010",
+    "text": "King, underestimating everyone in the room",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-011",
+    "text": "A Sweep that was never supposed to happen",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-012",
+    "text": "Ace, panicking in a very expensive suit",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-013",
+    "text": "The Mop showing up right on schedule",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-014",
+    "text": "Foster's version of \"I've got a plan\"",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-015",
+    "text": "Everyone finding out at once, badly",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-016",
+    "text": "A file with one too many red flags",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-017",
+    "text": "Corey pretending he wasn't worried",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-018",
+    "text": "A card left where it's guaranteed to be found",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-019",
+    "text": "Izzy, already three steps ahead",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-020",
+    "text": "The Dragones cartel, walking straight into it",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-021",
+    "text": "A Void card, played completely wrong",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-022",
+    "text": "Foster's silence, which says everything",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-023",
+    "text": "Jayden and Peyton, arguing about nothing",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-024",
+    "text": "A Protect assignment gone sideways",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-025",
+    "text": "The dirty cop, sweating through his collar",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-026",
+    "text": "Caizer, proving himself the hard way",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-027",
+    "text": "King's temper, right on schedule",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-028",
+    "text": "A recruit who folds under one question",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-029",
+    "text": "The Jokers, closing ranks without a word",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-030",
+    "text": "Foster, dealing a card he wasn't asked to deal",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-031",
+    "text": "Corey's \"I told you so\" face",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-032",
+    "text": "A trafficking route nobody flagged in time",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-033",
+    "text": "Ace, calling his father for backup",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-034",
+    "text": "The Scrub's file, three pages too honest",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-035",
+    "text": "Izzy, packing a bag just in case",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-036",
+    "text": "A Sweep card, played out of order",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-037",
+    "text": "Xen, learning the hard way",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-038",
+    "text": "Diego, loyal to whoever's winning",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-039",
+    "text": "The Mop, cleaning up a mess that wasn't physical",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-040",
+    "text": "Foster's dagger, doing the talking",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-041",
+    "text": "A recruit, watched a little too closely",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-042",
+    "text": "Quinn, dismantling something nobody saw coming",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-043",
+    "text": "FCJ, crossing a border he wasn't cleared for",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-044",
+    "text": "King's empire, cracking at the seams",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-045",
+    "text": "The Deck, shuffled by someone who shouldn't have it",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-046",
+    "text": "Corey, calling it exactly as he sees it",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-047",
+    "text": "Izzy's instincts, right again",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-048",
+    "text": "A Void card, worn like a badge of honor",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-049",
+    "text": "Foster, breaking his own rule just once",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-050",
+    "text": "Ace, mistaking fear for respect",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-051",
+    "text": "The Jokers' \"off the record\" meeting, on the record now",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-052",
+    "text": "A promise Foster can't actually keep",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-053",
+    "text": "Caizer's first real test, failed spectacularly",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-054",
+    "text": "The dirty cop, in over his head",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-055",
+    "text": "A Recruit card, handed to the wrong person",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-056",
+    "text": "Jayden, trusting Peyton against his better judgment",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-057",
+    "text": "King, calling Foster something he shouldn't",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-058",
+    "text": "The Scrub, turning chaos into a very long file",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-059",
+    "text": "Foster's cover story, falling apart in real time",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-060",
+    "text": "A Sweep, ordered but never explained",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-061",
+    "text": "Izzy, waiting up anyway",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-062",
+    "text": "The cartel's newest recruit, in way over his head",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-063",
+    "text": "Corey, the only honest voice in the room",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-064",
+    "text": "A card left behind on purpose",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-065",
+    "text": "Ace, one step behind his father",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-066",
+    "text": "The Mop, arriving before anyone called",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-067",
+    "text": "Foster, playing poker when everyone else is playing chess",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-068",
+    "text": "Peyton, proving Jayden wrong",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-069",
+    "text": "King's blind spot, exactly where the Jokers need it",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-070",
+    "text": "A Protect card, reassigned without warning",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-071",
+    "text": "The Deck's ninth card, the one nobody talks about",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-072",
+    "text": "Corey's honest odds, worse than anyone hoped",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-073",
+    "text": "Foster's Promise, costing more than he admits",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-074",
+    "text": "Izzy, refusing to be the one left behind",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-075",
+    "text": "Xen's first Sweep, haunting her quietly",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-076",
+    "text": "Diego's loyalty, for sale to the highest bidder",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-077",
+    "text": "The Scrub's paperwork, longer than it needs to be",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-078",
+    "text": "A Void card, mistaken for mercy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-079",
+    "text": "Foster, trusting Corey with the one thing he shouldn't",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-080",
+    "text": "Ace's peace offering, not actually peaceful",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-081",
+    "text": "King, calling in a favor he doesn't deserve",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-082",
+    "text": "The Jokers' celebration, quieter than expected",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-083",
+    "text": "Caizer, saying the quiet part out loud",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-084",
+    "text": "A Sweep, nobody wants to take credit for",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-085",
+    "text": "Foster's dagger, resting where it shouldn't",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-086",
+    "text": "Izzy, one text message from walking away",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-087",
+    "text": "Jayden's honest first impression, wrong within a week",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-088",
+    "text": "The dirty cop's tell, obvious to everyone but him",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-089",
+    "text": "A recruit, tested without knowing it",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-090",
+    "text": "Corey, right about Foster, as usual",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-091",
+    "text": "The cartel's trafficking route, exposed by accident",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-092",
+    "text": "Quinn and FCJ, arguing like siblings",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-093",
+    "text": "Foster's answer, shorter than Corey wanted",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-094",
+    "text": "Ace, inheriting more than he bargained for",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-095",
+    "text": "The Mop, cleaning up after a Sweep gone wrong",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-096",
+    "text": "A card that never should have been dealt",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-097",
+    "text": "King's temper, doing the Jokers' job for them",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-098",
+    "text": "Foster, keeping the one promise that matters",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-099",
+    "text": "Izzy's plan, better than Foster's",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-100",
+    "text": "The Scrub, finding the one thing everyone missed",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-101",
+    "text": "A Protect card, worn like a warning",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-102",
+    "text": "Corey, calling Foster out and being right about it",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-103",
+    "text": "Caizer, earning his seat the hard way",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-104",
+    "text": "The dirty cop, choosing the wrong side too late",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-105",
+    "text": "Foster's silence, louder than any threat",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-106",
+    "text": "A recruit's \"yes,\" said without hesitation",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-107",
+    "text": "King, one move behind Foster",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-108",
+    "text": "Peyton and Jayden, finally on the same page",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-109",
+    "text": "The Deck, missing exactly one card",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-110",
+    "text": "Ace, mistaking loyalty for love",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-111",
+    "text": "Izzy, done waiting for permission",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-112",
+    "text": "A Sweep, called off at the last second",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-113",
+    "text": "Foster's poker face, cracking under pressure",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-114",
+    "text": "The Mop, arriving too late this time",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-115",
+    "text": "Diego, choosing the Jokers over the cartel",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-116",
+    "text": "Corey's warning, ignored one time too many",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-117",
+    "text": "King's empire, smaller than it looks",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-118",
+    "text": "A Void card, handed out as a mercy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-119",
+    "text": "Foster, admitting he was wrong, once",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-120",
+    "text": "Xen, earning her place the hard way",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-121",
+    "text": "The Scrub's file, missing the one detail that matters",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-122",
+    "text": "Ace, finally standing up to his father",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-123",
+    "text": "A Recruit card, refused for the first time",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-124",
+    "text": "Izzy, the one person Foster can't lie to",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-125",
+    "text": "The Jokers, betting everything on one hand",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-126",
+    "text": "King, one card short of a full deck",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-127",
+    "text": "Foster's rule, broken for someone who mattered",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-128",
+    "text": "Caizer, keeping the Jokers' secret better than anyone",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-129",
+    "text": "The dirty cop, finally caught in his own trap",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-130",
+    "text": "A Sweep, that changes everything after",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-131",
+    "text": "Corey, holding the whole thing together",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-132",
+    "text": "Quinn's file on King, thicker than anyone expected",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-133",
+    "text": "Foster, choosing the Promise over everything else",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-134",
+    "text": "Peyton, taking the fall for Jayden",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-135",
+    "text": "The cartel, finally out of moves",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-136",
+    "text": "Izzy, standing exactly where Foster needs her",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-137",
+    "text": "A Void card, that turns out to matter after all",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-138",
+    "text": "Ace, finally seeing his father clearly",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-139",
+    "text": "The Deck, dealt one last time",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-140",
+    "text": "Foster's dagger, put down for good",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-141",
+    "text": "King, out of chess moves",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-142",
+    "text": "Corey, the voice Foster trusts most",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-143",
+    "text": "A Protect card, that finally does its job",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-144",
+    "text": "Xen and Diego, watching each other's backs",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-145",
+    "text": "The Jokers, playing their last hand",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-146",
+    "text": "Izzy, getting the last word",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-147",
+    "text": "Foster, finally answering honestly",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-148",
+    "text": "The Scrub, closing the file for good",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-149",
+    "text": "A Sweep, that ends the right way",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-response-150",
+    "text": "Foster's answer: it was worth it",
+    "reviewStatus": "approved"
+  }
+]

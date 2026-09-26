@@ -1,0 +1,502 @@
+[
+  {
+    "id": "supplied-prompt-001",
+    "text": "Foster's next move against King involves ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-002",
+    "text": "The real reason Corey became Foster's voice: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-003",
+    "text": "What Izzy actually thinks when Foster disappears for the night: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-004",
+    "text": "The Jokers' new house rule after the last close call: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-005",
+    "text": "Jayden and Peyton's first disagreement as partners was over ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-006",
+    "text": "If Caizer had said no during his recruitment, the Jokers would have ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-007",
+    "text": "The Deck's next card should honestly just be called ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-008",
+    "text": "What King doesn't know is that ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-009",
+    "text": "Ace's biggest mistake this week: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-010",
+    "text": "The reason Foster left a card at the scene instead of just leaving: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-011",
+    "text": "When someone gets dealt a Void card, the appropriate reaction is ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-012",
+    "text": "Kings play chess. Jokers play ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-013",
+    "text": "Foster's poker face finally broke when ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-014",
+    "text": "The Dragones cartel's biggest miscalculation: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-015",
+    "text": "What actually happens in the Jokers' \"off the record\" meetings: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-016",
+    "text": "The one thing Foster refuses to explain to anyone: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-017",
+    "text": "Corey's go-to line when things go sideways: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-018",
+    "text": "Izzy's actual reaction to being told to \"stay safe\": ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-019",
+    "text": "The real reason nobody wants to be dealt a Sweep: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-020",
+    "text": "What Quinn actually dismantled on her last job: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-021",
+    "text": "FCJ's least favorite part of working cross-border: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-022",
+    "text": "The Scrub's file on Ace contains ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-023",
+    "text": "What the Mop found this time that nobody wanted found: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-024",
+    "text": "Foster's rule about recruiting someone new: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-025",
+    "text": "The dirty cop's biggest tell: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-026",
+    "text": "What Xen brought to her first job with the Jokers: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-027",
+    "text": "Diego's opening line the day he met Foster: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-028",
+    "text": "The actual reason the King organization underestimates the Jokers: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-029",
+    "text": "What happens when you question a Protect card's judgment: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-030",
+    "text": "The Promise, according to Foster, really means ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-031",
+    "text": "Corey's honest opinion of Foster's plans: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-032",
+    "text": "What Izzy keeps in case Foster doesn't come home: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-033",
+    "text": "The Jokers' least official tradition: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-034",
+    "text": "Ace's version of a peace offering: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-035",
+    "text": "What King actually fears about Foster: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-036",
+    "text": "The Scrub's least favorite kind of paperwork: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-037",
+    "text": "Why nobody argues with a Sweep once it's dealt: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-038",
+    "text": "Jayden's honest first impression of Peyton: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-039",
+    "text": "Peyton's honest first impression of Jayden: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-040",
+    "text": "The real reason Foster plays poker instead of chess: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-041",
+    "text": "What Corey says right before things get worse: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-042",
+    "text": "The Jokers don't recruit randomly — they ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-043",
+    "text": "What a \"Protected\" person actually gets protected from: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-044",
+    "text": "Caizer's first test from Foster involved ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-045",
+    "text": "The Dragones cartel's trafficking routes always avoid ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-046",
+    "text": "What the Mop cleans up that isn't a body: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-047",
+    "text": "Foster's least convincing cover story: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-048",
+    "text": "What Izzy notices before anyone else does: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-049",
+    "text": "The real reason the Jokers don't trust the police: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-050",
+    "text": "What Ace inherited from King besides the family business: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-051",
+    "text": "The Void card exists because ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-052",
+    "text": "What Quinn and FCJ actually argue about when paired: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-053",
+    "text": "The one card nobody wants to draw twice: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-054",
+    "text": "Foster's honest answer when Corey asks \"are you okay?\": ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-055",
+    "text": "What the Recruit card really tests for: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-056",
+    "text": "King's syndicate's biggest blind spot: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-057",
+    "text": "What Foster does the night before a big move: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-058",
+    "text": "The Scrub's filing system is actually just ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-059",
+    "text": "Why Izzy stopped waiting up for Foster: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-060",
+    "text": "What Caizer brings to the table that nobody else does: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-061",
+    "text": "The real reason nobody questions a Mop's methods: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-062",
+    "text": "What Diego's loyalty actually depends on: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-063",
+    "text": "The Jokers' unofficial motto should be ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-064",
+    "text": "What Foster's dagger actually represents to him: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-065",
+    "text": "Ace's biggest fear about his own father: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-066",
+    "text": "What the dirty cop trades for protection: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-067",
+    "text": "The one rule Foster has never broken: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-068",
+    "text": "What happens the first time you lie to a Joker: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-069",
+    "text": "Corey's honest review of the Jokers' odds: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-070",
+    "text": "What King calls Foster when he thinks no one's listening: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-071",
+    "text": "The real reason Jayden trusts Peyton now: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-072",
+    "text": "What a Sweep looks like from the outside: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-073",
+    "text": "Foster's least favorite part of the Promise: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-074",
+    "text": "What the Jokers actually do with a Void card holder: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-075",
+    "text": "Izzy's plan if Foster ever asks her to walk away: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-076",
+    "text": "What Xen's first Sweep taught him: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-077",
+    "text": "The real reason nobody replaces the Scrub: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-078",
+    "text": "What King's empire looks like from the inside: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-079",
+    "text": "Foster's honest thoughts on being called a vigilante: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-080",
+    "text": "What the Jokers do differently from the cartel: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-081",
+    "text": "The card Foster wishes didn't exist: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-082",
+    "text": "What Corey actually believes will end this: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-083",
+    "text": "Ace's first real mistake in front of his father: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-084",
+    "text": "What Caizer says about Foster when Foster isn't around: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-085",
+    "text": "The real reason a Protect card gets reassigned: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-086",
+    "text": "What the Mop refuses to clean up: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-087",
+    "text": "Foster's honest reason for trusting Corey: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-088",
+    "text": "What the Dragones cartel's newest recruit doesn't know yet: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-089",
+    "text": "The one thing that could actually break the Jokers apart: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-090",
+    "text": "What Izzy would do in Foster's place: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-091",
+    "text": "The real reason nobody talks about the last Sweep: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-092",
+    "text": "What Quinn's file on King actually says: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-093",
+    "text": "Foster's honest answer to \"what happens when this is over?\": ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-094",
+    "text": "What the dirty cop actually reports back: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-095",
+    "text": "The Jokers' version of a celebration: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-096",
+    "text": "What Peyton does that Jayden secretly respects: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-097",
+    "text": "Foster's honest opinion of the Void card system: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-098",
+    "text": "What Ace would do if he ever got the upper hand: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-099",
+    "text": "The real reason the Deck has exactly eight cards: ____.",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "supplied-prompt-100",
+    "text": "Foster's answer, when Corey finally asks if it was worth it: ____.",
+    "reviewStatus": "approved"
+  }
+]

@@ -1,0 +1,1000 @@
+[
+  {
+    "id": "trivia-characters-relationships-001",
+    "category": "Characters & Relationships",
+    "question": "How is Foster related to Ginger and Gil?",
+    "options": ["He is their son", "He is their neighbor", "He is their nephew", "He is their grandson"],
+    "correctIndex": 0,
+    "sourceHint": "Izzy Vol. I, opening family scene",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-characters-relationships-002",
+    "category": "Characters & Relationships",
+    "question": "What is Ginger's role in Jessica's life?",
+    "options": ["She is Jessica's next-door neighbor", "She is Jessica's younger sister", "She is Jessica's assistant and is treated like family", "She is Jessica's commanding officer"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, opening family scene",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-characters-relationships-003",
+    "category": "Characters & Relationships",
+    "question": "Who is Alice described as being to Ginger?",
+    "options": ["A coworker", "A former teacher", "A cousin", "An old friend"],
+    "correctIndex": 3,
+    "sourceHint": "Izzy Vol. I, Ginger's kitchen conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-004",
+    "category": "Characters & Relationships",
+    "question": "What birthday connection do Foster and Asher share?",
+    "options": ["They have birthdays one day apart", "They are birthday twins", "They were born on the same holiday as Gil", "They share a birthday with Izzy"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, school-friends recollection",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-005",
+    "category": "Characters & Relationships",
+    "question": "What did Foster teach Izzy to do over spring break?",
+    "options": ["Ride a horse", "Play a piano scale", "Ollie on a skateboard", "Serve a tennis ball"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, recollection of Foster",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-006",
+    "category": "Characters & Relationships",
+    "question": "How old had Foster just turned when Izzy describes the start of the story?",
+    "options": ["Sixteen", "Seventeen", "Fourteen", "Fifteen"],
+    "correctIndex": 3,
+    "sourceHint": "Izzy Vol. I, opening chapters",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-characters-relationships-007",
+    "category": "Characters & Relationships",
+    "question": "What does Ginger do for Izzy's family when Atlas is deployed?",
+    "options": ["She becomes Izzy's coach", "She steps in as family", "She moves into Izzy's room", "She takes over Atlas's military duties"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, opening family scene",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-characters-relationships-008",
+    "category": "Characters & Relationships",
+    "question": "Which two people make up the close school-friends trio with Foster?",
+    "options": ["Ginger and Gil", "Izzy and Asher", "Peyton and Atlas", "Alice and Ginger"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, school-friends recollection",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-009",
+    "category": "Characters & Relationships",
+    "question": "What is Izzy's mother's first name?",
+    "options": ["Jessica", "Alice", "Ginger", "Laura"],
+    "correctIndex": 0,
+    "sourceHint": "Izzy Vol. I, opening kitchen scene",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-010",
+    "category": "Characters & Relationships",
+    "question": "What does Foster like to order extra of?",
+    "options": ["Pancakes", "Pickles", "Fries", "Milkshakes"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, recollection of Foster",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-011",
+    "category": "Characters & Relationships",
+    "question": "Which item of Izzy's does Foster borrow because it is more comfortable?",
+    "options": ["Her jacket", "Her sneakers", "Her backpack", "Her hoodie"],
+    "correctIndex": 3,
+    "sourceHint": "Izzy Vol. I, recollection of Foster",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-characters-relationships-012",
+    "category": "Characters & Relationships",
+    "question": "What personal keepsake from Atlas does Foster use as a familiar sound?",
+    "options": ["Dog tags", "A coin", "A pocket watch", "A key ring"],
+    "correctIndex": 0,
+    "sourceHint": "Izzy Vol. I, closet scene",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-characters-relationships-013",
+    "category": "Characters & Relationships",
+    "question": "Which school does Izzy attend?",
+    "options": ["Miami Central", "Ransom Everglades", "Atlantic Academy", "Coral Bay High"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, opening school details",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-014",
+    "category": "Characters & Relationships",
+    "question": "Which set of classes and activities does Izzy mention at school?",
+    "options": ["Chemistry, tennis, and orchestra", "History, soccer, and drama", "AP English, basketball, and cheer", "Biology, swimming, and choir"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, opening school details",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-015",
+    "category": "Characters & Relationships",
+    "question": "How long has Ginger known Izzy?",
+    "options": ["Since the start of high school", "Since Izzy's first trip to Miami", "Since Foster joined the Jokers", "Since Izzy was a baby"],
+    "correctIndex": 3,
+    "sourceHint": "Izzy Vol. I, opening family scene",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-016",
+    "category": "Characters & Relationships",
+    "question": "Which family occasions do Izzy's family and Ginger's family share?",
+    "options": ["Vacations, birthdays, and barbecues", "Graduations, concerts, and marathons", "Holidays, tournaments, and reunions", "Conferences, festivals, and school dances"],
+    "correctIndex": 0,
+    "sourceHint": "Izzy Vol. I, opening family scene",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-characters-relationships-017",
+    "category": "Characters & Relationships",
+    "question": "Which service branch is associated with Izzy's father, Atlas?",
+    "options": ["The Air Force", "The Marines", "The Coast Guard", "The Army"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, opening family scene",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-characters-relationships-018",
+    "category": "Characters & Relationships",
+    "question": "What nickname does Peyton use for Jayden?",
+    "options": ["Ace", "F", "J", "C"],
+    "correctIndex": 2,
+    "sourceHint": "Jayden Vol. II, Peyton and Jayden's conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-019",
+    "category": "Characters & Relationships",
+    "question": "Why does Peyton call Jayden by that nickname?",
+    "options": ["It is the name on his Joker card", "It is his district title", "It was a school nickname", "He told her he dislikes his name"],
+    "correctIndex": 3,
+    "sourceHint": "Jayden Vol. II, Peyton and Jayden's conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-characters-relationships-020",
+    "category": "Characters & Relationships",
+    "question": "Who was the first Joker Jayden met?",
+    "options": ["Caizer", "Peyton", "Loki", "Bo"],
+    "correctIndex": 0,
+    "sourceHint": "Jayden Vol. II, first Joker encountered",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-characters-relationships-021",
+    "category": "Characters & Relationships",
+    "question": "How long do Jayden and Peyton say they have been with the Jokers?",
+    "options": ["Six months", "One year", "Two years", "Three years"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, Joker district scene",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-022",
+    "category": "Characters & Relationships",
+    "question": "What does Jayden tend to do when everyone else hesitates?",
+    "options": ["Leave the room", "Wait for a formal vote", "Step forward", "Ask Peyton to decide"],
+    "correctIndex": 2,
+    "sourceHint": "Jayden Vol. II, Jayden and Peyton's dynamic",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-023",
+    "category": "Characters & Relationships",
+    "question": "What effect is Peyton described as having on Jayden?",
+    "options": ["She keeps him away from the Jokers", "She makes him avoid every decision", "She takes over his district", "She steadies him"],
+    "correctIndex": 3,
+    "sourceHint": "Jayden Vol. II, Jayden and Peyton's dynamic",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-characters-relationships-024",
+    "category": "Characters & Relationships",
+    "question": "Where does Jayden instinctively position himself in relation to Peyton?",
+    "options": ["Between her and the rest of the world", "Behind her at every meeting", "At the opposite end of the room", "Outside her district"],
+    "correctIndex": 0,
+    "sourceHint": "Jayden Vol. II, Jayden and Peyton's dynamic",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-001",
+    "category": "Suits & Card Lore",
+    "question": "What does the forest-green card signify in the Joker system?",
+    "options": ["Full-Colored Joker", "Potential recruit", "A district transfer", "Find and Scrub"],
+    "correctIndex": 3,
+    "sourceHint": "Jayden Vol. IV, card-and-file scene",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-002",
+    "category": "Suits & Card Lore",
+    "question": "Where does a Joker's ID card appear?",
+    "options": ["Inside a jacket pocket", "On the back of the neck", "On a wristband", "Pinned to a lapel"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, explanation of Joker identification",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-suits-card-lore-003",
+    "category": "Suits & Card Lore",
+    "question": "What two visual details help identify a Joker's role?",
+    "options": ["The rank and the badge", "The district and the date", "The color and the tools", "The name and the title"],
+    "correctIndex": 2,
+    "sourceHint": "Jayden Vol. IV, explanation of Joker identification",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-suits-card-lore-004",
+    "category": "Suits & Card Lore",
+    "question": "What does FCJ stand for?",
+    "options": ["Full-Colored Joker", "Field-Captain Joker", "Four-Card Joker", "First-Call Joker"],
+    "correctIndex": 0,
+    "sourceHint": "Jayden Vol. IV, FCJ explanation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-005",
+    "category": "Suits & Card Lore",
+    "question": "Which Joker is identified as Detroit's Scrub?",
+    "options": ["Jayden", "Loki", "Naylor", "Bo"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, Scrub-role discussion",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-006",
+    "category": "Suits & Card Lore",
+    "question": "What work do Scrubs do for the Jokers?",
+    "options": ["They assign birthdays to each district", "They assemble target files and label the work Jokers are hired to do", "They design new card colors", "They organize the Jokers' social calendar"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, Scrub-role discussion",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-007",
+    "category": "Suits & Card Lore",
+    "question": "What does a burnt-orange card mark in the scene where one is received?",
+    "options": ["A district already at capacity", "A Scrub assignment", "A potential recruit", "An FCJ designation"],
+    "correctIndex": 2,
+    "sourceHint": "Jayden Vol. IV, card clipped to the file",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-008",
+    "category": "Suits & Card Lore",
+    "question": "What name is on the file associated with the forest-green Find-and-Scrub card?",
+    "options": ["Loki Brown", "Naylor Jayden", "Bo Ramos", "Jayden Brown"],
+    "correctIndex": 3,
+    "sourceHint": "Jayden Vol. IV, card-and-file scene",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-009",
+    "category": "Suits & Card Lore",
+    "question": "What color is the FCJ card described as?",
+    "options": ["White", "Gold", "Black", "Silver"],
+    "correctIndex": 2,
+    "sourceHint": "Jayden Vol. II, FCJ card scene",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-010",
+    "category": "Suits & Card Lore",
+    "question": "How is the FCJ-and-Quinn pairing characterized?",
+    "options": ["Chaos paired with control", "Tradition paired with luck", "Silence paired with speed", "Patience paired with comedy"],
+    "correctIndex": 0,
+    "sourceHint": "Jayden Vol. II, discussion of Joker pairings",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-011",
+    "category": "Suits & Card Lore",
+    "question": "According to the narration, do the Jokers recruit randomly?",
+    "options": ["No, recruitment is deliberate", "Only after a card game", "Yes, recruits are drawn by lottery", "Only during district meetings"],
+    "correctIndex": 0,
+    "sourceHint": "Jayden Vol. II, discussion of Joker pairings",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-012",
+    "category": "Suits & Card Lore",
+    "question": "What does the narration say about how Jokers pair people?",
+    "options": ["They pair only by age", "They assign pairs by card color alone", "They let recruits choose at random", "They do not pair by accident"],
+    "correctIndex": 3,
+    "sourceHint": "Jayden Vol. II, discussion of Joker pairings",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-013",
+    "category": "Suits & Card Lore",
+    "question": "What phrase describes the Jokers as a group?",
+    "options": ["The King's table", "The Jester's hand", "The Queen's guard", "The Dealer's circle"],
+    "correctIndex": 1,
+    "sourceHint": "Caizer Vol. II, explanation of the Jokers",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-014",
+    "category": "Suits & Card Lore",
+    "question": "Across what scope does a Quinn operate?",
+    "options": ["One neighborhood", "One district", "Across all of it", "Only inside one city"],
+    "correctIndex": 2,
+    "sourceHint": "Caizer Vol. III, explanation of Quinn",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-015",
+    "category": "Suits & Card Lore",
+    "question": "Where do the other Jokers localize, in contrast to a Quinn?",
+    "options": ["Across every continent", "Only in Miami", "Only in Detroit", "Inside the United States"],
+    "correctIndex": 3,
+    "sourceHint": "Caizer Vol. III, explanation of Quinn and other Jokers",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-016",
+    "category": "Suits & Card Lore",
+    "question": "What does the book say about the roles of FCJ and Quinn?",
+    "options": ["They have the same role", "They only work in Miami", "They lead different card games", "They are assigned to one district"],
+    "correctIndex": 0,
+    "sourceHint": "Caizer Vol. III, FCJ explanation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-017",
+    "category": "Suits & Card Lore",
+    "question": "Which card-table game is associated with the Jokers?",
+    "options": ["Bridge", "Poker", "Mahjong", "Canasta"],
+    "correctIndex": 1,
+    "sourceHint": "Caizer Vol. IV, games-and-strategy comparison",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-018",
+    "category": "Suits & Card Lore",
+    "question": "Which board game is used as the comparison for Kings?",
+    "options": ["Checkers", "Backgammon", "Chess", "Go"],
+    "correctIndex": 2,
+    "sourceHint": "Caizer Vol. IV, games-and-strategy comparison",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-019",
+    "category": "Suits & Card Lore",
+    "question": "Which poker-related skill is named in the comparison about Jokers?",
+    "options": ["Memorizing openings", "Counting dominoes", "Rolling dice", "Bluffing"],
+    "correctIndex": 3,
+    "sourceHint": "Caizer Vol. IV, games-and-strategy comparison",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-020",
+    "category": "Suits & Card Lore",
+    "question": "What are the Jokers described as reading?",
+    "options": ["The room", "A rulebook", "A map legend", "A newspaper"],
+    "correctIndex": 0,
+    "sourceHint": "Caizer Vol. IV, games-and-strategy comparison",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-021",
+    "category": "Suits & Card Lore",
+    "question": "What are the Jokers described as waiting for?",
+    "options": ["The dealer to return", "A mistake", "A new deck", "A change of venue"],
+    "correctIndex": 1,
+    "sourceHint": "Caizer Vol. IV, games-and-strategy comparison",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-022",
+    "category": "Suits & Card Lore",
+    "question": "What does the narration say the Jokers' organization runs on?",
+    "options": ["Luck", "Tradition", "Structure", "A tournament schedule"],
+    "correctIndex": 2,
+    "sourceHint": "Foster Vol. XIX, Joker organization scene",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-suits-card-lore-023",
+    "category": "Suits & Card Lore",
+    "question": "What provides the Jokers' system with its terminology?",
+    "options": ["A list of city names", "An old rulebook", "A district map", "The language on the cards"],
+    "correctIndex": 3,
+    "sourceHint": "Caizer Vol. III, explanation of the card system",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-suits-card-lore-024",
+    "category": "Suits & Card Lore",
+    "question": "Who was the first card in the deck?",
+    "options": ["Caizer", "Jayden", "Peyton", "Foster"],
+    "correctIndex": 0,
+    "sourceHint": "Manuscript line 15020, first-card discussion",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-the-promise-timeline-001",
+    "category": "The Promise & Timeline",
+    "question": "What does Foster ask Izzy not to do during their conversation in the closet?",
+    "options": ["Choose his clothes", "Call his school", "Tell him what to think", "Leave him"],
+    "correctIndex": 3,
+    "sourceHint": "Izzy Vol. I, closet conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-the-promise-timeline-002",
+    "category": "The Promise & Timeline",
+    "question": "How does Izzy answer Foster's fear that she might leave?",
+    "options": ["She says she needs a week", "She promises to stay", "She changes the subject", "She asks Ginger to answer"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, closet conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-the-promise-timeline-003",
+    "category": "The Promise & Timeline",
+    "question": "What does Izzy tell Foster about the possibility that he may change?",
+    "options": ["He should avoid changing", "He must make the change alone", "She will still be there for him", "She will decide for him"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, closet conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-the-promise-timeline-004",
+    "category": "The Promise & Timeline",
+    "question": "What boundary does Atlas explain to Izzy about Foster?",
+    "options": ["She should stop speaking to him", "She is not responsible for fixing him", "She must keep every worry secret", "She must make every decision for him"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-005",
+    "category": "The Promise & Timeline",
+    "question": "When Atlas asks whether Izzy wants to remain close to Foster, what does she say?",
+    "options": ["Not until the next school year", "Yes", "She does not answer", "Only if Ginger asks"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-006",
+    "category": "The Promise & Timeline",
+    "question": "How does Atlas respond to Izzy's choice to stay close to Foster?",
+    "options": ["He asks her to leave it to Ginger", "He changes the subject to school", "He tells her the choice is temporary", "He says he will support her choice"],
+    "correctIndex": 3,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-the-promise-timeline-007",
+    "category": "The Promise & Timeline",
+    "question": "What changes in Foster after Izzy reassures him in the closet?",
+    "options": ["He immediately runs outside", "He begins planning a trip", "He gradually loosens his grip and stands", "He asks Izzy to leave first"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, after the closet promise",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-the-promise-timeline-008",
+    "category": "The Promise & Timeline",
+    "question": "What does Foster worry might happen if he changes?",
+    "options": ["That Izzy may no longer want him", "That Gil will forget his birthday", "That he will lose his skateboard", "That he will have to change schools"],
+    "correctIndex": 0,
+    "sourceHint": "Izzy Vol. I, closet conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-the-promise-timeline-009",
+    "category": "The Promise & Timeline",
+    "question": "What sound helps Izzy reassure Foster in the closet?",
+    "options": ["The soft clink of Atlas's tags", "Rain against the window", "A kitchen timer", "A phone notification"],
+    "correctIndex": 0,
+    "sourceHint": "Izzy Vol. I, closet scene",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-010",
+    "category": "The Promise & Timeline",
+    "question": "How does Atlas begin his later check-in with Izzy?",
+    "options": ["He knocks twice", "He sends her a text", "He asks Ginger to speak first", "He calls from downstairs"],
+    "correctIndex": 0,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-011",
+    "category": "The Promise & Timeline",
+    "question": "What does Atlas say Izzy has the right to choose?",
+    "options": ["When Atlas deploys", "Which school Foster attends", "Who earns a place in her life", "Where the family moves"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-012",
+    "category": "The Promise & Timeline",
+    "question": "When Atlas asks whether Izzy wants to be there for Foster, what is her answer?",
+    "options": ["She would rather decide later", "Not until the next school year", "Only after she speaks with Ginger", "She does"],
+    "correctIndex": 3,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-013",
+    "category": "The Promise & Timeline",
+    "question": "What does Atlas give Izzy before his last deployment?",
+    "options": ["A compass", "His old dog tags", "A pocket watch", "A letter from Ginger"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, closet scene",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-014",
+    "category": "The Promise & Timeline",
+    "question": "What does Izzy do with Atlas's tags while she stays with Foster?",
+    "options": ["Puts them in her pocket", "Hands them to Ginger", "Lets them make a soft clinking sound", "Hides them under a blanket"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, closet scene",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-the-promise-timeline-015",
+    "category": "The Promise & Timeline",
+    "question": "Where does Izzy make her first promise to stay with Foster?",
+    "options": ["In the family kitchen", "At the school gate", "In the car", "In a closet"],
+    "correctIndex": 3,
+    "sourceHint": "Izzy Vol. I, closet conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-the-promise-timeline-016",
+    "category": "The Promise & Timeline",
+    "question": "What does Atlas say Izzy does not owe Foster?",
+    "options": ["Her peace", "A birthday gift", "A school schedule", "A decision about his future"],
+    "correctIndex": 0,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-017",
+    "category": "The Promise & Timeline",
+    "question": "When does Atlas say he will especially make sure Jessica honors Izzy's choice?",
+    "options": ["During the next school term", "When he is deployed", "After Foster graduates", "When Ginger visits"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-018",
+    "category": "The Promise & Timeline",
+    "question": "What does Atlas ask Izzy to do if being around Foster ever feels unsafe?",
+    "options": ["Keep it to herself", "Ask a classmate to intervene", "Tell him immediately", "Wait for the next check-in"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-the-promise-timeline-019",
+    "category": "The Promise & Timeline",
+    "question": "After Izzy reassures him, what does Foster do before standing?",
+    "options": ["Calls for Ginger", "Asks to leave the house", "Starts talking about school", "Gradually loosens his hold"],
+    "correctIndex": 3,
+    "sourceHint": "Izzy Vol. I, after the closet promise",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-the-promise-timeline-020",
+    "category": "The Promise & Timeline",
+    "question": "Who comes to Izzy's room for a private check-in after the earlier promise?",
+    "options": ["Atlas", "Gil", "Asher", "Foster"],
+    "correctIndex": 0,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-021",
+    "category": "The Promise & Timeline",
+    "question": "What does Atlas say he will do after Izzy chooses to stay close to Foster?",
+    "options": ["Choose Foster's school", "Support her choice", "Ask her to wait a year", "Make the decision for her"],
+    "correctIndex": 1,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-the-promise-timeline-022",
+    "category": "The Promise & Timeline",
+    "question": "How many taps precede Atlas's later check-in with Izzy?",
+    "options": ["One", "Three", "Two", "Four"],
+    "correctIndex": 2,
+    "sourceHint": "Izzy Vol. I, Atlas checks in with Izzy",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-the-promise-timeline-023",
+    "category": "The Promise & Timeline",
+    "question": "What does Foster say he promised Asher?",
+    "options": ["To buy him a skateboard", "To tell Ginger every detail", "To let him choose a district", "That he will keep him safe"],
+    "correctIndex": 3,
+    "sourceHint": "Foster Vol. XIII, manuscript lines 8322-8323",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-the-promise-timeline-024",
+    "category": "The Promise & Timeline",
+    "question": "What does Foster promise Izzy he will do?",
+    "options": ["Stay in contact", "Move to Miami", "Join a card game", "Change schools"],
+    "correctIndex": 0,
+    "sourceHint": "Foster Vol. IV, manuscript lines 1790-1792",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-001",
+    "category": "Street Cred / Underworld",
+    "question": "Who is identified as the Jokers' main target in the recruiting conversation?",
+    "options": ["Loki", "Bo", "Jayden Brown", "King"],
+    "correctIndex": 3,
+    "sourceHint": "Jayden Vol. IV, conversation about the Jokers",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-002",
+    "category": "Street Cred / Underworld",
+    "question": "How many Jokers are assigned to each district?",
+    "options": ["Twenty-four", "Thirty-seven", "Twelve", "Eighteen"],
+    "correctIndex": 3,
+    "sourceHint": "Jayden Vol. IV, district planning",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-street-cred-underworld-003",
+    "category": "Street Cred / Underworld",
+    "question": "How many Jokers are in the organization at the point described?",
+    "options": ["Thirty-six", "Sixteen", "Eighteen", "Fifty-four"],
+    "correctIndex": 0,
+    "sourceHint": "Jayden Vol. IV, district planning",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-street-cred-underworld-004",
+    "category": "Street Cred / Underworld",
+    "question": "What is the organization's stated total goal for Jokers?",
+    "options": ["Sixteen", "Thirty-seven", "Fifty-four", "Eighteen"],
+    "correctIndex": 2,
+    "sourceHint": "Jayden Vol. IV, district planning",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-005",
+    "category": "Street Cred / Underworld",
+    "question": "Which district is still being filled when the plan is discussed?",
+    "options": ["Miami", "Los Angeles", "Detroit", "Chicago"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, district planning",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-006",
+    "category": "Street Cred / Underworld",
+    "question": "Who is set to run the Los Angeles district alongside Jayden?",
+    "options": ["Asher", "Peyton", "Ginger", "Loki"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, district planning",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-007",
+    "category": "Street Cred / Underworld",
+    "question": "Which two districts are described as already full?",
+    "options": ["Detroit and Los Angeles", "Los Angeles and Miami", "New York and Detroit", "Miami and Detroit"],
+    "correctIndex": 3,
+    "sourceHint": "Jayden Vol. IV, district planning",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-008",
+    "category": "Street Cred / Underworld",
+    "question": "How many more recruits does the Los Angeles district need in the plan?",
+    "options": ["Sixteen", "Fifty-four", "Thirty-seven", "Eighteen"],
+    "correctIndex": 0,
+    "sourceHint": "Jayden Vol. IV, district planning",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-009",
+    "category": "Street Cred / Underworld",
+    "question": "Which Joker is named as Jayden's planned recruit for Los Angeles?",
+    "options": ["Asher", "Loki", "Bo", "Naylor"],
+    "correctIndex": 2,
+    "sourceHint": "Jayden Vol. IV, district planning",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-010",
+    "category": "Street Cred / Underworld",
+    "question": "How many district locations are named in the plan discussed?",
+    "options": ["Three", "Four", "Two", "Five"],
+    "correctIndex": 0,
+    "sourceHint": "Jayden Vol. IV, district planning",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-011",
+    "category": "Street Cred / Underworld",
+    "question": "What card does Jayden tell Bo is dealt to him?",
+    "options": ["Scrub", "Recruit", "Void", "Protect"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, Bo's card conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-012",
+    "category": "Street Cred / Underworld",
+    "question": "Which two card colors does Bo say he has seen before?",
+    "options": ["Forest green and burnt orange", "Navy and burgundy", "Black and silver", "Red and gold"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, Bo's card conversation",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-013",
+    "category": "Street Cred / Underworld",
+    "question": "Where is C usually based?",
+    "options": ["Detroit", "Miami", "Los Angeles", "New York"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, manuscript line 19986",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-014",
+    "category": "Street Cred / Underworld",
+    "question": "Which city does the narration say all the Jokers come to?",
+    "options": ["Miami", "Los Angeles", "Detroit", "Chicago"],
+    "correctIndex": 2,
+    "sourceHint": "Jayden Vol. IV, manuscript lines 19986-19987",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-015",
+    "category": "Street Cred / Underworld",
+    "question": "How often do the Jokers hold their Detroit meeting?",
+    "options": ["Weekly", "Monthly", "Quarterly", "Annually"],
+    "correctIndex": 1,
+    "sourceHint": "Jayden Vol. IV, manuscript lines 19986-19987",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-016",
+    "category": "Street Cred / Underworld",
+    "question": "Where does the narration place the Jokers' base?",
+    "options": ["On the other side of the city", "Inside the courthouse", "Next to the school", "At the city airport"],
+    "correctIndex": 0,
+    "sourceHint": "Joker base description",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-street-cred-underworld-017",
+    "category": "Street Cred / Underworld",
+    "question": "What relationship does Corey initially suspect between King and Ace?",
+    "options": ["King is Ace's brother", "King is Ace's father", "King is Ace's teacher", "King is Ace's business partner"],
+    "correctIndex": 1,
+    "sourceHint": "Foster and Corey discuss Ace",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-street-cred-underworld-018",
+    "category": "Street Cred / Underworld",
+    "question": "Which full name comes up while Foster and Corey discuss King's identity?",
+    "options": ["Charles Caizer", "Casper James", "John King James", "Jayden Brown"],
+    "correctIndex": 2,
+    "sourceHint": "Foster and Corey discuss King",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-street-cred-underworld-019",
+    "category": "Street Cred / Underworld",
+    "question": "Who does Corey say throws King's name around more than the streets do?",
+    "options": ["Bo", "Loki", "Naylor", "Casper"],
+    "correctIndex": 3,
+    "sourceHint": "Foster and Corey conversation, manuscript lines 3084-3085",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-street-cred-underworld-020",
+    "category": "Street Cred / Underworld",
+    "question": "What underworld title is used jokingly for John King James?",
+    "options": ["King of the underworld", "The Miami Dealer", "The Cardmaster", "The District Kingpin"],
+    "correctIndex": 0,
+    "sourceHint": "school conversation about John King James",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "trivia-street-cred-underworld-021",
+    "category": "Street Cred / Underworld",
+    "question": "Where is John King James described as entering in a news segment?",
+    "options": ["A hotel lobby", "A courtroom", "A card room", "A school auditorium"],
+    "correctIndex": 1,
+    "sourceHint": "television coverage of John King James",
+    "reviewStatus": "draft"
+  },
+  {
+    "id": "corrected-street-cred-underworld-022",
+    "category": "Street Cred / Underworld",
+    "question": "What does Foster realize Alice did regarding John King James?",
+    "options": ["She left him", "She moved to Detroit", "She joined his business", "She changed her name to Peyton"],
+    "correctIndex": 0,
+    "sourceHint": "Foster's search, manuscript lines 2492-2495",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-street-cred-underworld-023",
+    "category": "Street Cred / Underworld",
+    "question": "Where are Alice May James and John King James pictured in their wedding photos?",
+    "options": ["On courthouse steps", "At a school gym", "At a Miami beach", "In a hotel ballroom"],
+    "correctIndex": 0,
+    "sourceHint": "Wedding announcement, Foster's search, manuscript lines 2477-2479",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "corrected-street-cred-underworld-024",
+    "category": "Street Cred / Underworld",
+    "question": "Which name appears alongside John King James in Foster's search results?",
+    "options": ["Alice May James", "Ginger Bryer", "Laila Brown", "Peyton James"],
+    "correctIndex": 0,
+    "sourceHint": "Wedding announcement, Foster's search, manuscript line 2477",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-001",
+    "category": "Suits & Card Lore",
+    "question": "What do the four suits represent in the Joker system?",
+    "options": [
+      "Spade = drug lords; Diamond = mafia; Heart = petty crime; Club = dirty cops/law enforcement",
+      "Spade = dirty cops/law enforcement; Diamond = petty crime; Heart = mafia; Club = drug lords",
+      "Spade = mafia; Diamond = drug lords; Heart = dirty cops/law enforcement; Club = petty crime",
+      "Spade = petty crime; Diamond = dirty cops/law enforcement; Heart = drug lords; Club = mafia"
+    ],
+    "correctIndex": 2,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #1",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-002",
+    "category": "Characters & Relationships",
+    "question": "What podcast does Foster listen to?",
+    "options": ["The Rumors", "The Daily Briefing", "Courtroom Files", "Miami After Dark"],
+    "correctIndex": 0,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #2",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-003",
+    "category": "Characters & Relationships",
+    "question": "According to the book's definition, who is the jester?",
+    "options": [
+      "The king's entertainer, whose only duty is to make the court laugh",
+      "The king's official executioner, responsible for enforcing every sentence",
+      "The royal adviser who must agree with the king in public",
+      "The court's truth-teller, allowed to mock the king and speak truth without losing his head"
+    ],
+    "correctIndex": 3,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #3",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-004",
+    "category": "Characters & Relationships",
+    "question": "Who is Foster's uncle?",
+    "options": ["Uncle Gil", "Uncle Vince", "Uncle Casper", "Uncle Dominic"],
+    "correctIndex": 1,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #4",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-005",
+    "category": "Street Cred / Underworld",
+    "question": "Who is Mason in King's operation?",
+    "options": ["The prosecutor", "The police informant", "The mule", "The club owner"],
+    "correctIndex": 2,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #5",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-006",
+    "category": "Street Cred / Underworld",
+    "question": "Who is Jace (Matthews) in King's trafficking operation?",
+    "options": [
+      "Mason's brother, who keeps the girls organized and advertises them",
+      "A detective assigned to investigate King's operation",
+      "A driver who transports goods between Miami and Detroit",
+      "Mason's attorney, who handles King's courtroom defense"
+    ],
+    "correctIndex": 0,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #6",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-007",
+    "category": "Street Cred / Underworld",
+    "question": "Who is Dominic?",
+    "options": [
+      "A defense lawyer who represents King in court",
+      "A Joker who recruits new members for Detroit",
+      "A club owner who supplies information to Foster",
+      "A larger-circle distributor/dealer and hub in King's network, whom Casper answers to"
+    ],
+    "correctIndex": 3,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #7",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-008",
+    "category": "Characters & Relationships",
+    "question": "Who is Xen?",
+    "options": [
+      "A lawyer who defends John King James in court",
+      "A woman connected to a club who gives Foster information about King in exchange for what he buys or does for her there",
+      "A Joker who runs the Detroit district",
+      "A member of Izzy's family who works with Ginger"
+    ],
+    "correctIndex": 1,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #8",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-009",
+    "category": "Street Cred / Underworld",
+    "question": "Whom did Foster kill after learning that Mason was King's mule?",
+    "options": ["Casper", "Dominic", "Tyson", "Jace"],
+    "correctIndex": 2,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #9",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-010",
+    "category": "Street Cred / Underworld",
+    "question": "What is the distinction between John King James and 'King'?",
+    "options": [
+      "John King James is his legal identity as a defense lawyer; 'King' is his separate street reputation",
+      "John King James is a false identity; 'King' is his legal name",
+      "John King James is a club owner; 'King' is his brother's nickname",
+      "John King James is a Joker alias; 'King' is the name of his law firm"
+    ],
+    "correctIndex": 0,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #10",
+    "reviewStatus": "approved"
+  },
+  {
+    "id": "trivia-confirmed-addition-011",
+    "category": "Characters & Relationships",
+    "question": "True or False: Ginger is described as 'basically family,' not just an assistant.",
+    "options": [
+      "False; she is described only as a neighbor",
+      "False; she is described only as a schoolteacher",
+      "The book does not describe her relationship to the family",
+      "True"
+    ],
+    "correctIndex": 3,
+    "sourceHint": "Author-confirmed trivia additions, Part 2 #11",
+    "reviewStatus": "approved"
+  }
+]
