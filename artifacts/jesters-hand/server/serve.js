@@ -18,7 +18,7 @@ const WEB_ROOT = path.join(STATIC_ROOT, 'web');
 const TEMPLATE_PATH = path.resolve(__dirname, 'templates', 'landing-page.html');
 const NATIVE_QR_PATH = path.resolve(__dirname, 'assets', 'jesters-hand-native-install-qr.png');
 const EXPO_ANDROID_BUILD_URL =
-  'https://expo.dev/accounts/00-00/projects/jesters-hand-native/builds/68e9be80-6097-4997-85ca-a9fc1102ff2f';
+  'https://expo.dev/accounts/00-00/projects/jesters-hand-native/builds/31a3f3b3-fba4-4a33-9f3a-d696f04f37e5';
 const basePath = (process.env.BASE_PATH || '/').replace(/\/+$/, '');
 
 const MIME_TYPES = {
