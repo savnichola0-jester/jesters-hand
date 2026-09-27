@@ -31,7 +31,7 @@ const ROLE_IMAGES: Record<string, number> = {
 const BANKS: ContentBank[] = ['trivia', 'prompts', 'responses'];
 const MODE_COPY: Record<GameMode, { title: string; detail: string }> = {
   trivia: { title: 'TRIVIA', detail: 'A private table. A fresh shuffled question deck. Play solo or invite your crew.' },
-  cards: { title: 'JOKER CARDS', detail: 'A rotating judge. Secret responses. One winning card each round.' },
+  cards: { title: 'JOKERS COH', detail: 'A rotating judge. Secret responses. One winning card each round.' },
   recruit: { title: 'RECRUIT', detail: 'Hold your role close. Question the table, lock your guesses, then reveal.' },
 };
 
@@ -203,7 +203,7 @@ export default function GameScreen() {
                 <View style={styles.panel}>
                   <Text style={styles.heading}>AT THE TABLE · {room.members.length}/8</Text>
                   {room.members.map(member => <Text key={member.uid} style={styles.memberLine}>{member.jokerId}{member.uid === room.hostUid ? '  · HOST' : ''}{member.uid === user?.uid ? '  · YOU' : ''}</Text>)}
-                  {room.mode === 'trivia' && room.members.length === 1 ? <Text style={styles.helper}>Solo play is ready. Invite a group or start a private challenge.</Text> : null}
+                  {room.mode === 'trivia' && room.members.length === 1 ? <Text style={styles.helper}>Solo play is ready. Invite a group or start a private challenge. Each table deals up to 20 questions, with ones you have not played first.</Text> : null}
                   {isHost ? room.members.filter(member => member.uid !== user?.uid).map(member => <GoldButton key={member.uid} title={`PASS HOST TO ${member.jokerId}`} onPress={() => void act(() => transferGameHost(room.id, member.uid))} disabled={working} quiet />) : null}
                 </View>
                 {isHost ? <GoldButton title={`DEAL ${MODE_COPY[room.mode].title}`} onPress={() => void act(() => startGame(room.id))} disabled={working || (room.mode !== 'trivia' && room.members.length < 2)} /> : <Text style={styles.helper}>The host will deal when everyone is ready.</Text>}
@@ -315,21 +315,21 @@ export default function GameScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            {(['trivia', 'cards', 'recruit'] as GameMode[]).map(mode => (
+            {choosingTrivia ? (
+              <View style={styles.panel}>
+                <Text style={styles.heading}>CHOOSE YOUR QUESTION DECK</Text>
+                <Text style={styles.helper}>20 questions per table. Come back for another round to uncover more; questions you have not played come first.</Text>
+                <GoldButton title="ALL CATEGORIES" onPress={() => void makeTable('trivia')} disabled={loading} />
+                {triviaCategories.map(category => <GoldButton key={category} title={category.toUpperCase()} onPress={() => void makeTable('trivia', category)} disabled={loading} quiet />)}
+                <TouchableOpacity onPress={() => setChoosingTrivia(false)}><Text style={styles.link}>CANCEL</Text></TouchableOpacity>
+              </View>
+            ) : (['trivia', 'cards', 'recruit'] as GameMode[]).map(mode => (
               <TouchableOpacity key={mode} disabled={loading || !user} style={styles.gameTile} onPress={() => void chooseMode(mode)}>
                 <View style={styles.tileTop}><Text style={styles.eyebrow}>0{(['trivia', 'cards', 'recruit'] as GameMode[]).indexOf(mode) + 1} / 03</Text><Text style={styles.tileArrow}>↗</Text></View>
                 <Text style={styles.tileTitle}>{MODE_COPY[mode].title}</Text><Text style={styles.copy}>{MODE_COPY[mode].detail}</Text>
               </TouchableOpacity>
             ))}
             {loading ? <ActivityIndicator color={GOLD} /> : null}
-            {choosingTrivia ? (
-              <View style={styles.panel}>
-                <Text style={styles.heading}>CHOOSE YOUR QUESTION DECK</Text>
-                <GoldButton title="ALL CATEGORIES" onPress={() => void makeTable('trivia')} disabled={loading} />
-                {triviaCategories.map(category => <GoldButton key={category} title={category.toUpperCase()} onPress={() => void makeTable('trivia', category)} disabled={loading} quiet />)}
-                <TouchableOpacity onPress={() => setChoosingTrivia(false)}><Text style={styles.link}>CANCEL</Text></TouchableOpacity>
-              </View>
-            ) : null}
             <View style={styles.panel}>
               <Text style={styles.heading}>JOIN AN INVITATION</Text>
               <TextInput value={joinCode} onChangeText={value => setJoinCode(value.toUpperCase().replace(/[^A-F0-9]/g, '').slice(0, 10))} style={styles.input} placeholder="10-character room code" placeholderTextColor={DIM} autoCapitalize="characters" autoCorrect={false} maxLength={10} accessibilityLabel="Game invitation code" />
