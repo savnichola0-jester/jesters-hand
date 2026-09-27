@@ -29,7 +29,6 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
 import { useAppDimensions } from '@/lib/appWindow';
-import CheckInEmblem from '@/components/CheckInEmblem';
 
 // ── Assets ────────────────────────────────────────────────────────────────────
 const NAV_DAGGER     = require('../../assets/images/nav_dagger.png');
@@ -275,7 +274,7 @@ export default function ChatScreen() {
         {showSender && (
           <View style={s.senderRow}>
             {isReadOnlyCheckIns ? (
-              <CheckInEmblem size={30} />
+              <Image source={CHECK_IN_LOGO} style={s.checkInSenderLogo} resizeMode="contain" />
             ) : senderAvatar ? (
               <Image source={{ uri: resolveMediaUrl(senderAvatar) }} style={s.senderAvatar} />
             ) : (
@@ -389,7 +388,9 @@ export default function ChatScreen() {
             </TouchableOpacity>
           </View>
           <View style={s.navCenter}>
-            {isReadOnlyCheckIns && <CheckInEmblem size={36} />}
+            {isReadOnlyCheckIns && (
+              <Image source={CHECK_IN_LOGO} style={s.checkInHeaderLogo} resizeMode="contain" />
+            )}
             {conversation?.isGroup && (
               <GroupAvatarCollage
                 memberUids={conversation.memberUids.filter(u => u !== user?.uid)}
@@ -441,7 +442,12 @@ export default function ChatScreen() {
       </View>
 
       {/* ── Whisper frame + overlaid content ── */}
-      <View style={[s.frameContainer, { top: navBottom + 10, left: Math.round((dynW - PANEL_W) / 2) }]}>
+       <View style={[s.frameContainer, {
+         top: navBottom + 10,
+         left: Math.round((dynW - PANEL_W) / 2),
+         width: PANEL_W,
+         height: PANEL_H,
+       }]}>
 
         {/* Frame image */}
         <Image
@@ -449,23 +455,21 @@ export default function ChatScreen() {
           style={{ width: PANEL_W, height: PANEL_H }}
           resizeMode="stretch"
         />
-        {isReadOnlyCheckIns && (
-          <View
-            pointerEvents="none"
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-            style={{
-              position: 'absolute',
-              top: MSG_TOP + 38,
-              left: Math.round(PANEL_W * 0.2),
-              width: Math.round(PANEL_W * 0.6),
-              height: Math.round(PANEL_H * 0.54),
-              opacity: 0.3,
-            }}
-          >
-            <Image source={CHECK_IN_LOGO} style={StyleSheet.absoluteFill} resizeMode="contain" />
-          </View>
-        )}
+         {isReadOnlyCheckIns && (
+           <Image
+             source={CHECK_IN_LOGO}
+             accessible={false}
+             resizeMode="contain"
+             style={{
+               position: 'absolute',
+               top: MSG_TOP + 38,
+               left: Math.round(PANEL_W * 0.2),
+               width: Math.round(PANEL_W * 0.6),
+               height: Math.round(PANEL_H * 0.54),
+               opacity: 0.3,
+             }}
+           />
+         )}
 
         {/* Messages — scrollable area inside frame body */}
         <View
@@ -715,7 +719,9 @@ const s = StyleSheet.create({
   dagIcon: { width: 48, height: 26 },
   sqIcon:  { width: 34, height: 34 },
 
-  frameContainer: { position: 'absolute' },
+   frameContainer: { position: 'absolute', overflow: 'hidden' },
+   checkInHeaderLogo: { width: 36, height: 36 },
+   checkInSenderLogo: { width: 30, height: 30 },
 
   msgListContent: { paddingVertical: 4 },
 
