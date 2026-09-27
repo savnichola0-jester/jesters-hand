@@ -79,7 +79,7 @@ export default function ContractScreen() {
 
   // Signed & current → read-only. Signed but outdated → sign again.
   const signed   = !!agreement;
-  const viewOnly = isJester || (signed && !needsContract);
+  const viewOnly = jokerId === '00-00' || (signed && !needsContract);
 
   // Auth guard: members only.
   useEffect(() => {
@@ -176,12 +176,18 @@ export default function ContractScreen() {
   const publish = useCallback(() => {
     const sections = fromDraft(drafts);
     if (!draftHead.trim() || sections.length === 0) {
-      Alert.alert('Not so fast', 'The contract needs a heading and at least one section.');
+      if (Platform.OS === 'web') window.alert('The contract needs a heading and at least one section.');
+      else Alert.alert('Not so fast', 'The contract needs a heading and at least one section.');
+      return;
+    }
+    const description = 'Every member will be notified and must review and re-sign before they can use the app again.';
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Amend the Contract?\n\n${description}`)) void doPublish(sections);
       return;
     }
     Alert.alert(
       'Amend the Contract?',
-      'Every member will be notified and must review and re-sign before they can use the app again.',
+      description,
       [
         { text: 'Cancel', style: 'cancel' },
         {

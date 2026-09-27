@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TextI
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
+import GameRoomComms from '@/components/GameRoomComms';
 import { useAuth } from '@/contexts/AuthContext';
 import { confirmAction } from '@/lib/confirm';
 import {
@@ -198,15 +199,18 @@ export default function GameScreen() {
               </TouchableOpacity>
             </View>
 
+            <GameRoomComms roomId={room.id} jokerId={jokerId ?? '??-??'} />
+
             {room.status === 'lobby' ? (
               <>
                 <View style={styles.panel}>
-                  <Text style={styles.heading}>AT THE TABLE · {room.members.length}/8</Text>
+                  <Text style={styles.heading}>AT THE TABLE · {room.members.length}</Text>
                   {room.members.map(member => <Text key={member.uid} style={styles.memberLine}>{member.jokerId}{member.uid === room.hostUid ? '  · HOST' : ''}{member.uid === user?.uid ? '  · YOU' : ''}</Text>)}
                   {room.mode === 'trivia' && room.members.length === 1 ? <Text style={styles.helper}>Solo play is ready. Invite a group or start a private challenge. Each table deals up to 20 questions, with ones you have not played first.</Text> : null}
+                  {room.mode !== 'trivia' && room.members.length < 4 ? <Text style={styles.helper}>{MODE_COPY[room.mode].title} needs at least 4 Jokers to deal. Invite {4 - room.members.length} more {4 - room.members.length === 1 ? 'Joker' : 'Jokers'}.</Text> : null}
                   {isHost ? room.members.filter(member => member.uid !== user?.uid).map(member => <GoldButton key={member.uid} title={`PASS HOST TO ${member.jokerId}`} onPress={() => void act(() => transferGameHost(room.id, member.uid))} disabled={working} quiet />) : null}
                 </View>
-                {isHost ? <GoldButton title={`DEAL ${MODE_COPY[room.mode].title}`} onPress={() => void act(() => startGame(room.id))} disabled={working || (room.mode !== 'trivia' && room.members.length < 2)} /> : <Text style={styles.helper}>The host will deal when everyone is ready.</Text>}
+                {isHost ? <GoldButton title={`DEAL ${MODE_COPY[room.mode].title}`} onPress={() => void act(() => startGame(room.id))} disabled={working || (room.mode !== 'trivia' && room.members.length < 4)} /> : <Text style={styles.helper}>The host will deal when everyone is ready.</Text>}
                 {isHost ? <GoldButton title="CLOSE THIS TABLE" onPress={() => confirmAction('Close this table?', 'The room will finish and its invitation will no longer accept new players.', 'Close table', () => void act(() => endGame(room.id)))} disabled={working} quiet /> : null}
                 {!isHost ? <GoldButton title="TAKE HOST SEAT IF HOST IS OFFLINE" onPress={() => void act(() => claimGameHost(room.id))} disabled={working} quiet /> : null}
                 <GoldButton title="LEAVE TABLE" onPress={() => void onLeave()} disabled={working} quiet />
@@ -246,7 +250,7 @@ export default function GameScreen() {
                       : room.phase === 'judging' && room.judgeUid === user?.uid ? (
                         <View style={styles.panel}><Text style={styles.heading}>CHOOSE THE WINNER</Text>{room.submissions?.map((submission, i) => <TouchableOpacity key={submission.id} disabled={working} style={styles.responseCard} onPress={() => void act(() => judgeResponse(room.id, submission.id))}><Text style={styles.eyebrow}>CARD {String.fromCharCode(65 + i)}</Text><Text style={styles.responseText}>{submission.text}</Text></TouchableOpacity>)}</View>
                       ) : room.phase === 'judging' ? <View style={styles.panel}><Text style={styles.heading}>JUDGE IS READING</Text><Text style={styles.copy}>The judge is choosing the funniest match.</Text></View>
-                        : room.phase === 'round-result' ? <View style={styles.panel}><Text style={styles.heading}>THE TABLE’S PICK · {room.winner?.jokerId}</Text><Text style={styles.responseText}>{room.winner?.text}</Text>{isHost ? <GoldButton title="DEAL NEXT ROUND" onPress={() => void act(() => advanceGame(room.id))} disabled={working} /> : null}</View> : null}
+                        : room.phase === 'round-result' ? <View style={styles.panel}><Text style={styles.heading}>THE TABLE’S PICK · {room.winner?.jokerId}</Text><Text style={styles.responseText}>{room.winner?.text}</Text>{room.members.length < 4 ? <Text style={styles.helper}>Cards needs at least 4 Jokers to deal again. This table has {room.members.length}.</Text> : null}{isHost ? <GoldButton title="DEAL NEXT ROUND" onPress={() => void act(() => advanceGame(room.id))} disabled={working || room.members.length < 4} /> : null}</View> : null}
                   </>
                 ) : (
                   <>
@@ -272,9 +276,10 @@ export default function GameScreen() {
                         ))}
                         {!selfAlreadyVoted ? <GoldButton title="LOCK MY GUESSES" disabled={working || room.members.some(member => member.uid !== user?.uid && !guessMap[member.uid])} onPress={() => void act(() => voteRecruitRoles(room.id, guessMap))} /> : <Text style={styles.helper}>Your ballot is locked · {room.votedCount}/{room.voteCount} have voted.</Text>}
                       </> : room.phase === 'revealed' ? <>
-                        <Text style={styles.copy}>Correct guesses and unspotted bluffs earn a point. The next deal reshuffles the complete eight-role deck.</Text>
+                        <Text style={styles.copy}>Correct guesses and unspotted bluffs earn a point. Each deal reshuffles the eight established roles; larger tables repeat the full deck.</Text>
                         {room.members.map(member => <Text key={member.uid} style={styles.memberLine}>{member.jokerId}  ·  {room.revealedRoles?.[member.uid]}</Text>)}
-                        {isHost ? <GoldButton title="RESHUFFLE & DEAL AGAIN" onPress={() => void act(() => dealRecruitAgain(room.id))} disabled={working} /> : null}
+                        {room.members.length < 4 ? <Text style={styles.helper}>Recruit needs at least 4 Jokers to deal again. This table has {room.members.length}.</Text> : null}
+                        {isHost ? <GoldButton title="RESHUFFLE & DEAL AGAIN" onPress={() => void act(() => dealRecruitAgain(room.id))} disabled={working || room.members.length < 4} /> : null}
                       </> : null}
                     </View>
                   </>
@@ -297,7 +302,7 @@ export default function GameScreen() {
         ) : (
           <View style={styles.column}>
             <View style={styles.intro}>
-              <Text style={styles.eyebrow}>SMALL TABLES · PRIVATE ROLES</Text>
+              <Text style={styles.eyebrow}>PRIVATE ROLES · OPEN TABLES</Text>
               <Text style={styles.title}>DEAL THE NIGHT</Text>
               <Text style={styles.copy}>Pull up a chair. Choose your game, invite a few Jokers, and let the table decide what happens next.</Text>
             </View>

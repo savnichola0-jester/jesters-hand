@@ -20,7 +20,6 @@ import { getApiDomain } from './apiConfig';
 import type { AppNotificationType } from './notificationService';
 import { notificationText, notificationTitle } from './notificationCatalog';
 import { registerWebPush, unregisterWebPush } from './webPush';
-import { routeNotification } from './notificationRouting';
 
 const ANDROID_CHANNEL_ID = 'dispatches';
 let nativeListenersAttached = false;
@@ -35,7 +34,7 @@ export type PushRegistrationResult =
   | { status: 'token-unavailable' }
   | { status: 'failed'; reason: string };
 
-/** Configure foreground presentation and notification-tap routing once. */
+/** Configure foreground presentation once; NotificationProvider owns tap routing. */
 export async function configureNativePushNotifications(): Promise<() => void> {
   if (Platform.OS === 'web' || nativeListenersAttached) return () => {};
   const Notifications = await import('expo-notifications');
@@ -48,13 +47,8 @@ export async function configureNativePushNotifications(): Promise<() => void> {
     }),
   });
   nativeListenersAttached = true;
-  const response = Notifications.addNotificationResponseReceivedListener(event => {
-    const data = event.notification.request.content.data;
-    if (typeof data?.type === 'string') routeNotification(data as any);
-  });
   return () => {
     nativeListenersAttached = false;
-    response.remove();
   };
 }
 

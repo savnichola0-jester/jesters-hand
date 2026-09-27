@@ -28,7 +28,8 @@ export type AppNotificationType =
   | 'royals_honor'
   | 'issued_item'
   | 'contract_update'
-  | 'vault_comment' | 'vault_review';
+  | 'vault_comment' | 'vault_review'
+  | 'deal_personal' | 'deal_community' | 'deal_suit';
 
 export interface AppNotification {
   id:              string;
@@ -95,9 +96,11 @@ export async function broadcastToActiveMembers(
 ): Promise<void> {
   const users = await getDocs(collection(db, 'users'));
   const recipients = users.docs
-    .filter(d => d.data().suspended !== true)
+    .filter(d => d.data().suspended !== true
+      && (data.type !== 'contract_update' || d.data().jokerId !== '00-00'))
     .map(d => d.id);
-  await broadcastNotification(senderUid, recipients, data);
+  // 01-54 must re-sign even when that dealer publishes the amendment.
+  await broadcastNotification(data.type === 'contract_update' ? '' : senderUid, recipients, data);
 }
 
 // ── Real-time listener ────────────────────────────────────────────────────────

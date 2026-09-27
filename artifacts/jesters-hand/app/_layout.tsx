@@ -40,8 +40,13 @@ import { sweepVaultTempFiles } from '@/lib/vaultService';
 import { Platform, StyleSheet, View } from 'react-native';
 import { APP_MAX_W } from '@/lib/appWindow';
 import { configureNativePushNotifications } from '@/lib/pushService';
+import { auth } from '@/lib/firebase';
+import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 
 SplashScreen.preventAutoHideAsync();
+
+setBaseUrl(process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : null);
+setAuthTokenGetter(async () => auth.currentUser?.getIdToken() ?? null);
 
 // Web: lock the document so the page itself can never scroll or rubber-band
 // off screen on mobile — only in-app ScrollViews scroll. The custom +html.tsx

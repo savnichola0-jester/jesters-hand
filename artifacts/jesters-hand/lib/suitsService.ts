@@ -40,6 +40,8 @@ export interface SuitTask {
   active: boolean;
   title: string;
   visibility?: 'community' | 'private';
+  /** A public card can alert the whole Hand or the dealer-assigned suit group. */
+  notifyAudience?: 'community' | 'suit_group';
   privateTargetUid?: string;
   instruction?: string;
   destination?: SuitTaskDestination;

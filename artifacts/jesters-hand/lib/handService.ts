@@ -13,6 +13,8 @@ export interface RosterMember {
   street: string;
   name: string;
   suspended: boolean;
+  /** Only the explicit server-controlled true value is active; missing means pending. */
+  activated: boolean;
   isAdmin: boolean;
 }
 
@@ -45,6 +47,7 @@ export function listenRoster(cb: (slots: RosterSlot[]) => void): () => void {
         street: String(data.street ?? ''),
         name: String(data.name ?? ''),
         suspended: data.suspended === true,
+        activated: data.activated === true,
         isAdmin: data.isAdmin === true,
       });
     });

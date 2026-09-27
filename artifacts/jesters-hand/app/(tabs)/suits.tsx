@@ -203,9 +203,10 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
       });
     };
     return <View><Text style={s.section}>DEAL A SUITS CARD</Text>
-      <Text style={s.assignmentCopy}>Choose whether the card is visible to everyone or only to the Joker you select below. Responsibility assignments are separate.</Text>
+      <Text style={s.assignmentCopy}>Choose whether the card is visible to everyone or only to the Joker you select below. Suit-group alerts use the assigned roster here, not the photo on a Ticket.</Text>
      <View style={s.assignmentPanel}>
-       <Text style={s.assignmentTitle}>RESPONSIBILITY ASSIGNMENTS</Text>
+        <Text style={s.assignmentTitle}>SUIT GROUP ROSTER</Text>
+        <Text style={s.assignmentCopy}>After placing a suit card on a member’s Ticket, search their Joker ID and assign the matching suit here. The artwork cannot be read automatically.</Text>
        <TextInput
          value={jokerSearch}
          onChangeText={value => { setJokerSearch(value); setHolder(null); setAssignmentNote(''); }}
@@ -252,8 +253,24 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
                <Text style={s.visibilityTitle}>VISIBLE TO COMMUNITY</Text>
                <Text style={s.visibilityHint}>{d.visibility === 'private' ? `Only ${holder?.jokerId ?? 'your selected Joker'} can read this card` : 'Every active member can read this card'}</Text>
              </View>
-             <Switch testID={`suits-visibility-${x.key}`} accessibilityLabel={`${x.name} visible to community`} value={d.visibility !== 'private'} onValueChange={community => setDrafts(a => ({ ...a, [x.key]: { ...d, visibility: community ? 'community' : 'private' } }))} trackColor={{ false: '#6b6251', true: GOLD }} thumbColor={CREAM} />
+              <Switch testID={`suits-visibility-${x.key}`} accessibilityLabel={`${x.name} visible to community`} value={d.visibility !== 'private'} onValueChange={community => setDrafts(a => ({ ...a, [x.key]: { ...d, visibility: community ? 'community' : 'private', notifyAudience: community ? 'community' : undefined } }))} trackColor={{ false: '#6b6251', true: GOLD }} thumbColor={CREAM} />
            </View>
+            {d.visibility !== 'private' && (
+              <View style={s.visibilityRow}>
+                <View style={s.visibilityCopy}>
+                  <Text style={s.visibilityTitle}>ALERT ONLY THIS SUIT GROUP</Text>
+                  <Text style={s.visibilityHint}>The card stays visible to everyone. {d.notifyAudience === 'suit_group' ? `Only Jokers assigned ${x.name} in the roster get “Your suit is in play.”` : 'Everyone gets “The Jester has dealt a card.”'}</Text>
+                </View>
+                <Switch
+                  testID={`suits-group-alert-${x.key}`}
+                  accessibilityLabel={`Alert only assigned ${x.name} Jokers`}
+                  value={d.notifyAudience === 'suit_group'}
+                  onValueChange={matching => setDrafts(a => ({ ...a, [x.key]: { ...d, notifyAudience: matching ? 'suit_group' : 'community' } }))}
+                  trackColor={{ false: '#6b6251', true: GOLD }}
+                  thumbColor={CREAM}
+                />
+              </View>
+            )}
 
           <CardInput
             value={d.title}

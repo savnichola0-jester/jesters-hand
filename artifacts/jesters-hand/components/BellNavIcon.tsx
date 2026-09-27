@@ -121,6 +121,8 @@ export default function BellNavIcon({ size = 38 }: Props) {
       icon = <Feather name="smile" size={16} color={GOLD} />;
     } else if (item.type === 'royals_honor') {
       icon = <Feather name="award" size={16} color={GOLD} />;
+    } else if (item.type === 'deal_personal' || item.type === 'deal_community' || item.type === 'deal_suit') {
+      icon = <Feather name="award" size={16} color={GOLD} />;
     } else if (item.type === 'contract_update') {
       icon = <Feather name="edit-3" size={16} color={GOLD} />;
     } else {

@@ -45,6 +45,8 @@ export function routeNotification(item: NotificationRoutingData): void {
     router.push({ pathname: '/(tabs)/uniform', params: { view: 'locker' } });
   } else if (item.type === 'contract_update') {
     router.push('/contract');
+  } else if (item.type === 'deal_personal' || item.type === 'deal_community' || item.type === 'deal_suit') {
+    router.push('/(tabs)/jesters-deal');
   } else if (item.type === 'vault_comment' || item.type === 'vault_review') {
     // Overall saga review — open the Vault's book-review sheet.
     if (item.vaultSection === 'book' || !item.vaultEntryId) {

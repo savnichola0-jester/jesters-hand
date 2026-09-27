@@ -9,6 +9,7 @@ import { Feather } from '@/components/FIcon';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { deleteChatImage, uploadChatImage } from '@/lib/chatMediaService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,12 +29,14 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
 import { useAppDimensions } from '@/lib/appWindow';
+import CheckInEmblem from '@/components/CheckInEmblem';
 
 // ── Assets ────────────────────────────────────────────────────────────────────
 const NAV_DAGGER     = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS      = require('../../assets/images/nav_cards.png');
 const MARBLE         = require('../../assets/images/lace_bg.png');
 const WHISPER_FRAME  = require('../../assets/images/whisper_frame.png');
+const CHECK_IN_LOGO  = require('../../assets/images/check_in_thread_logo.png');
 
 // ── Layout constants (screen-size-independent) ────────────────────────────────
 const PANEL_MARGIN  = 12;
@@ -271,7 +274,9 @@ export default function ChatScreen() {
       <View style={[s.msgWrap, isOwn ? s.msgWrapOwn : s.msgWrapOther]}>
         {showSender && (
           <View style={s.senderRow}>
-            {senderAvatar ? (
+            {isReadOnlyCheckIns ? (
+              <CheckInEmblem size={30} />
+            ) : senderAvatar ? (
               <Image source={{ uri: resolveMediaUrl(senderAvatar) }} style={s.senderAvatar} />
             ) : (
               <View style={[s.senderAvatar, s.senderAvatarFallback]}>
@@ -285,8 +290,7 @@ export default function ChatScreen() {
         )}
 
         <Pressable
-          onLongPress={!isReadOnlyCheckIns ? (e) => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          onPress={!isReadOnlyCheckIns ? (e) => {
             const pageY = (e.nativeEvent as any).pageY ?? 200;
             setPickerPos({
               top:  Math.max(pageY - 60, navBottom + 10),
@@ -294,6 +298,28 @@ export default function ChatScreen() {
             });
             setPickerMsgId(msg.id);
           } : undefined}
+          onLongPress={() => {
+            const privateCode = isReadOnlyCheckIns
+              ? msg.text.match(/Your check-in code:\s*([A-Za-z0-9_-]{20,64})/i)?.[1]
+              : msg.text;
+            if (!privateCode) {
+              if (isReadOnlyCheckIns && msg.text) {
+                Alert.alert('Could not copy code', 'This check-in message does not contain a valid private code.');
+              }
+              return;
+            }
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            Clipboard.setStringAsync(privateCode).catch(error => {
+              Alert.alert('Could not copy message', error instanceof Error ? error.message : 'Please try again.');
+            });
+          }}
+          accessibilityHint={isReadOnlyCheckIns
+            ? 'Long press to copy only the private check-in code.'
+            : 'Long press to copy this message text. Tap to open message actions.'}
+          accessibilityRole="button"
+          accessibilityLabel={isReadOnlyCheckIns
+            ? 'Private check-in code message'
+            : msg.text || 'Message attachment'}
           style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleOther, { maxWidth: maxBubbleW }]}
         >
           {msg.imageUrl ? (
@@ -363,6 +389,7 @@ export default function ChatScreen() {
             </TouchableOpacity>
           </View>
           <View style={s.navCenter}>
+            {isReadOnlyCheckIns && <CheckInEmblem size={36} />}
             {conversation?.isGroup && (
               <GroupAvatarCollage
                 memberUids={conversation.memberUids.filter(u => u !== user?.uid)}
@@ -422,6 +449,23 @@ export default function ChatScreen() {
           style={{ width: PANEL_W, height: PANEL_H }}
           resizeMode="stretch"
         />
+        {isReadOnlyCheckIns && (
+          <View
+            pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            style={{
+              position: 'absolute',
+              top: MSG_TOP + 38,
+              left: Math.round(PANEL_W * 0.2),
+              width: Math.round(PANEL_W * 0.6),
+              height: Math.round(PANEL_H * 0.54),
+              opacity: 0.3,
+            }}
+          >
+            <Image source={CHECK_IN_LOGO} style={StyleSheet.absoluteFill} resizeMode="contain" />
+          </View>
+        )}
 
         {/* Messages — scrollable area inside frame body */}
         <View

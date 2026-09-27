@@ -18,6 +18,7 @@ import {
 } from '@/lib/whisperService';
 import BellNavIcon from '@/components/BellNavIcon';
 import GroupAvatarCollage from '@/components/GroupAvatarCollage';
+import CheckInEmblem from '@/components/CheckInEmblem';
 import { resolveMediaUrl } from '@/lib/mediaService';
 import { MARBLE_TEXT_SHADOW } from '@/lib/legibility';
 import { appWindow } from '@/lib/appWindow';
@@ -233,6 +234,7 @@ export default function WhisperScreen() {
             const unread  = conv.unreadCounts[user?.uid ?? ''] ?? 0;
             const name    = getConvDisplayName(conv, user?.uid ?? '', memberCache);
             const timeStr = formatTimestamp(conv.lastMessageAt);
+            const isCheckInConversation = conv.kind === 'check_ins' || conv.id.startsWith('checkins_');
 
             const renderRightActions = (
               _progress: any,
@@ -260,9 +262,15 @@ export default function WhisperScreen() {
                   style={[s.convRow, unread > 0 && s.convRowUnread]}
                   onPress={() => openConversation(conv)}
                   activeOpacity={0.80}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${name}${unread > 0 ? `, ${unread} unread messages` : ''}`}
+                  accessibilityHint="Opens this Pocket conversation."
                 >
+                  {unread > 0 ? <View style={s.convUnreadAccent} /> : null}
                   {/* Avatar */}
-                  {conv.isGroup ? (
+                  {isCheckInConversation ? (
+                    <CheckInEmblem size={54} />
+                  ) : conv.isGroup ? (
                     <GroupAvatarCollage
                       memberUids={conv.memberUids.filter(u => u !== user?.uid)}
                       avatarCache={avatarCache}
@@ -598,6 +606,10 @@ const s = StyleSheet.create({
     gap: 12,
   },
   convRowUnread: { backgroundColor: 'rgba(212,168,83,0.06)' },
+  convUnreadAccent: {
+    position: 'absolute', left: 0, top: 8, bottom: 8,
+    width: 3, borderRadius: 2, backgroundColor: GOLD,
+  },
   avatar: {
     width: 46, height: 46, borderRadius: 23,
     backgroundColor: 'rgba(200,165,60,0.12)',

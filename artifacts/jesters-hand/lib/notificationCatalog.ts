@@ -19,6 +19,9 @@ export const NOTIFICATION_TITLES: Record<AppNotificationType, string> = {
   contract_update: 'Go sign in blood.',
   vault_comment:   'Someone has noticed.',
   vault_review:    'Someone has noticed.',
+  deal_personal:   'The Jester has dealt you a card.',
+  deal_community:  'The Jester has dealt a card.',
+  deal_suit:       'Your suit is in play.',
 };
 
 export function notificationTitle(type: AppNotificationType): string {

@@ -199,3 +199,43 @@ export const CONTRACT_SECTIONS: ContractSection[] = [
 export const CONTRACT_ACKNOWLEDGEMENT =
   '🖤 By signing, I acknowledge that I have read and agree to follow the rules of The Hand. ' +
   'I understand that violations may result in the revocation of my Joker ID and removal from The Hand.';
+
+/** Wording merged into Active Participation by the versioned live correction. */
+export const JESTERS_DEAL_PARTICIPATION_LINES = [
+  "🃏 JESTER'S DEAL",
+  "🖤 Open Jester's Deal to see the black cards The Hand has dealt. Community cards are visible to the whole Hand; private cards are shown only to their Joker and the Hand dealers.",
+  '♠️ Tap a lit card to read its task and follow its link to participate elsewhere in the app when available. A card marked Not Dealt is not in play.',
+  '♥️ Cards assigned to you are marked Assigned to You. Jokers may also participate in community cards without a personal assignment.',
+  "🗡️ Opening a card alone does not complete its task. Do not claim another Joker's work, use someone else's account, or fake activity to earn credit.",
+  "🖤 The Hand manages and assigns cards; the Jester awards Royals. Jester's Deal is not a ranking board. Do not shame anyone over a card or their Seat Temperature.",
+  '🖤 Seat Temperature reflects participation across the app, not just a card in the Deal. No task requires content prohibited by this contract.',
+];
+
+export const GAME_CHECKIN_PARTICIPATION_LINES = [
+  'THE GAME',
+  '🖤 Open the Game icon to play Trivia, Jesters COH, and Recruit with other Jokers. Playing is one way to participate in The Hand.',
+  '♠️ Trivia may be played solo. Jesters COH and Recruit need at least four Jokers at the table before a deal.',
+  '🗡️ Only approved prompts and response cards may be dealt in Jesters COH.',
+  "🗡️ Keep private hands, roles, room messages, and invitation codes within the game room. Play fairly on your own account; do not cheat or interfere with another Joker's private role or response.",
+  'CHECK-IN',
+  '🖤 Open the Check-In icon to see your daily mark and streak, then enter your own daily code from your private Check-In Pocket thread.',
+  "♠️ Each activated, nonsuspended member—including both active Hand seats—receives a separate daily code in that member's own Pocket thread. Mark your day with your own code before that Denver day ends; missing a day resets the streak.",
+  '🗡️ Each code is single-use and valid only for its intended Joker and day. No one may submit another member’s code for them.',
+  "🗡️ Never share your login, password, or check-in code or sign in as another Joker. Account sharing is a serious violation of The Hand's rules.",
+  '🗡️ A transferred seat stays deactivated until The Hand activates its next holder; deactivated or suspended accounts do not receive check-in codes.',
+];
+
+/** Added to the live notification glossary by the next versioned amendment. */
+export const DEAL_NOTIFICATION_LINES = [
+  "JESTER'S DEAL",
+  '“The Jester has dealt you a card.” — A private task was dealt to your Joker ID alone. Open the Jester’s Deal icon to read your card.',
+  '“The Jester has dealt a card.” — A community card is in play for the whole Hand. Open the Jester’s Deal icon to read it.',
+  '“Your suit is in play.” — A community card is in play, and The Hand assigned you to that suit group. The card is visible to the whole Hand, but only Jokers assigned that suit receive this alert. Open Jester’s Deal to read it.',
+];
+
+/** Meanings added to the live notification glossary without issuing any codes. */
+export const CHECK_IN_NOTIFICATION_LINES = [
+  'CHECK-IN',
+  '“A private check-in is ready” — Your daily code is waiting in your own private Check-In Pocket thread. The device alert never shows the code; open Pocket to read it, then enter it in Check-In. The bell lists this as a Pocket message.',
+  '“Daily Check-Ins need attention” — The daily send did not finish or some delivery failed. Only The Hand gets this warning to review the Check-Ins roster and Pocket delivery; it is not a member’s code.',
+];

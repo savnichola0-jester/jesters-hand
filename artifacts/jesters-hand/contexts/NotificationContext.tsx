@@ -27,7 +27,7 @@ const NotificationContext = createContext<NotificationContextType>({
 });
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, contractGateRequired } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   useEffect(() => {
@@ -41,7 +41,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Push notification taps → same routing as the bell panel.
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    // Wait for a restored session: cold-start taps otherwise route before auth
+    // and the sign-in/contract gate replaces the requested destination.
+    if (Platform.OS === 'web' || !user || contractGateRequired !== false) return;
     let sub: { remove: () => void } | undefined;
     let cancelled = false;
 
@@ -61,14 +63,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         // Cold start: app was opened by tapping a push.
         const last = await Notifications.getLastNotificationResponseAsync();
-        if (!cancelled && last) route(last.notification.request.content.data);
+        if (!cancelled && last) {
+          route(last.notification.request.content.data);
+          await Notifications.clearLastNotificationResponseAsync();
+        }
       } catch {
         // expo-notifications unavailable (e.g. Expo Go limitations) — ignore.
       }
     })();
 
     return () => { cancelled = true; sub?.remove(); };
-  }, []);
+  }, [user?.uid, contractGateRequired]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

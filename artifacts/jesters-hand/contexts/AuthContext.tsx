@@ -68,7 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isJester = !!user && adminFlag && jokerId === '00-00';
   const isHandAdmin = isAdmin;
   const contractGateReady = !!user && !loading && agreementChecked && contractChecked;
-  const needsContract = !!user && !isJester && (
+  // Signing exemption belongs to the 00-00 seat, not to an admin flag that
+  // can still be loading or temporarily unavailable.
+  const needsContract = !!user && jokerId !== '00-00' && (
     agreement === false || (!!agreement && agreement.version < contractVersion)
   );
 

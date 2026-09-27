@@ -11,6 +11,7 @@ import { Feather } from '@/components/FIcon';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTicket, saveTicket, uploadMug, uploadAdminPhoto, deleteMug, deleteAdminPhoto } from '@/lib/ticketService';
+import TicketBrandImprint from '@/components/TicketBrandImprint';
 import { listenOwnStats, DealMemberStats } from '@/lib/dealService';
 import { broadcastToActiveMembers } from '@/lib/notificationService';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
@@ -466,6 +467,7 @@ export default function TicketScreen() {
                 }
               </TouchableOpacity>
             </View>
+            <TicketBrandImprint />
 
           </View>{/* end folder body */}
         </View>{/* end folder wrap */}

@@ -160,7 +160,7 @@ export function refreshPresenceHeartbeat(): void {
   });
 }
 
-async function fetchVoiceToken(channelId: string): Promise<{
+async function fetchVoiceToken(channelId: string, gameRoomId?: string): Promise<{
   appId: string; token: string; uid: string;
 }> {
   const domain = getApiDomain();
@@ -172,7 +172,7 @@ async function fetchVoiceToken(channelId: string): Promise<{
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${idToken}`,
     },
-    body: JSON.stringify({ channel: channelId }),
+    body: JSON.stringify({ channel: channelId, ...(gameRoomId ? { gameRoomId } : {}) }),
   });
   if (!res.ok) {
     throw new Error(res.status === 500
@@ -190,13 +190,14 @@ export async function joinVoiceChannel(
   channelId: string,
   jokerId: string,
   events: VoiceEvents = {},
+  gameRoomId?: string,
 ): Promise<VoiceSession> {
   if (!voiceSupported()) {
     throw new Error('Live voice works in the browser app — it is not available in Expo Go.');
   }
   activeSession?.leave();
 
-  const { appId, token, uid } = await fetchVoiceToken(channelId);
+  const { appId, token, uid } = await fetchVoiceToken(channelId, gameRoomId);
 
   let ended = false; // onEnded fires exactly once, whether we leave or drop
   const endOnce = () => {
@@ -216,7 +217,7 @@ export async function joinVoiceChannel(
     // stays in the channel with no interruption. If the fetch fails the
     // engine expires as before and onEnded fires; nothing worse happens.
     onTokenWillExpire: () => {
-      fetchVoiceToken(channelId)
+      fetchVoiceToken(channelId, gameRoomId)
         .then(fresh => handle.renewToken(fresh.token))
         .catch(() => {});
     },
@@ -233,6 +234,15 @@ export async function joinVoiceChannel(
   };
   activeSession = session;
   return session;
+}
+
+/** Join private voice for a game room; the API verifies live room membership. */
+export function joinGameRoomVoiceChannel(
+  roomId: string,
+  jokerId: string,
+  events: VoiceEvents = {},
+): Promise<VoiceSession> {
+  return joinVoiceChannel(`game-${roomId}`, jokerId, events, roomId);
 }
 
 

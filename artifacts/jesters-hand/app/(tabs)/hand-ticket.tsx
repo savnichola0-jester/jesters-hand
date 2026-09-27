@@ -19,6 +19,7 @@ import { writeNotification } from '@/lib/notificationService';
 import { fetchSeatActivitySummary, SeatActivitySummary } from '@/lib/activityService';
 import { SeatThermometer } from '@/components/SeatThermometer';
 import { resolveMediaUrl } from '@/lib/mediaService';
+import TicketBrandImprint from '@/components/TicketBrandImprint';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
@@ -380,6 +381,7 @@ export default function HandTicketScreen() {
                     </View>
                   );
                 })}
+                <TicketBrandImprint />
               </View>
             </View>
           </ScrollView>

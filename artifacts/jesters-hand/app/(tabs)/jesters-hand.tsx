@@ -4,10 +4,9 @@
 // and the Jester's masks — Archive. Members (01-54 … 54-54) never see the
 // tile and are bounced home if they somehow land here.
 //
-// THE HAND: the roster of all 54 permanent Joker ID slots with the three
-// administrative actions — Suspend (temporarily disable login, data kept),
-// Recover (reset only the cipher), Transfer (permanent wipe, slot handed to
-// a new member — Joker ID itself never changes).
+// THE HAND: the roster of all 54 permanent Joker ID slots with Activate,
+// Suspend, Recover, and Transfer controls, plus a safe-to-repeat today's
+// Check-Ins backup action.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -23,6 +22,7 @@ import BellNavIcon from '@/components/BellNavIcon';
 import {
   RosterSlot, listenRoster, setSuspended, recoverCipher, transferSlot,
 } from '@/lib/handService';
+import { useActivateMember, useSendTodayCheckIns } from '@workspace/api-client-react';
 import {
   Report, listenReports, fetchEvidenceUrls, formatReportTimestamp,
   setReportStatus, deleteReport,
@@ -92,7 +92,7 @@ const EMPTY_COPY: Record<SectionId, string> = {
 
 // ── Action modal state ────────────────────────────────────────────────────────
 
-type ActionKind = 'suspend' | 'unsuspend' | 'recover' | 'transfer';
+type ActionKind = 'activate' | 'suspend' | 'unsuspend' | 'recover' | 'transfer';
 
 interface PendingAction {
   kind: ActionKind;
@@ -100,6 +100,11 @@ interface PendingAction {
 }
 
 const ACTION_COPY: Record<ActionKind, { title: string; body: string; confirm: string }> = {
+  activate: {
+    title: 'ACTIVATE MEMBER',
+    body: 'This assigned Joker ID will become active and eligible for daily Check-Ins. Activation does not lift a suspension.',
+    confirm: 'Activate',
+  },
   suspend: {
     title: 'SUSPEND',
     body: 'Temporarily disables this Joker ID. The member cannot log in or use the app while suspended. Nothing is deleted or changed — lifting the suspension restores everything exactly as it was.',
@@ -159,6 +164,9 @@ export default function JestersHandScreen() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  const [checkInRunMessage, setCheckInRunMessage] = useState<string | null>(null);
+  const activateMemberMutation = useActivateMember();
+  const sendTodayCheckInsMutation = useSendTodayCheckIns();
 
   const openAction = (kind: ActionKind, slot: RosterSlot) => {
     setCipher(''); setConfirmId(''); setActionError(null);
@@ -169,6 +177,18 @@ export default function JestersHandScreen() {
   const showBanner = (msg: string) => {
     setBanner(msg);
     setTimeout(() => setBanner(null), 5000);
+  };
+
+  const sendTodayCheckIns = async () => {
+    setCheckInRunMessage(null);
+    try {
+      const result = await sendTodayCheckInsMutation.mutateAsync();
+      setCheckInRunMessage(
+        `${result.dateKey}: ${result.issued} sent, ${result.alreadyIssued} already sent, ${result.failed} code failures, ${result.pushFailed} push failures. Audit ${result.auditId}.`,
+      );
+    } catch (err: any) {
+      setCheckInRunMessage(err?.message ?? 'Could not send today’s Check-Ins. The server records the attempt.');
+    }
   };
 
   // ── Reports ("Cards") ──
@@ -400,10 +420,12 @@ export default function JestersHandScreen() {
     try {
       if (kind === 'suspend')        await setSuspended(m.uid, true);
       else if (kind === 'unsuspend') await setSuspended(m.uid, false);
+      else if (kind === 'activate') await activateMemberMutation.mutateAsync({ data: { targetUid: m.uid } });
       else if (kind === 'recover')   await recoverCipher(m.uid, cipher.trim());
       else                           await transferSlot(m.uid, m.jokerId, cipher.trim());
       setAction(null);
       showBanner(
+        kind === 'activate'  ? `${slot.slotId} activated.` :
         kind === 'suspend'   ? `${slot.slotId} suspended.` :
         kind === 'unsuspend' ? `${slot.slotId} reinstated.` :
         kind === 'recover'   ? `Cipher reset for ${slot.slotId}.` :
@@ -422,8 +444,8 @@ export default function JestersHandScreen() {
 
   const renderSlot = ({ item }: { item: RosterSlot }) => {
     const m = item.member;
-    const status = !m ? 'UNASSIGNED' : m.suspended ? 'SUSPENDED' : 'ACTIVE';
-    const statusColor = !m ? 'rgba(237,224,196,0.30)' : m.suspended ? RED : GOLD;
+    const status = !m ? 'UNASSIGNED' : m.suspended ? 'SUSPENDED' : !m.activated ? 'PENDING' : 'ACTIVE';
+    const statusColor = !m ? 'rgba(237,224,196,0.30)' : m.suspended ? RED : !m.activated ? '#E6B84B' : GOLD;
     return (
       <View style={st.row}>
         <View style={st.rowInfo}>
@@ -435,6 +457,16 @@ export default function JestersHandScreen() {
         </View>
         {m && isHandAdmin ? (
           <View style={st.rowBtns}>
+            {!m.activated && !m.suspended ? (
+              <TouchableOpacity
+                style={[st.actBtn, st.activateBtn]}
+                onPress={() => openAction('activate', item)}
+                activeOpacity={0.8}
+                testID={`activate-${item.slotId}`}
+              >
+                <Text style={[st.actBtnText, { color: '#0A0A0A' }]}>ACTIVATE</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               style={[st.actBtn, m.suspended && st.actBtnActive]}
               onPress={() => openAction(m.suspended ? 'unsuspend' : 'suspend', item)}
@@ -519,7 +551,26 @@ export default function JestersHandScreen() {
                   data={slots}
                   keyExtractor={s => s.slotId}
                   renderItem={renderSlot}
-                  ListHeaderComponent={<AppKeyQr />}
+                  ListHeaderComponent={(
+                    <View>
+                      <AppKeyQr />
+                      <TouchableOpacity
+                        style={[st.sendCheckInsBtn, sendTodayCheckInsMutation.isPending && st.sendCheckInsBtnDisabled]}
+                        onPress={() => void sendTodayCheckIns()}
+                        disabled={sendTodayCheckInsMutation.isPending}
+                        activeOpacity={0.8}
+                        testID="hand-send-todays-checkins"
+                      >
+                        {sendTodayCheckInsMutation.isPending
+                          ? <ActivityIndicator size="small" color="#0A0A0A" />
+                          : <Text style={st.sendCheckInsBtnText}>SEND TODAY’S CHECK-INS · SAFE TO REPEAT</Text>}
+                      </TouchableOpacity>
+                      <Text style={st.checkInHint}>
+                        Uses today’s Denver calendar day. One issuance per active member, including both active Hand seats; repeats never replace codes already sent.
+                      </Text>
+                      {checkInRunMessage ? <Text style={st.checkInRunMessage}>{checkInRunMessage}</Text> : null}
+                    </View>
+                  )}
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={{ paddingBottom: 8 }}
                   ItemSeparatorComponent={() => <View style={st.rowSep} />}
@@ -1531,6 +1582,7 @@ const st = StyleSheet.create({
     fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1.2,
   },
   rowBtns: { flexDirection: 'row', gap: 8 },
+  activateBtn: { backgroundColor: GOLD, borderColor: GOLD },
   actBtn: {
     flex: 1, height: 30, borderRadius: 7, borderWidth: 1,
     borderColor: 'rgba(200,165,60,0.4)', backgroundColor: '#080808',
@@ -1540,6 +1592,24 @@ const st = StyleSheet.create({
   actBtnDanger: { borderColor: 'rgba(176,58,58,0.6)' },
   actBtnText: {
     color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 9.5, letterSpacing: 1,
+  },
+  sendCheckInsBtn: {
+    minHeight: 40, borderRadius: 8, borderWidth: 1, borderColor: GOLD,
+    backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 8, marginVertical: 12,
+  },
+  sendCheckInsBtnDisabled: { opacity: 0.65 },
+  sendCheckInsBtnText: {
+    color: '#0A0A0A', fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 0.6,
+    textAlign: 'center',
+  },
+  checkInRunMessage: {
+    color: CREAM, fontFamily: 'Inter_400Regular', fontSize: 11, lineHeight: 16,
+    marginBottom: 10,
+  },
+  checkInHint: {
+    color: 'rgba(237,224,196,0.45)', fontFamily: 'Inter_400Regular',
+    fontSize: 10.5, lineHeight: 15, marginBottom: 10,
   },
 
   // ── Report rows ──
