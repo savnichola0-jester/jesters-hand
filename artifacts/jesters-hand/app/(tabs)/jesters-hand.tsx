@@ -72,11 +72,10 @@ const CREAM = '#EDE0C4';
 const GOLD  = '#D4A853';
 const RED   = '#B03A3A';
 
-type SectionId = 'hand' | 'checkins' | 'reports' | 'investigations' | 'activity' | 'archive';
+type SectionId = 'hand' | 'reports' | 'investigations' | 'activity' | 'archive';
 
 const SECTIONS: { id: SectionId; suit: string; suitColor: string; label: string }[] = [
   { id: 'hand',           suit: '\u2666', suitColor: RED,   label: 'The Hand' },
-  { id: 'checkins',       suit: '\u2713', suitColor: RED,   label: 'Check-Ins' },
   { id: 'reports',        suit: '\u2665', suitColor: RED,   label: 'Reports' },
   { id: 'investigations', suit: '\u2660', suitColor: CREAM, label: 'Investigations' },
   { id: 'activity',       suit: '\u2663', suitColor: CREAM, label: 'Activity' },
@@ -85,7 +84,6 @@ const SECTIONS: { id: SectionId; suit: string; suitColor: string; label: string 
 
 const EMPTY_COPY: Record<SectionId, string> = {
   hand:           '',
-  checkins:       '',
   reports:        'No cards have been filed.\nWhen a member files The Card from a Pocket conversation,\nthe report lands here — visible only to you.',
   investigations: 'Search a name, street name, or Joker ID to see their complete\nfile: messages, comments, intel, Deal, SUITS, Hidden records, and reports.\nPocket conversations stay private — they never appear here.',
   activity:       'Search a name, street name, or Joker ID for a high-level log of\nlogins and actions across the Hand. No message, comment, or intel body is shown.',
@@ -186,7 +184,7 @@ export default function JestersHandScreen() {
     try {
       const result = await sendTodayCheckInsMutation.mutateAsync();
       setCheckInRunMessage(
-        `${result.dateKey}: ${result.issued} codes issued, ${result.alreadyIssued} already issued, ${result.failed} code failures, ${result.pushFailed} notification failures. Audit ${result.auditId}.`,
+        `${result.dateKey}: ${result.issued} sent, ${result.alreadyIssued} already sent, ${result.failed} code failures, ${result.pushFailed} push failures. Audit ${result.auditId}.`,
       );
     } catch (err: any) {
       setCheckInRunMessage(err?.message ?? 'Could not send today’s Check-Ins. The server records the attempt.');
@@ -519,11 +517,7 @@ export default function JestersHandScreen() {
 
       {/* ── Folder ── */}
       <View style={[st.folderWrap, { top: navBottom + 42 }]}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={st.tabsRow}
-        >
+        <View style={st.tabsRow}>
           {SECTIONS.map(s => {
             const active = s.id === section;
             return (
@@ -532,9 +526,6 @@ export default function JestersHandScreen() {
                 style={[st.tab, active && st.tabActive]}
                 onPress={() => setSection(s.id)}
                 activeOpacity={0.8}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                testID={`hand-section-${s.id}`}
               >
                 <Text style={[st.tabSuit, { color: active ? s.suitColor : 'rgba(237,224,196,0.30)' }]}>
                   {s.suit}
@@ -545,7 +536,7 @@ export default function JestersHandScreen() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
 
         <View style={st.body}>
           {section === 'hand' ? (
@@ -563,6 +554,21 @@ export default function JestersHandScreen() {
                   ListHeaderComponent={(
                     <View>
                       <AppKeyQr />
+                      <TouchableOpacity
+                        style={[st.sendCheckInsBtn, sendTodayCheckInsMutation.isPending && st.sendCheckInsBtnDisabled]}
+                        onPress={() => void sendTodayCheckIns()}
+                        disabled={sendTodayCheckInsMutation.isPending}
+                        activeOpacity={0.8}
+                        testID="hand-send-todays-checkins"
+                      >
+                        {sendTodayCheckInsMutation.isPending
+                          ? <ActivityIndicator size="small" color="#0A0A0A" />
+                          : <Text style={st.sendCheckInsBtnText}>SEND TODAY’S CHECK-INS · SAFE TO REPEAT</Text>}
+                      </TouchableOpacity>
+                      <Text style={st.checkInHint}>
+                        Uses today’s Denver calendar day. One issuance per active member, including both active Hand seats; repeats never replace codes already sent.
+                      </Text>
+                      {checkInRunMessage ? <Text style={st.checkInRunMessage}>{checkInRunMessage}</Text> : null}
                     </View>
                   )}
                   showsVerticalScrollIndicator={false}
@@ -571,38 +577,6 @@ export default function JestersHandScreen() {
                 />
               )}
             </>
-          ) : section === 'checkins' ? (
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={st.checkInPanel}
-            >
-              <Text style={st.checkInSuit}>{'\u2713'}</Text>
-              <Text style={st.checkInTitle}>DAILY CHECK-INS</Text>
-              <Text style={st.checkInIntro}>
-                Send today’s private check-in to every active member with one tap.
-              </Text>
-              <View style={st.checkInInfoCard}>
-                <Text style={st.checkInInfo}>
-                  The server creates a different code for each explicitly activated, non-suspended account, including active Hand accounts. Each code goes only to that person’s private Check-In Pocket. The phone notification just says a code is ready.
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[st.sendCheckInsBtn, sendTodayCheckInsMutation.isPending && st.sendCheckInsBtnDisabled]}
-                onPress={() => void sendTodayCheckIns()}
-                disabled={sendTodayCheckInsMutation.isPending}
-                activeOpacity={0.8}
-                testID="hand-send-todays-checkins"
-                accessibilityRole="button"
-              >
-                {sendTodayCheckInsMutation.isPending
-                  ? <ActivityIndicator size="small" color="#0A0A0A" />
-                  : <Text style={st.sendCheckInsBtnText}>SEND TODAY’S CHECK-INS</Text>}
-              </TouchableOpacity>
-              <Text style={st.checkInHint}>
-                One code per member per Denver day. Pressing again will not replace a code already issued.
-              </Text>
-              {checkInRunMessage ? <Text style={st.checkInRunMessage}>{checkInRunMessage}</Text> : null}
-            </ScrollView>
           ) : section === 'reports' ? (
             reports === null ? (
               <View style={st.centerFill}><ActivityIndicator size="large" color={GOLD} /></View>
@@ -1554,7 +1528,7 @@ const st = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
   tab: {
-    width: 72, flexShrink: 0, height: TAB_H,
+    flex: 1, height: TAB_H,
     backgroundColor: '#080808',
     borderTopLeftRadius: 10, borderTopRightRadius: 10,
     borderWidth: 1, borderBottomWidth: 0,
@@ -1632,28 +1606,6 @@ const st = StyleSheet.create({
   checkInRunMessage: {
     color: CREAM, fontFamily: 'Inter_400Regular', fontSize: 11, lineHeight: 16,
     marginBottom: 10,
-  },
-  checkInPanel: {
-    flexGrow: 1, alignItems: 'stretch', paddingTop: 18, paddingBottom: 12,
-  },
-  checkInSuit: {
-    color: RED, fontSize: 32, lineHeight: 38, textAlign: 'center',
-  },
-  checkInTitle: {
-    ...MARBLE_TEXT_SHADOW, color: GOLD, fontFamily: 'Cinzel_700Bold',
-    fontSize: 16, letterSpacing: 2, textAlign: 'center', marginBottom: 8,
-  },
-  checkInIntro: {
-    color: CREAM, fontFamily: 'Inter_500Medium', fontSize: 13, lineHeight: 19,
-    textAlign: 'center', marginBottom: 12,
-  },
-  checkInInfoCard: {
-    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(200,165,60,0.22)',
-    backgroundColor: '#080808', padding: 12, marginBottom: 4,
-  },
-  checkInInfo: {
-    color: 'rgba(237,224,196,0.65)', fontFamily: 'Inter_400Regular',
-    fontSize: 11.5, lineHeight: 17,
   },
   checkInHint: {
     color: 'rgba(237,224,196,0.45)', fontFamily: 'Inter_400Regular',
