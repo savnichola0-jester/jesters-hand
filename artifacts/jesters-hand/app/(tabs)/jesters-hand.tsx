@@ -21,8 +21,8 @@ import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import {
   RosterSlot, listenRoster, setSuspended, recoverCipher, transferSlot,
+  activateMember, sendTodayCheckIns as issueTodayCheckIns,
 } from '@/lib/handService';
-import { useActivateMember, useSendTodayCheckIns } from '@workspace/api-client-react';
 import {
   Report, listenReports, fetchEvidenceUrls, formatReportTimestamp,
   setReportStatus, deleteReport,
@@ -165,8 +165,7 @@ export default function JestersHandScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [checkInRunMessage, setCheckInRunMessage] = useState<string | null>(null);
-  const activateMemberMutation = useActivateMember();
-  const sendTodayCheckInsMutation = useSendTodayCheckIns();
+  const [checkInSending, setCheckInSending] = useState(false);
 
   const openAction = (kind: ActionKind, slot: RosterSlot) => {
     setCipher(''); setConfirmId(''); setActionError(null);
@@ -180,14 +179,18 @@ export default function JestersHandScreen() {
   };
 
   const sendTodayCheckIns = async () => {
+    if (checkInSending) return;
     setCheckInRunMessage(null);
+    setCheckInSending(true);
     try {
-      const result = await sendTodayCheckInsMutation.mutateAsync();
+      const result = await issueTodayCheckIns();
       setCheckInRunMessage(
         `${result.dateKey}: ${result.issued} sent, ${result.alreadyIssued} already sent, ${result.failed} code failures, ${result.pushFailed} push failures. Audit ${result.auditId}.`,
       );
     } catch (err: any) {
       setCheckInRunMessage(err?.message ?? 'Could not send today’s Check-Ins. The server records the attempt.');
+    } finally {
+      setCheckInSending(false);
     }
   };
 
@@ -420,7 +423,7 @@ export default function JestersHandScreen() {
     try {
       if (kind === 'suspend')        await setSuspended(m.uid, true);
       else if (kind === 'unsuspend') await setSuspended(m.uid, false);
-      else if (kind === 'activate') await activateMemberMutation.mutateAsync({ data: { targetUid: m.uid } });
+      else if (kind === 'activate') await activateMember(m.uid);
       else if (kind === 'recover')   await recoverCipher(m.uid, cipher.trim());
       else                           await transferSlot(m.uid, m.jokerId, cipher.trim());
       setAction(null);
@@ -555,13 +558,13 @@ export default function JestersHandScreen() {
                     <View>
                       <AppKeyQr />
                       <TouchableOpacity
-                        style={[st.sendCheckInsBtn, sendTodayCheckInsMutation.isPending && st.sendCheckInsBtnDisabled]}
+                        style={[st.sendCheckInsBtn, checkInSending && st.sendCheckInsBtnDisabled]}
                         onPress={() => void sendTodayCheckIns()}
-                        disabled={sendTodayCheckInsMutation.isPending}
+                        disabled={checkInSending}
                         activeOpacity={0.8}
                         testID="hand-send-todays-checkins"
                       >
-                        {sendTodayCheckInsMutation.isPending
+                        {checkInSending
                           ? <ActivityIndicator size="small" color="#0A0A0A" />
                           : <Text style={st.sendCheckInsBtnText}>SEND TODAY’S CHECK-INS · SAFE TO REPEAT</Text>}
                       </TouchableOpacity>

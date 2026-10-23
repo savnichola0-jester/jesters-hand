@@ -60,7 +60,10 @@ export function listenRoster(cb: (slots: RosterSlot[]) => void): () => void {
 
 // ── Admin actions (api-server) ───────────────────────────────────────────────
 
-async function adminPost(path: string, body: Record<string, unknown>): Promise<void> {
+async function adminPost<TResponse = void>(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<TResponse> {
   const domain = getApiDomain();
   if (!domain) throw new Error('Server address is not configured.');
   const idToken = await auth.currentUser?.getIdToken();
@@ -73,10 +76,31 @@ async function adminPost(path: string, body: Record<string, unknown>): Promise<v
     },
     body: JSON.stringify(body),
   });
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? `Request failed (${res.status}).`);
+    const errorData = data as { error?: string };
+    throw new Error(errorData.error ?? `Request failed (${res.status}).`);
   }
+  return data as TResponse;
+}
+
+/** Activate an assigned member through the server-verified admin endpoint. */
+export function activateMember(targetUid: string): Promise<void> {
+  return adminPost('activate', { targetUid });
+}
+
+export interface SendTodayCheckInsResult {
+  dateKey: string;
+  issued: number;
+  alreadyIssued: number;
+  failed: number;
+  pushFailed: number;
+  auditId: string;
+}
+
+/** Ask the server to issue today's unique private codes and report the result. */
+export function sendTodayCheckIns(): Promise<SendTodayCheckInsResult> {
+  return adminPost('check-ins/send-today', {});
 }
 
 /** Temporarily disable (or re-enable) a member's login. Data is untouched. */
