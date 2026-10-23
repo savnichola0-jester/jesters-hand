@@ -282,32 +282,45 @@ export function listenConversations(
     collection(db, 'conversations'),
     where('memberUids', 'array-contains', uid),
   );
-  return onSnapshot(q, (snap: QuerySnapshot<DocumentData>) => {
-    const convs: Conversation[] = snap.docs
+  let ordinary: Conversation[] = [];
+  let ownCheckIn: Conversation | null = null;
+  const mapConversation = (id: string, data: DocumentData): Conversation => ({
+    id, kind: data.kind, memberUids: data.memberUids ?? [],
+    isGroup: data.isGroup ?? false, groupName: data.groupName,
+    createdBy: data.createdBy ?? '', createdAt: data.createdAt ?? null,
+    lastMessage: data.lastMessage ?? '', lastMessageAt: data.lastMessageAt ?? null,
+    unreadCounts: data.unreadCounts ?? {},
+  });
+  const emit = () => {
+    const convs = [...ordinary, ...(ownCheckIn ? [ownCheckIn] : [])];
+    convs.sort((a, b) => (b.lastMessageAt?.toMillis() ?? 0) - (a.lastMessageAt?.toMillis() ?? 0));
+    cb(convs);
+  };
+  // Ownership is provable for this exact path, unlike the broad membership
+  // query. Keep its unread counter live even when that query is denied.
+  const stopPrivate = onSnapshot(doc(db, 'conversations', `checkins_${uid}`), snap => {
+    ownCheckIn = snap.exists() && !(snap.data().deletedBy ?? []).includes(uid)
+      ? mapConversation(snap.id, snap.data()) : null;
+    emit();
+  }, error => {
+    ownCheckIn = null;
+    emit();
+    console.warn('[Pocket] private thread subscription failed:', error.code);
+  });
+  const stopOrdinary = onSnapshot(q, (snap: QuerySnapshot<DocumentData>) => {
+    ordinary = snap.docs
       .filter(d => {
         const deletedBy: string[] = d.data().deletedBy ?? [];
-        return !deletedBy.includes(uid);
+        return !deletedBy.includes(uid) && !d.id.startsWith('checkins_')
+          && !d.id.startsWith('checkin-') && d.data().kind !== 'check_ins';
       })
-      .map(d => ({
-        id:            d.id,
-        kind:          d.data().kind,
-        memberUids:    d.data().memberUids   ?? [],
-        isGroup:       d.data().isGroup      ?? false,
-        groupName:     d.data().groupName,
-        createdBy:     d.data().createdBy    ?? '',
-        createdAt:     d.data().createdAt    ?? null,
-        lastMessage:   d.data().lastMessage  ?? '',
-        lastMessageAt: d.data().lastMessageAt ?? null,
-        unreadCounts:  d.data().unreadCounts ?? {},
-      }));
-    // Sort by lastMessageAt desc (newest first), then by creation order for new convs
-    convs.sort((a, b) => {
-      const ta = a.lastMessageAt?.toMillis() ?? 0;
-      const tb = b.lastMessageAt?.toMillis() ?? 0;
-      return tb - ta;
-    });
-    cb(convs);
+      .map(d => mapConversation(d.id, d.data()));
+    emit();
+  }, error => {
+    console.warn('[Pocket] conversation list subscription failed:', error.code);
+    emit();
   });
+  return () => { stopPrivate(); stopOrdinary(); };
 }
 
 // ── Real-time messages in a conversation ──────────────────────────────────────

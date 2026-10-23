@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { listenConversations, listenAllMembers, Conversation, Member } from '@/lib/whisperService';
+import React, { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react';
+import { listenConversations, listenAllMembers, markRead, Conversation, Member } from '@/lib/whisperService';
+import { markConversationNotificationsRead } from '@/lib/notificationService';
 import { useAuth } from './AuthContext';
 
 interface WhisperContextType {
   conversations: Conversation[];
   totalUnread:   number;
+  markConversationRead: (conversationId: string) => Promise<void>;
   /** Live list of all members — re-fires on any profile change. */
   allMembers:    Member[];
   /** True once the first member snapshot has arrived. */
@@ -18,6 +20,7 @@ interface WhisperContextType {
 const WhisperContext = createContext<WhisperContextType>({
   conversations: [],
   totalUnread:   0,
+  markConversationRead: async () => {},
   allMembers:    [],
   membersReady:  false,
   memberCache:   {},
@@ -35,8 +38,17 @@ export function WhisperProvider({ children }: { children: React.ReactNode }) {
       setConversations([]);
       return;
     }
+    setConversations([]);
     const unsub = listenConversations(user.uid, setConversations);
     return unsub;
+  }, [user?.uid]);
+
+  const markConversationRead = useCallback(async (conversationId: string) => {
+    if (!user) return;
+    await markRead(conversationId, user.uid);
+    setConversations(previous => previous.map(c => c.id === conversationId
+      ? { ...c, unreadCounts: { ...c.unreadCounts, [user.uid]: 0 } } : c));
+    await markConversationNotificationsRead(user.uid, conversationId);
   }, [user?.uid]);
 
   // Single app-wide member listener — every screen shares the same live
@@ -71,7 +83,7 @@ export function WhisperProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <WhisperContext.Provider
-      value={{ conversations, totalUnread, allMembers, membersReady, memberCache, avatarCache }}
+      value={{ conversations, totalUnread, markConversationRead, allMembers, membersReady, memberCache, avatarCache }}
     >
       {children}
     </WhisperContext.Provider>

@@ -20,6 +20,13 @@ service cloud.firestore {
         || data.get('checkInProtected', false) == true;
     }
 
+    function isOwnerCheckInConversation(conversationId, data) {
+      return conversationId == 'checkins_' + request.auth.uid
+        && data.get('kind', '') == 'check_ins'
+        && data.get('checkInProtected', false) == true
+        && data.get('ownerUid', request.auth.uid) == request.auth.uid;
+    }
+
     function isDealAdmin() {
       return isAdmin();
     }
@@ -164,6 +171,9 @@ service cloud.firestore {
         && (request.auth.uid == userId || !isSuspended());
       allow create: if activeUser() && request.auth.uid == userId
         && request.resource.data.get('isAdmin', false) == false
+        // Profiles created through a client are always pending. Only the
+        // pinned Hand administration service can grant activation.
+        && request.resource.data.get('activated', true) == false
         // The permanent Jester is provisioned out-of-band; a client-created
         // profile may never claim that seat.
         && validMemberJokerId(request.resource.data.get('jokerId', null));
@@ -184,6 +194,8 @@ service cloud.firestore {
             && request.auth.uid == userId
             && request.resource.data.get('isAdmin', false)
                == resource.data.get('isAdmin', false)
+            && request.resource.data.get('activated', false)
+               == resource.data.get('activated', false)
             // The vault-keeper tier flag is pinned exactly like isAdmin —
             // the restricted second Hand cannot lift their own limit.
             && request.resource.data.get('vaultKeeper', null)
@@ -413,11 +425,19 @@ service cloud.firestore {
     match /conversations/{conversationId} {
       allow read: if activeUser()
         && (
-          request.auth.uid in resource.data.memberUids
-          // Orphan sweep: zero-member conversations are readable by anyone
-          // signed in, so clients can find and delete pre-fix leftovers
-          // (delete below already permits this via hasOnly on an empty list).
-          || resource.data.memberUids.size() == 0
+          // Orphan sweep: zero-member conversation metadata remains enumerable,
+          // including malformed reserved documents, so the cleanup query stays
+          // provable. Message reads remain separately protected below.
+          resource.data.memberUids.size() == 0
+          ||
+          (
+            isCheckInConversation(conversationId)
+            && isOwnerCheckInConversation(conversationId, resource.data)
+          )
+          || (
+            !isCheckInConversation(conversationId)
+            && request.auth.uid in resource.data.memberUids
+          )
         );
       allow update: if activeUser()
         && request.auth.uid in resource.data.memberUids
@@ -521,11 +541,26 @@ service cloud.firestore {
     match /conversations/{conversationId}/messages/{messageId} {
       allow read: if activeUser()
         && (
-          request.auth.uid in
-            get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids
-          // Orphan sweep: messages under a zero-member conversation must be
-          // enumerable so the sweeper can batch-delete them with the parent.
-          || get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids.size() == 0
+          (
+            isCheckInConversation(conversationId)
+            && isOwnerCheckInConversation(
+              conversationId,
+              get(/databases/$(database)/documents/conversations/$(conversationId)).data
+            )
+            // Authorize the app's ordered message-list query from the
+            // canonical owner-only parent. A per-message marker here makes
+            // an unfiltered sentAt query unprovable and hides every code.
+          )
+          || (
+            !isCheckInConversation(conversationId)
+            && (
+              request.auth.uid in
+                get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids
+              // Orphan sweep: messages under a zero-member conversation must be
+              // enumerable so the sweeper can batch-delete them with the parent.
+              || get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids.size() == 0
+            )
+          )
         );
       // Sender identity is immutable after create. Only the sender may touch
       // the message body; other members are limited to reaction updates —
@@ -981,7 +1016,36 @@ service cloud.firestore {
       allow read, create, update, delete: if false;
     }
     match /gameMemberships/{userId}/rooms/{roomId} {
-      allow read, create, update, delete: if false;
+      // The game state itself remains server-only. A member may read only
+      // their own server-maintained membership marker; it is also the
+      // authoritative gate for private room communications.
+      allow read: if activeUser() && request.auth.uid == userId;
+      allow create, update, delete: if false;
+    }
+
+    function isGameRoomMember(roomId) {
+      return activeUser()
+        && exists(/databases/$(database)/documents/gameMemberships/$(request.auth.uid)/rooms/$(roomId));
+    }
+
+    // Private game-room chat is deliberately separate from tableMessages:
+    // table broadcasts/notifications must never reach a game room audience.
+    match /gameRoomMessages/{roomId}/messages/{messageId} {
+      allow read: if isGameRoomMember(roomId);
+      allow create: if isGameRoomMember(roomId)
+        && request.resource.data.keys().hasOnly(
+             ['senderUid', 'senderJokerId', 'text', 'sentAt'])
+        && request.resource.data.keys().hasAll(
+             ['senderUid', 'senderJokerId', 'text', 'sentAt'])
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.senderJokerId is string
+        && request.resource.data.senderJokerId.size() > 0
+        && request.resource.data.senderJokerId.size() <= 40
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 1000
+        && request.resource.data.sentAt == request.time;
+      allow update, delete: if false;
     }
 
     function validDealAward(userId) {

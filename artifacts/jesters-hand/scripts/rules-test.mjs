@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   doc, setDoc, writeBatch, deleteDoc, deleteField, updateDoc, increment,
-  collection, query, where, getDocs, getDoc, serverTimestamp,
+  collection, query, where, orderBy, getDocs, getDoc, serverTimestamp,
 } from 'firebase/firestore';
 
 const env = await initializeTestEnvironment({
@@ -1391,12 +1391,13 @@ await test('check-in ledger and code index deny client reads and writes', async 
   await assertFails(deleteDoc(doc(alice(), 'checkInCodes/secret-hash')));
 });
 
-await test('reserved check-in Pocket cannot be impersonated or changed except own unread marking', async () => {
+await test('check-in Pocket reads are limited to the canonical owner, not listed members or admins', async () => {
   await seedBlackBook();
   await env.withSecurityRulesDisabled(async ctx => {
     const db = ctx.firestore();
     await setDoc(doc(db, 'conversations/checkins_alice'), {
-      memberUids: ['alice', 'admin', 'secondHand'], isGroup: true, kind: 'check_ins',
+      memberUids: ['alice', 'admin', 'secondHand'], ownerUid: 'alice',
+      isGroup: false, kind: 'check_ins',
       groupName: 'Private Check-In', createdBy: 'check-in-server',
       createdAt: new Date(), lastMessage: 'A private code is ready.',
       lastMessageAt: new Date(), unreadCounts: { alice: 1, admin: 1, secondHand: 0 },
@@ -1411,8 +1412,32 @@ await test('reserved check-in Pocket cannot be impersonated or changed except ow
   const issuedMessage = doc(db, 'conversations/checkins_alice/messages/issued-2025-04-03');
   await assertSucceeds(getDoc(conv));
   await assertSucceeds(getDoc(issuedMessage));
+  // Match the app's real-time message query, not just a single-document read.
+  // Firestore must authorize every potential result without filtering by a
+  // message marker: the canonical parent and authenticated owner gate access.
+  const messagesQuery = db => query(
+    collection(db, 'conversations/checkins_alice/messages'),
+    orderBy('sentAt', 'asc'),
+  );
+  const ownerMessages = await assertSucceeds(getDocs(messagesQuery(db)));
+  if (ownerMessages.size !== 1) throw new Error('owner message query returned no code');
+  // The broad membership query cannot prove canonical Check-In ownership.
+  // The app must subscribe to its own Check-In document separately.
+  await assertFails(getDocs(query(
+    collection(db, 'conversations'),
+    where('memberUids', 'array-contains', 'alice'),
+  )));
+  await assertFails(getDocs(messagesQuery(mallory())));
+  await assertFails(getDocs(messagesQuery(admin())));
+  await assertFails(getDocs(messagesQuery(
+    env.authenticatedContext('secondHand').firestore(),
+  )));
   await assertFails(getDoc(doc(mallory(), 'conversations/checkins_alice')));
   await assertFails(getDoc(doc(mallory(), 'conversations/checkins_alice/messages/issued-2025-04-03')));
+  await assertFails(getDoc(doc(admin(), 'conversations/checkins_alice')));
+  await assertFails(getDoc(doc(admin(), 'conversations/checkins_alice/messages/issued-2025-04-03')));
+  await assertFails(getDoc(doc(env.authenticatedContext('secondHand').firestore(), 'conversations/checkins_alice')));
+  await assertFails(getDoc(doc(env.authenticatedContext('secondHand').firestore(), 'conversations/checkins_alice/messages/issued-2025-04-03')));
   await assertSucceeds(updateDoc(conv, { 'unreadCounts.alice': 0 }));
   await assertFails(updateDoc(conv, { lastMessage: 'leaked code' }));
   await assertFails(updateDoc(conv, { 'unreadCounts.admin': 0 }));
@@ -1427,6 +1452,18 @@ await test('reserved check-in Pocket cannot be impersonated or changed except ow
   await assertFails(setDoc(doc(db, 'conversations/checkin-fake'), {
     memberUids: ['alice'], isGroup: false, createdBy: 'alice', createdAt: serverTimestamp(),
   }));
+});
+
+await test('recorded check-in owner mismatch denies canonical-path reads', async () => {
+  await seedBlackBook();
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'conversations/checkins_alice'), {
+      memberUids: ['alice', 'admin'], ownerUid: 'admin', kind: 'check_ins',
+      checkInProtected: true,
+    });
+  });
+  await assertFails(getDoc(doc(alice(), 'conversations/checkins_alice')));
 });
 
 await test('check-in markers are rejected on create and update for every ordinary Pocket ID', async () => {
@@ -1552,12 +1589,27 @@ await test('member cannot grant themselves isAdmin (create or update)', async ()
   await seedBlackBook();
   await assertFails(setDoc(doc(mallory(), 'users/mallory'),
     { jokerId: '13-54', isAdmin: true }));
-  await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '13-54' }));
+  await assertFails(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '13-54' }));
+  await assertFails(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '13-54', activated: true }));
+  await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '13-54', activated: false }));
   await assertFails(setDoc(doc(mallory(), 'users/mallory'),
     { isAdmin: true }, { merge: true }));
   // …and without the flag they still cannot award royals.
   await assertFails(setDoc(doc(mallory(), 'blackBook/alice/entries/fake'),
     { tab: 'royals', title: 'Fake honor', createdBy: 'mallory', createdAt: new Date() }));
+});
+
+await test('legacy profile missing activated cannot set itself active', async () => {
+  await seedBlackBook();
+  await assertFails(updateDoc(doc(alice(), 'users/alice'), { activated: true }));
+});
+
+await test('pending profile cannot set itself active', async () => {
+  await seedBlackBook();
+  await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), {
+    jokerId: '13-54', activated: false,
+  }));
+  await assertFails(updateDoc(doc(mallory(), 'users/mallory'), { activated: true }));
 });
 
 await test('member cannot create their profile as the permanent 00-00 Jester', async () => {
@@ -1566,7 +1618,7 @@ await test('member cannot create their profile as the permanent 00-00 Jester', a
     jokerId: '00-00', name: 'Not the Jester',
   }));
   await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), {
-    jokerId: '13-54', name: 'Mallory',
+    jokerId: '13-54', name: 'Mallory', activated: false,
   }));
 });
 
@@ -1576,7 +1628,7 @@ await test('member profile must use a reserved 01-54 through 54-54 roster seat',
   await assertFails(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '55-54' }));
   await assertFails(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '00-54' }));
   await assertFails(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '1-54' }));
-  await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '54-54' }));
+  await assertSucceeds(setDoc(doc(mallory(), 'users/mallory'), { jokerId: '54-54', activated: false }));
 });
 
 await test('member cannot change jokerId, alone or with an allowed profile field', async () => {
@@ -3372,9 +3424,38 @@ await test('game rooms, invitation codes and private content reviews are server-
     await assertFails(setDoc(doc(db, 'gameInvites/ABCDEF0123'), { roomId: 'room-forged' }));
     await assertFails(getDoc(doc(db, 'gamesContentReviews/trivia-q1')));
     await assertFails(setDoc(doc(db, 'gamesContentReviews/trivia-q1'), { status: 'approved' }));
-    await assertFails(getDoc(doc(db, 'gameMemberships/alice/rooms/room-secret')));
     await assertFails(setDoc(doc(db, 'gameMemberships/alice/rooms/room-forged'), { roomId: 'room-forged' }));
   }
+  await assertSucceeds(getDoc(doc(alice(), 'gameMemberships/alice/rooms/room-secret')));
+});
+
+await test('game-room chat is private to server-recorded room members', async () => {
+  await env.clearFirestore();
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'gameMemberships/alice/rooms/room-one'), {
+      roomId: 'room-one', joinedAt: new Date(),
+    });
+    await setDoc(doc(db, 'gameRoomMessages/room-one/messages/hello'), {
+      senderUid: 'alice', senderJokerId: '07-54', text: 'Private table', sentAt: new Date(),
+    });
+  });
+  const path = 'gameRoomMessages/room-one/messages/hello';
+  await assertSucceeds(getDoc(doc(alice(), path)));
+  await assertFails(getDoc(doc(mallory(), path)));
+  await assertFails(setDoc(doc(mallory(), 'gameRoomMessages/room-one/messages/intrude'), {
+    senderUid: 'mallory', senderJokerId: '08-54', text: 'Not a member', sentAt: serverTimestamp(),
+  }));
+  await assertSucceeds(setDoc(doc(alice(), 'gameRoomMessages/room-one/messages/own'), {
+    senderUid: 'alice', senderJokerId: '07-54', text: 'Only members can send', sentAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(alice(), 'gameRoomMessages/room-one/messages/forged'), {
+    senderUid: 'mallory', senderJokerId: '08-54', text: 'Forged author', sentAt: serverTimestamp(),
+  }));
+  await assertFails(getDoc(doc(alice(), 'gameRoomMessages/room-two/messages/hello')));
+  await assertFails(setDoc(doc(alice(), 'gameRoomMessages/room-one/messages/oversized'), {
+    senderUid: 'alice', senderJokerId: '07-54', text: 'x'.repeat(1001), sentAt: serverTimestamp(),
+  }));
 });
 
 await env.cleanup();

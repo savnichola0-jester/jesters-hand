@@ -6,7 +6,7 @@ import {
   Keyboard, useWindowDimensions,
 } from 'react-native';
 import { Feather } from '@/components/FIcon';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
@@ -16,7 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWhisper } from '@/contexts/WhisperContext';
 import {
   Message, Conversation, Member,
-  listenMessages, sendMessage, toggleReaction, markRead,
+  listenMessages, sendMessage, toggleReaction,
   getConvDisplayName, formatTimestamp, deleteChatMessage,
   getAllMembers, addMembersToGroup, claimLegacyGroupOwnership,
 } from '@/lib/whisperService';
@@ -85,13 +85,14 @@ export default function ChatScreen() {
   const isCheckIns = !!conversationId?.startsWith('checkins_');
 
   const [messages,     setMessages]     = useState<Message[]>([]);
+  const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const isReadOnlyCheckIns = isCheckIns || conversation?.kind === 'check_ins';
 
   // Shared live member caches from WhisperContext — one app-wide listener
   // keeps names + avatars fresh on every screen, so a Joker's updated mug
   // photo shows here immediately without remounting.
-  const { memberCache: labelCache, avatarCache } = useWhisper();
+  const { memberCache: labelCache, avatarCache, markConversationRead } = useWhisper();
   const [inputText,    setInputText]    = useState('');
   const [sending,      setSending]      = useState(false);
   const [pickerMsgId,  setPickerMsgId]  = useState<string | null>(null);
@@ -174,16 +175,24 @@ export default function ChatScreen() {
 
   // Real-time messages
   useEffect(() => {
+    setMessages([]);
+    setLoadedConversationId(null);
     if (!conversationId) return;
-    const unsub = listenMessages(conversationId, msgs => setMessages(msgs));
+    const unsub = listenMessages(conversationId, msgs => {
+      setMessages(msgs);
+      setLoadedConversationId(conversationId);
+    });
     return unsub;
   }, [conversationId]);
 
-  // Mark as read when messages update
-  useEffect(() => {
-    if (conversationId && user && messages.length > 0)
-      markRead(conversationId, user.uid).catch(() => {});
-  }, [conversationId, user, messages.length]);
+  // Only acknowledge messages while the conversation is actually visible.
+  const lastMessageId = messages[messages.length - 1]?.id;
+  useFocusEffect(useCallback(() => {
+    if (conversationId && loadedConversationId === conversationId && user && lastMessageId)
+      void markConversationRead(conversationId).catch(() => {
+        console.warn('[Pocket] could not mark conversation read');
+      });
+  }, [conversationId, loadedConversationId, user?.uid, lastMessageId, markConversationRead]));
 
   // Scroll to bottom on new messages
   useEffect(() => {

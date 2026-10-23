@@ -13,11 +13,12 @@
  */
 import {
   collection, doc, addDoc, updateDoc, getDocs,
-  query, orderBy, onSnapshot, serverTimestamp,
+  query, where, orderBy, onSnapshot, serverTimestamp,
   limit as firestoreLimit, writeBatch, Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { sendPushToUsers } from './pushService';
+import { Platform } from 'react-native';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -147,6 +148,31 @@ export async function markNotificationRead(
     doc(db, 'notifications', uid, 'items', notifId),
     { read: true },
   );
+}
+
+/** Acknowledge only the conversation being viewed, preserving other alerts. */
+export async function markConversationNotificationsRead(uid: string, conversationId: string): Promise<void> {
+  const snap = await getDocs(query(
+    collection(db, 'notifications', uid, 'items'),
+    where('conversationId', '==', conversationId),
+  ));
+  const unread = snap.docs.filter(d => !d.data().read);
+  for (let i = 0; i < unread.length; i += 450) {
+    const batch = writeBatch(db);
+    unread.slice(i, i + 450).forEach(d => batch.update(d.ref, { read: true }));
+    await batch.commit();
+  }
+  if (Platform.OS !== 'web') {
+    try {
+      const Notifications = await import('expo-notifications');
+      const presented = await Notifications.getPresentedNotificationsAsync();
+      await Promise.all(presented
+        .filter(n => n.request.content.data?.conversationId === conversationId)
+        .map(n => Notifications.dismissNotificationAsync(n.request.identifier)));
+    } catch {
+      // Notification APIs are unavailable in some preview environments.
+    }
+  }
 }
 
 /** Batch-mark all unread notifications as read. */
