@@ -25,6 +25,7 @@ import { Feather } from '@/components/FIcon';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { getAllMembers } from '@/lib/ticketService';
 import {
   LOCKER_KINDS, LockerKind, IssuedRecord,
@@ -1371,9 +1372,9 @@ const st = StyleSheet.create({
     alignSelf: 'stretch', borderRadius: 8, borderWidth: 1, borderColor: GOLD,
     backgroundColor: 'rgba(212,168,83,0.08)', paddingVertical: 13, alignItems: 'center',
   },
-  secondaryBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
+  secondaryBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
   linkBtn: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 8 },
-  linkBtnText: { color: GOLD, fontFamily: 'Inter_600SemiBold', fontSize: 11.5, letterSpacing: 2 },
+  linkBtnText: { color: BUTTON_ACCENT, fontFamily: 'Inter_600SemiBold', fontSize: 11.5, letterSpacing: 2 },
 
   // Armory
   pageTitle: {
@@ -1392,8 +1393,8 @@ const st = StyleSheet.create({
     borderRadius: 8, borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)',
     paddingHorizontal: 12, paddingVertical: 7,
   },
-  pillActive: { backgroundColor: GOLD, borderColor: GOLD },
-  pillText: { color: GOLD, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
+  pillActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
+  pillText: { color: BUTTON_ACCENT, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
   pillTextActive: { color: '#0B0906' },
   armoryEmpty: { alignItems: 'center', paddingVertical: 56, paddingHorizontal: 16 },
   armoryEmptyText: {
@@ -1410,7 +1411,7 @@ const st = StyleSheet.create({
     borderWidth: 1, borderBottomWidth: 0, borderColor: 'rgba(212,168,83,0.5)',
     paddingHorizontal: 12, paddingVertical: 5, maxWidth: '70%',
   },
-  folderCardTabText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 8.5, letterSpacing: 2 },
+  folderCardTabText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 8.5, letterSpacing: 2 },
   folderCard: {
     backgroundColor: '#0A0A0A',
     borderRadius: 8, borderTopLeftRadius: 0,
@@ -1446,23 +1447,23 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)', borderRadius: 6,
     paddingVertical: 6, paddingHorizontal: 12, backgroundColor: 'rgba(0,0,0,0.35)',
   },
-  variantChipActive: { backgroundColor: GOLD, borderColor: GOLD },
-  variantChipText: { color: GOLD, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
+  variantChipActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
+  variantChipText: { color: BUTTON_ACCENT, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
   variantChipTextActive: { color: '#0B0906' },
   buyBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderRadius: 8, backgroundColor: GOLD, paddingVertical: 11,
+    borderRadius: 8, backgroundColor: BUTTON_ACCENT, paddingVertical: 11,
   },
   buyBtnText: { color: '#0B0906', fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
   cartAddBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderRadius: 8, borderWidth: 1, borderColor: GOLD,
-    backgroundColor: 'rgba(212,168,83,0.08)', paddingVertical: 10, marginTop: 8,
+    borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT, paddingVertical: 10, marginTop: 8,
   },
-  cartAddBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
+  cartAddBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
   cartBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 8, backgroundColor: GOLD,
+    borderRadius: 8, backgroundColor: BUTTON_ACCENT,
     paddingVertical: 10, paddingHorizontal: 12, marginBottom: 14,
   },
   cartBarText: { color: '#0B0906', fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.6, flex: 1 },
@@ -1617,7 +1618,7 @@ const st = StyleSheet.create({
     borderRadius: 14, borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)',
     paddingHorizontal: 10, paddingVertical: 6, maxWidth: '100%',
   },
-  chipActive: { backgroundColor: 'rgba(212,168,83,0.18)', borderColor: GOLD },
+  chipActive: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
   chipText: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Inter_500Medium', fontSize: 10.5 },
   chipTextActive: { color: CREAM },
   input: {

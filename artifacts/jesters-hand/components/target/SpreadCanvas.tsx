@@ -27,6 +27,7 @@ import {
 } from '@/lib/targetTicketService';
 import { StatusDot, DotPickerModal } from './StatusDot';
 import { resolveMediaUrl } from '@/lib/mediaService';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 
 const GOLD = '#D4A853';
 const CREAM = '#F5E8C8';
@@ -794,9 +795,9 @@ const styles = StyleSheet.create({
   palette: { flexDirection: 'row', gap: 6, paddingHorizontal: 8, flexGrow: 1, justifyContent: 'center' },
   paletteBtn: {
     backgroundColor: 'rgba(5,3,0,0.9)', borderRadius: 10, paddingHorizontal: 11, paddingVertical: 7,
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)',
+    borderWidth: 1, borderColor: BUTTON_ACCENT,
   },
-  paletteText: { fontSize: 10, color: GOLD, fontFamily: 'Cinzel_600SemiBold', letterSpacing: 1 },
+  paletteText: { fontSize: 10, color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', letterSpacing: 1 },
 
   textBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', padding: 24 },
   textSheet: {
@@ -815,8 +816,8 @@ const styles = StyleSheet.create({
   },
   textBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 9,
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.35)',
+    borderWidth: 1, borderColor: BUTTON_ACCENT,
   },
-  textBtnPrimary: { borderColor: 'rgba(255,215,0,0.55)', backgroundColor: 'rgba(255,215,0,0.08)' },
-  textBtnLabel: { fontSize: 12, color: GOLD, fontFamily: 'Cinzel_600SemiBold', letterSpacing: 1.5 },
+  textBtnPrimary: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
+  textBtnLabel: { fontSize: 12, color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', letterSpacing: 1.5 },
 });

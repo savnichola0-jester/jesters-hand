@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import {
   createSocialComment, listenSocialComments, SocialComment,
   SOCIAL_REACTION_EMOJIS, toggleSocialCommentReaction, toggleSocialReaction,
@@ -186,9 +187,10 @@ const s = StyleSheet.create({
   reactionCount: { color: CREAM, fontFamily: 'Inter_500Medium', fontSize: 11 },
   markButton: {
     minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)',
+    paddingHorizontal: 10, borderRadius: 15, borderWidth: 1,
+    borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT,
   },
-  markText: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 9, letterSpacing: 1 },
+  markText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 9, letterSpacing: 1 },
   divider: { height: 1, backgroundColor: 'rgba(212,168,83,0.2)', marginVertical: 16 },
   commentsTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.5, marginBottom: 10 },
   comment: {
@@ -209,9 +211,9 @@ const s = StyleSheet.create({
   send: {
     minWidth: 66, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 12,
-    borderWidth: 1, borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.1)',
+    borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT,
   },
-  sendText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.2 },
+  sendText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.2 },
   disabled: { opacity: 0.4 },
   picker: {
     position: 'absolute', left: 14, right: 14, flexDirection: 'row', flexWrap: 'wrap',

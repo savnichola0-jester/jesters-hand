@@ -10,6 +10,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT } from '@/lib/buttonAccent';
 import {
   TargetTicket, TicketComment,
   listenTargetTicket, listenTicketComments, createTicketComment,
@@ -159,7 +160,7 @@ export default function TargetTicketViewScreen() {
         <Image source={MARBLE} style={StyleSheet.absoluteFill} resizeMode="cover" />
         <Text style={{ ...MARBLE_TEXT_SHADOW, color: CREAM, fontFamily: 'Cinzel_600SemiBold' }}>This file was burned.</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
-          <Text style={{ ...MARBLE_TEXT_SHADOW, color: GOLD, fontFamily: 'Cinzel_700Bold', letterSpacing: 2 }}>GO BACK</Text>
+          <Text style={{ ...MARBLE_TEXT_SHADOW, color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', letterSpacing: 2 }}>GO BACK</Text>
         </TouchableOpacity>
       </View>
     );
@@ -344,7 +345,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderBottomWidth: 0, borderColor: 'rgba(212,168,83,0.5)',
     justifyContent: 'center', paddingHorizontal: 12,
   },
-  tabText: { color: GOLD, fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 2 },
+  tabText: { color: BUTTON_ACCENT, fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 2 },
   body: {
     backgroundColor: '#0A0A0A',
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.5)',
@@ -366,7 +367,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.35)', borderRadius: 8,
     paddingHorizontal: 11, paddingVertical: 7,
   },
-  ownerBtnText: { color: GOLD, fontSize: 11.5, fontFamily: 'Cinzel_600SemiBold', letterSpacing: 1 },
+  ownerBtnText: { color: BUTTON_ACCENT, fontSize: 11.5, fontFamily: 'Cinzel_600SemiBold', letterSpacing: 1 },
 
   reactionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   reactionChip: {

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import {
   AnteBoard, AntePost, AnteComment,
   listenAntePosts, createAntePost, formatAnteTimestamp, toggleAnteVote,
@@ -791,15 +792,15 @@ const s = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 10,
     overflow: 'hidden',
   },
-  optionRowMine: { borderColor: 'rgba(212,168,83,0.6)', backgroundColor: 'rgba(212,168,83,0.08)' },
+  optionRowMine: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   optionFill: {
     position: 'absolute', left: 0, top: 0, bottom: 0,
     backgroundColor: 'rgba(200,165,60,0.14)',
   },
-  optionFillMine: { backgroundColor: 'rgba(212,168,83,0.24)' },
-  optionBullet: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, width: 16, textAlign: 'center' },
+  optionFillMine: { backgroundColor: 'rgba(250,105,2,0.24)' },
+  optionBullet: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, width: 16, textAlign: 'center' },
   optionText:   { flex: 1, color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 12, lineHeight: 18 },
-  optionTextMine: { color: GOLD },
+  optionTextMine: { color: BUTTON_ACCENT },
   optionPct: { color: 'rgba(237,224,196,0.7)', fontFamily: 'Cinzel_700Bold', fontSize: 11, minWidth: 34, textAlign: 'right' },
   voteTally: { color: 'rgba(237,224,196,0.35)', fontFamily: 'Cinzel_400Regular', fontSize: 10, marginTop: 2 },
 
@@ -808,7 +809,7 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: 'rgba(200,165,60,0.12)', paddingTop: 8,
   },
   footBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  footBtnText: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 0.5 },
+  footBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 0.5 },
   footMeta:    { color: 'rgba(237,224,196,0.55)', fontFamily: 'Cinzel_400Regular', fontSize: 10 },
   footHint:    { flex: 1, textAlign: 'right', color: 'rgba(237,224,196,0.25)', fontFamily: 'Cinzel_400Regular', fontSize: 9, letterSpacing: 0.5 },
 
@@ -854,11 +855,11 @@ const s = StyleSheet.create({
   // Bottom action button
   actionBtn: {
     height: 50, borderRadius: 10, marginTop: 10,
-    backgroundColor: 'rgba(200,165,60,0.1)',
-    borderWidth: 1.5, borderColor: 'rgba(200,165,60,0.45)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
+    borderWidth: 1.5, borderColor: BUTTON_ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
-  actionBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
+  actionBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
 
   // ── Compose card (framed) ──
   cardOverlay: {
@@ -958,11 +959,11 @@ const s = StyleSheet.create({
   },
   sendBtn: {
     minWidth: 66, height: 44, borderRadius: 10, paddingHorizontal: 12,
-    backgroundColor: 'rgba(200,165,60,0.12)',
-    borderWidth: 1.2, borderColor: 'rgba(200,165,60,0.45)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
+    borderWidth: 1.2, borderColor: BUTTON_ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
   sendBtnText: {
-    color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.2,
+    color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.2,
   },
 });

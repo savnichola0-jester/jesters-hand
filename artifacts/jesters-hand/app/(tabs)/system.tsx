@@ -20,6 +20,7 @@ import { deleteField, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { auth, db } from '@/lib/firebase';
 import { signOutUser } from '@/lib/authService';
 import { registerPushToken, unregisterPushToken } from '@/lib/pushService';
@@ -421,7 +422,7 @@ export default function SystemScreen() {
             </View>
             <View style={s.contractAction}>
               {needsContract ? <Feather name="alert-triangle" size={16} color="#FFD700" /> : null}
-              <Text style={[s.contractActionText, needsContract && { color: '#FFD700' }]}>
+              <Text style={[s.contractActionText, needsContract && { color: BUTTON_ACCENT }]}>
                 {needsContract ? 'REVIEW & SIGN' : isAdmin ? 'REVIEW / AMEND' : 'VIEW'}
               </Text>
               <Feather name="chevron-right" size={18} color={needsContract ? '#FFD700' : GOLD} />
@@ -600,7 +601,7 @@ const s = StyleSheet.create({
   rowHint:    { color: 'rgba(237,224,196,0.45)', fontFamily: 'Inter_400Regular', fontSize: 11,
                 marginTop: 4, lineHeight: 15 },
   contractAction: { alignItems: 'center', gap: 4 },
-  contractActionText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1 },
+  contractActionText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1 },
   hairline:   { height: 1, backgroundColor: 'rgba(200,165,60,0.14)', marginVertical: 4 },
 
   fieldLabel: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 10,
@@ -613,10 +614,10 @@ const s = StyleSheet.create({
   msgText: { fontFamily: 'Inter_500Medium', fontSize: 12, flex: 1 },
 
   goldBtn: { height: 50, borderRadius: 10, marginTop: 12,
-             backgroundColor: 'rgba(200,165,60,0.1)',
-             borderWidth: 1, borderColor: 'rgba(200,165,60,0.45)',
+             backgroundColor: BUTTON_ACCENT_SOFT,
+             borderWidth: 1, borderColor: BUTTON_ACCENT,
              alignItems: 'center', justifyContent: 'center' },
-  goldBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
+  goldBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
   panelFootnote: { color: 'rgba(237,224,196,0.4)', fontFamily: 'Inter_400Regular',
                    fontSize: 11, marginTop: 10, textAlign: 'center' },
   updateMessage: { color: CREAM, fontFamily: 'Inter_400Regular', fontSize: 12,
@@ -641,7 +642,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(200,165,60,0.35)',
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
-  pillActive:     { backgroundColor: GOLD, borderColor: GOLD },
+  pillActive:     { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
   pillText:       { color: 'rgba(237,224,196,0.7)', fontFamily: 'Cinzel_600SemiBold',
                     fontSize: 11, letterSpacing: 1.5 },
   pillTextActive: { color: '#000' },

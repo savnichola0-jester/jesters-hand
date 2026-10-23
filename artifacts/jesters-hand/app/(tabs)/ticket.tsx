@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@/components/FIcon';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { getTicket, saveTicket, uploadMug, uploadAdminPhoto, deleteMug, deleteAdminPhoto } from '@/lib/ticketService';
 import TicketBrandImprint from '@/components/TicketBrandImprint';
 import { listenOwnStats, DealMemberStats } from '@/lib/dealService';
@@ -542,7 +543,7 @@ const s = StyleSheet.create({
   darkBtnText: { color: '#C84040', fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1.5 },
   mugBtn:   { flex: 1, height: 38, borderRadius: 8, backgroundColor: 'rgba(200,165,60,0.08)',
     borderWidth: 1, borderColor: 'rgba(200,165,60,0.35)', alignItems: 'center', justifyContent: 'center' },
-  mugBtnText: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1.5 },
+  mugBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1.5 },
 
   divider: { height: 1, backgroundColor: 'rgba(200,165,60,0.18)', marginBottom: SIDE + 4 },
 
@@ -560,7 +561,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)',
   },
-  suitPillActive: { backgroundColor: '#D4A853', borderColor: '#D4A853' },
+  suitPillActive: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
   suitPillText: { color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1 },
   suitPillTextActive: { color: '#0A0A0A' },
   fieldLabel: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 10,
@@ -576,9 +577,9 @@ const s = StyleSheet.create({
   reviewBtn:  { flex: 1, height: 52, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)',
     borderWidth: 1, borderColor: 'rgba(200,165,60,0.35)', alignItems: 'center', justifyContent: 'center' },
   reviewText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
-  fileBtn:    { flex: 1, height: 52, borderRadius: 10, backgroundColor: 'rgba(200,165,60,0.1)',
-    borderWidth: 1, borderColor: 'rgba(200,165,60,0.45)', alignItems: 'center', justifyContent: 'center' },
-  fileText:   { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
+  fileBtn:    { flex: 1, height: 52, borderRadius: 10, backgroundColor: BUTTON_ACCENT_SOFT,
+    borderWidth: 1, borderColor: BUTTON_ACCENT, alignItems: 'center', justifyContent: 'center' },
+  fileText:   { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
 
   // Toast
   toast: { position: 'absolute', alignSelf: 'center', flexDirection: 'row', alignItems: 'center',

@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@/components/FIcon';
 import { getTicket, saveTicket, uploadAdminPhoto, deleteAdminPhoto, TicketData } from '@/lib/ticketService';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { listenOwnStats, DealMemberStats } from '@/lib/dealService';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
@@ -456,7 +457,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)',
   },
-  suitPillActive: { backgroundColor: GOLD, borderColor: GOLD },
+  suitPillActive: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
   suitPillText: { color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1 },
   suitPillTextActive: { color: '#0A0A0A' },
 
@@ -483,5 +484,5 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5, shadowRadius: 12, elevation: 8,
   },
-  whisperText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 3 },
+  whisperText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 3 },
 });

@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT } from '@/lib/buttonAccent';
 import { AppNotification, formatNotifTimestamp } from '@/lib/notificationService';
 import { routeNotification } from '@/lib/notificationRouting';
 import { notificationText, notificationTitle } from '@/lib/notificationCatalog';
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Cinzel_700Bold', letterSpacing: 2,
   },
   clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  clearText: { color: GOLD, fontSize: 10 },
+  clearText: { color: BUTTON_ACCENT, fontSize: 10 },
 
   allClear: { alignItems: 'center', paddingVertical: 32, gap: 8 },
   allClearTitle: { color: CREAM, fontSize: 14, fontFamily: 'Cinzel_700Bold' },

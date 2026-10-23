@@ -9,6 +9,7 @@ import { Feather } from '@/components/FIcon';
 import { getAllMembers, TicketData } from '@/lib/ticketService';
 import { getRoyalsCounts } from '@/lib/blackBookService';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { MARBLE_TEXT_SHADOW, MARBLE_BTN_BACKING } from '@/lib/legibility';
@@ -254,9 +255,9 @@ const s = StyleSheet.create({
   retryBtn:    {
     ...MARBLE_BTN_BACKING,
     marginTop: 4, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20,
-    borderWidth: 1, borderColor: 'rgba(200,165,60,0.4)', backgroundColor: 'rgba(200,165,60,0.08)',
+    borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT,
   },
-  retryText: { ...MARBLE_TEXT_SHADOW, color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 12, letterSpacing: 1.5 },
+  retryText: { ...MARBLE_TEXT_SHADOW, color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 12, letterSpacing: 1.5 },
 
   headerRow:  { flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 12 },
   headerText: { ...MARBLE_TEXT_SHADOW, color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },

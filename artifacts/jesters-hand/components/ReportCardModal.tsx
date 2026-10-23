@@ -11,6 +11,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@/components/FIcon';
 import { submitReport, MAX_EVIDENCE } from '@/lib/reportService';
 import { appWindow } from '@/lib/appWindow';
+import { BUTTON_ACCENT } from '@/lib/buttonAccent';
 
 const CARD_FRAME = require('../assets/images/ante_card_frame.png');
 
@@ -261,10 +262,10 @@ const s = StyleSheet.create({
     flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center',
     minHeight: 44, borderRadius: 8,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    borderWidth: 1.5, borderColor: 'rgba(200,165,60,0.55)', borderStyle: 'dashed',
+    borderWidth: 1.5, borderColor: BUTTON_ACCENT, borderStyle: 'dashed',
   },
   uploadBtnText: {
-    color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 12, letterSpacing: 1.5,
+    color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 12, letterSpacing: 1.5,
   },
   error: {
     color: '#E8B4B4', fontFamily: 'Cinzel_400Regular', fontSize: 11,

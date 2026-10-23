@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TextI
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import {
   CheckInMember, CheckInState, chooseCheckInReward, getCheckInMembers,
   getCheckInRoster, getMyCheckIns, redeemCheckInCode,
@@ -187,8 +188,8 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(212,168,83,0.3)' },
   statNumber: { color: GOLD, fontSize: 26, fontFamily: FONT, textAlign: 'center' },
   statLabel: { color: DIM, fontSize: 9, textAlign: 'center', letterSpacing: 0.7 },
-  button: { borderWidth: 1, borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.11)', paddingVertical: 13, paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center', minHeight: 44 },
-  buttonText: { color: GOLD, fontSize: 10, letterSpacing: 0.7, fontFamily: FONT, textAlign: 'center' },
+  button: { borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT, paddingVertical: 13, paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center', minHeight: 44 },
+  buttonText: { color: BUTTON_ACCENT, fontSize: 10, letterSpacing: 0.7, fontFamily: FONT, textAlign: 'center' },
   helper: { color: DIM, fontSize: 10, lineHeight: 16 },
   input: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.48)', color: CREAM, padding: 12, fontSize: 14, minHeight: 44, backgroundColor: 'rgba(0,0,0,0.7)' },
   link: { color: GOLD, textAlign: 'center', padding: 10, fontSize: 11, fontFamily: FONT },

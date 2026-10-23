@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { findSuitHolder, getMySuits, setSuitAssignment, SUITS, SUIT_TASK_ACTIONS, SuitHolder, SuitKey, SuitState, SuitTask, setSuitInPlay } from '@/lib/suitsService';
+import { findSuitHolder, getMySuits, getSuitAdmin, setSuitAssignment, SUITS, SUIT_TASK_ACTIONS, SuitHolder, SuitKey, SuitState, SuitTask, setSuitInPlay } from '@/lib/suitsService';
 import { InWorldCard, CardPip, CardTitle, CardInput } from '@/components/InWorldCard';
 import ExternalWhispersParticipation from '@/components/community/ExternalWhispersParticipation';
+import { BUTTON_ACCENT, BUTTON_ACCENT_FAINT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 
 const GOLD = '#D4A853'; const CREAM = '#EDE0C4';
 export default function SuitsScreen() {
@@ -133,10 +134,82 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
     const [assignmentNote, setAssignmentNote] = useState('');
     const [searching, setSearching] = useState(false);
     const [workingPip, setWorkingPip] = useState<SuitKey | null>(null);
+    const [privateTargets, setPrivateTargets] = useState<Partial<Record<SuitKey, SuitHolder>>>({});
+    const [targetingPip, setTargetingPip] = useState<SuitKey | null>(null);
+    const [individualSearch, setIndividualSearch] = useState('');
+    const [individualResult, setIndividualResult] = useState<SuitHolder | null>(null);
+    const [individualNote, setIndividualNote] = useState('');
+    const [searchingIndividual, setSearchingIndividual] = useState(false);
+    const [adminHolders, setAdminHolders] = useState<SuitHolder[]>([]);
+    useEffect(() => {
+      let active = true;
+      getSuitAdmin()
+        .then(result => { if (active) setAdminHolders(result.holders); })
+        .catch(() => { if (active) setAssignmentNote('Could not load current individual Joker assignments.'); });
+      return () => { active = false; };
+    }, []);
    const task = (pip: SuitKey): SuitTask => drafts[pip] ??
      (inPlay[pip]?.visibility === 'private'
-       ? { active: false, title: '', ...(holder && holder.uid === inPlay[pip]?.privateTargetUid ? holder.privateCards?.[pip] : {}), visibility: 'private' }
+       ? {
+           active: false,
+           title: '',
+           ...(
+             privateTargets[pip]?.uid === inPlay[pip]?.privateTargetUid
+               ? privateTargets[pip]?.privateCards?.[pip]
+               : holder?.uid === inPlay[pip]?.privateTargetUid
+                 ? holder?.privateCards?.[pip]
+                 : adminHolders.find(member => member.uid === inPlay[pip]?.privateTargetUid)?.privateCards?.[pip]
+           ),
+           visibility: 'private',
+           privateTargetUid: inPlay[pip]?.privateTargetUid,
+         }
        : inPlay[pip]) ?? { active: false, title: '', destination: 'table', visibility: 'community' };
+    const searchIndividualJoker = async () => {
+      const exactId = individualSearch.trim();
+      if (!/^\d{2}-\d{2}$/.test(exactId)) {
+        setIndividualResult(null);
+        setIndividualNote('Enter an exact Joker ID in the form 00-00.');
+        return;
+      }
+      if (exactId === '00-00' || exactId === '01-54') {
+        setIndividualResult(null);
+        setIndividualNote('Individual private cards can only be assigned to active member Jokers.');
+        return;
+      }
+      setSearchingIndividual(true);
+      setIndividualNote('');
+      try {
+        const result = await findSuitHolder(exactId);
+        setIndividualResult(result.holder);
+        if (!result.holder) setIndividualNote(`No active member found for ${exactId}.`);
+      } catch (e: any) {
+        setIndividualResult(null);
+        setIndividualNote(e?.message ?? 'Joker lookup failed. Try again.');
+      } finally {
+        setSearchingIndividual(false);
+      }
+    };
+    const chooseIndividualJoker = () => {
+      if (targetingPip === null || !individualResult) return;
+      const pip = targetingPip;
+      setPrivateTargets(current => ({ ...current, [pip]: individualResult }));
+      setDrafts(current => ({
+        ...current,
+        [pip]: {
+          ...(current[pip] ?? (
+            inPlay[pip]?.visibility === 'private' && inPlay[pip]?.privateTargetUid === individualResult.uid
+              ? individualResult.privateCards?.[pip]
+              : task(pip)
+          )),
+          visibility: 'private',
+          notifyAudience: undefined,
+        },
+      }));
+      setTargetingPip(null);
+      setIndividualSearch('');
+      setIndividualResult(null);
+      setIndividualNote('');
+    };
     const searchJoker = async () => {
       const exactId = jokerSearch.trim();
       if (!/^\d{2}-\d{2}$/.test(exactId)) {
@@ -180,12 +253,14 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
       }
     };
     const saveCard = (pip: SuitKey, card: SuitTask) => {
-      if (card.visibility === 'private' && !holder) {
-        setAssignmentNote('Search and select one Joker before dealing a private card.');
+      const selectedTarget = privateTargets[pip]
+        ?? (holder && holder.uid === card.privateTargetUid ? holder : null);
+      if (card.visibility === 'private' && !selectedTarget) {
+        setAssignmentNote('Choose the individual Joker on this card before saving it.');
         return;
       }
       mutate(async () => {
-        await setSuitInPlay(pip, card, card.visibility === 'private' ? holder! : undefined);
+        await setSuitInPlay(pip, card, card.visibility === 'private' ? selectedTarget! : undefined);
         setDrafts(current => {
           const next = { ...current };
           delete next[pip];
@@ -203,7 +278,7 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
       });
     };
     return <View><Text style={s.section}>DEAL A SUITS CARD</Text>
-      <Text style={s.assignmentCopy}>Choose whether the card is visible to everyone or only to the Joker you select below. Suit-group alerts use the assigned roster here, not the photo on a Ticket.</Text>
+      <Text style={s.assignmentCopy}>Each card can go to the whole Hand, alert its suit group, or be assigned privately to one Joker. Suit groups come from the roster below.</Text>
      <View style={s.assignmentPanel}>
         <Text style={s.assignmentTitle}>SUIT GROUP ROSTER</Text>
         <Text style={s.assignmentCopy}>After placing a suit card on a member’s Ticket, search their Joker ID and assign the matching suit here. The artwork cannot be read automatically.</Text>
@@ -245,32 +320,72 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
      </View>
     {SUITS.map(x => {
       const d=task(x.key);
+       const individualTarget = privateTargets[x.key]
+         ?? (holder?.uid === d.privateTargetUid ? holder : null)
+         ?? adminHolders.find(member => member.uid === d.privateTargetUid)
+         ?? null;
+       const audience = d.visibility === 'private'
+         ? 'individual'
+         : d.notifyAudience === 'suit_group' ? 'group' : 'community';
       return (
         <InWorldCard key={x.key} style={s.adminCard}>
           <CardPip>{x.pip} {x.name}</CardPip>
-           <View style={s.visibilityRow}>
-             <View style={s.visibilityCopy}>
-               <Text style={s.visibilityTitle}>VISIBLE TO COMMUNITY</Text>
-               <Text style={s.visibilityHint}>{d.visibility === 'private' ? `Only ${holder?.jokerId ?? 'your selected Joker'} can read this card` : 'Every active member can read this card'}</Text>
-             </View>
-              <Switch testID={`suits-visibility-${x.key}`} accessibilityLabel={`${x.name} visible to community`} value={d.visibility !== 'private'} onValueChange={community => setDrafts(a => ({ ...a, [x.key]: { ...d, visibility: community ? 'community' : 'private', notifyAudience: community ? 'community' : undefined } }))} trackColor={{ false: '#6b6251', true: GOLD }} thumbColor={CREAM} />
-           </View>
-            {d.visibility !== 'private' && (
-              <View style={s.visibilityRow}>
-                <View style={s.visibilityCopy}>
-                  <Text style={s.visibilityTitle}>ALERT ONLY THIS SUIT GROUP</Text>
-                  <Text style={s.visibilityHint}>The card stays visible to everyone. {d.notifyAudience === 'suit_group' ? `Only Jokers assigned ${x.name} in the roster get “Your suit is in play.”` : 'Everyone gets “The Jester has dealt a card.”'}</Text>
-                </View>
-                <Switch
-                  testID={`suits-group-alert-${x.key}`}
-                  accessibilityLabel={`Alert only assigned ${x.name} Jokers`}
-                  value={d.notifyAudience === 'suit_group'}
-                  onValueChange={matching => setDrafts(a => ({ ...a, [x.key]: { ...d, notifyAudience: matching ? 'suit_group' : 'community' } }))}
-                  trackColor={{ false: '#6b6251', true: GOLD }}
-                  thumbColor={CREAM}
-                />
-              </View>
+          <View style={s.audiencePanel}>
+            <Text style={s.visibilityTitle}>WHO GETS THIS TASK?</Text>
+            <View style={s.audienceOptions}>
+              {([
+                ['community', 'WHOLE HAND'],
+                ['group', 'SUIT GROUP'],
+                ['individual', 'ONE JOKER'],
+              ] as const).map(([mode, label]) => {
+                const selected = audience === mode;
+                return (
+                  <TouchableOpacity
+                    key={mode}
+                    testID={`suits-audience-${x.key}-${mode}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${label} task assignment for ${x.name}`}
+                    style={[s.audienceOption, selected && s.audienceOptionSelected]}
+                    onPress={() => setDrafts(current => ({
+                      ...current,
+                      [x.key]: {
+                        ...d,
+                        visibility: mode === 'individual' ? 'private' : 'community',
+                        notifyAudience: mode === 'group' ? 'suit_group' : 'community',
+                      },
+                    }))}
+                  >
+                    <Text style={[s.audienceOptionText, selected && s.audienceOptionTextSelected]}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={s.visibilityHint}>
+              {audience === 'individual'
+                ? 'Only the selected Joker and Hand admins can read this private card.'
+                : audience === 'group'
+                  ? `The card remains visible to the whole Hand; only Jokers assigned ${x.name} get the alert.`
+                  : 'Everyone can read the card and gets the alert.'}
+            </Text>
+            {audience === 'individual' && (
+              <TouchableOpacity
+                style={s.individualTargetButton}
+                testID={`suits-individual-target-${x.key}`}
+                accessibilityLabel={`Choose individual Joker for ${x.name}`}
+                onPress={() => {
+                  setTargetingPip(x.key);
+                  setIndividualSearch(individualTarget?.jokerId ?? '');
+                  setIndividualResult(individualTarget);
+                  setIndividualNote('');
+                }}
+              >
+                <Text style={s.individualTargetLabel}>ASSIGNED JOKER</Text>
+                <Text style={s.individualTargetValue}>{individualTarget?.jokerId ?? 'CHOOSE JOKER ID'}</Text>
+                <Text style={s.tapHint}>{individualTarget ? 'TAP TO CHANGE' : 'TAP TO SELECT'}</Text>
+              </TouchableOpacity>
             )}
+          </View>
 
           <CardInput
             value={d.title}
@@ -308,6 +423,43 @@ function Admin({ inPlay, mutate }: { inPlay: Partial<Record<SuitKey, SuitTask>>;
         </InWorldCard>
       );
     })}
+    <Modal visible={targetingPip !== null} transparent animationType="fade" onRequestClose={() => setTargetingPip(null)}>
+      <View style={s.modalBackdrop}>
+        <View style={s.modalSheet}>
+          <Text style={s.modalTitle}>ASSIGN TO ONE JOKER</Text>
+          <Text style={s.modalCopy}>This card will be private to the Joker you select.</Text>
+          <TextInput
+            value={individualSearch}
+            onChangeText={value => { setIndividualSearch(value); setIndividualResult(null); setIndividualNote(''); }}
+            placeholder="Exact Joker ID · 12-34"
+            placeholderTextColor="#8e8067"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={5}
+            accessibilityLabel="Search individual Joker ID"
+            testID="suits-individual-joker-search"
+            style={s.jokerInput}
+          />
+          <TouchableOpacity style={s.searchButton} onPress={() => void searchIndividualJoker()} disabled={searchingIndividual}>
+            {searchingIndividual ? <ActivityIndicator color={GOLD} /> : <Text style={s.actionText}>SEARCH JOKER</Text>}
+          </TouchableOpacity>
+          {individualNote ? <Text style={s.assignmentNote}>{individualNote}</Text> : null}
+          {individualResult && (
+            <TouchableOpacity
+              style={s.confirmTarget}
+              testID="suits-confirm-individual-joker"
+              accessibilityLabel={`Assign to Joker ${individualResult.jokerId}`}
+              onPress={chooseIndividualJoker}
+            >
+              <Text style={s.confirmTargetText}>ASSIGN TO {individualResult.jokerId}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={s.modalClose} onPress={() => setTargetingPip(null)}>
+            <Text style={s.modalCloseText}>CANCEL</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
    </View>;
 }
 
@@ -316,7 +468,7 @@ const s = StyleSheet.create({
   center:{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(5,4,3,0.82)',padding:28},
   errorTitle:{color:GOLD,fontFamily:'Cinzel_700Bold',letterSpacing:2,fontSize:15,textAlign:'center'},
   errorText:{color:CREAM,fontSize:13,lineHeight:19,textAlign:'center',marginTop:12},
-  retry:{borderWidth:1,borderColor:GOLD,paddingHorizontal:22,paddingVertical:12,marginTop:22},
+  retry:{borderWidth:1,borderColor:BUTTON_ACCENT,backgroundColor:BUTTON_ACCENT_SOFT,paddingHorizontal:22,paddingVertical:12,marginTop:22},
   errorBack:{color:'#aa9c85',fontSize:11,marginTop:18},
   nav:{backgroundColor:'#000',flexDirection:'row',alignItems:'center',paddingHorizontal:16,paddingBottom:10},
   back:{color:GOLD,fontSize:34,lineHeight:30},
@@ -339,37 +491,53 @@ const s = StyleSheet.create({
    detailBody:{flex:1,justifyContent:'center',alignItems:'center',gap:16,paddingHorizontal:8},
    detailTitle:{color:GOLD,fontFamily:'Cinzel_700Bold',fontSize:20,textAlign:'center'},
    detailInstruction:{color:CREAM,fontSize:15,lineHeight:22,textAlign:'center'},
-   detailAction:{borderWidth:1,borderColor:GOLD,borderRadius:6,padding:12,alignItems:'center',marginTop:12},
+   detailAction:{borderWidth:1,borderColor:BUTTON_ACCENT,backgroundColor:BUTTON_ACCENT_SOFT,borderRadius:6,padding:12,alignItems:'center',marginTop:12},
   meta:{color:'#aa9c85',fontSize:11,textAlign:'center'},
   inPlay:{color:CREAM,fontSize:8,letterSpacing:2,marginTop:4},
   play:{color:GOLD,fontSize:10,letterSpacing:2,marginTop:2,textAlign:'center'},
   section:{color:GOLD,fontFamily:'Cinzel_700Bold',letterSpacing:2,fontSize:12,marginTop:28,marginBottom:10},
-  buttonText:{color:GOLD,fontSize:9,fontFamily:'Cinzel_700Bold'},
+  buttonText:{color:BUTTON_ACCENT,fontSize:9,fontFamily:'Cinzel_700Bold'},
 
   adminCard: { width: '100%', marginBottom: 16 },
-  visibilityRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, paddingHorizontal: 8, gap: 12 },
-  visibilityCopy: { flex: 1 },
+  audiencePanel: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)', backgroundColor: 'rgba(0,0,0,0.38)', padding: 10, marginBottom: 12 },
+  audienceOptions: { flexDirection: 'row', gap: 6, marginTop: 8, marginBottom: 8 },
+  audienceOption: { flex: 1, minHeight: 40, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)', borderRadius: 5, paddingHorizontal: 4, paddingVertical: 7 },
+  audienceOptionSelected: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
+  audienceOptionText: { color: 'rgba(237,224,196,0.65)', fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 0.4, textAlign: 'center' },
+  audienceOptionTextSelected: { color: BUTTON_ACCENT },
   visibilityTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1 },
   visibilityHint: { color: CREAM, fontSize: 10, marginTop: 5 },
+  individualTargetButton: { alignItems: 'center', borderWidth: 1, borderColor: 'rgba(250,105,2,0.45)', padding: 10, marginTop: 10, backgroundColor: BUTTON_ACCENT_FAINT },
+  individualTargetLabel: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Cinzel_600SemiBold', fontSize: 9, letterSpacing: 1 },
+  individualTargetValue: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 15, marginTop: 4 },
+  tapHint: { color: 'rgba(212,168,83,0.65)', fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1, marginTop: 4 },
   destRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12, justifyContent: 'center' },
   destBtn: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 10, backgroundColor: 'rgba(0,0,0,0.4)' },
-  destSelected: { borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.15)' },
+  destSelected: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   destBtnText: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Cinzel_700Bold', fontSize: 9 },
-  destSelectedText: { color: GOLD },
+  destSelectedText: { color: BUTTON_ACCENT },
   adminActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  actionBtn: { flex: 1, borderWidth: 1, borderColor: GOLD, borderRadius: 6, paddingVertical: 12, alignItems: 'center', backgroundColor: 'rgba(212,168,83,0.1)' },
-  actionText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1 },
+  actionBtn: { flex: 1, borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 6, paddingVertical: 12, alignItems: 'center', backgroundColor: BUTTON_ACCENT_SOFT },
+  actionText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1 },
   assignmentCopy: { color: CREAM, fontSize: 12, lineHeight: 18, textAlign: 'center', marginBottom: 12 },
   assignmentPanel: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', backgroundColor: 'rgba(0,0,0,0.55)', padding: 14, marginBottom: 20 },
   assignmentTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5, fontSize: 12, textAlign: 'center', marginBottom: 12 },
   jokerInput: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', color: CREAM, fontSize: 15, paddingHorizontal: 12, paddingVertical: 11, textAlign: 'center' },
-  searchButton: { borderWidth: 1, borderColor: GOLD, padding: 12, alignItems: 'center', marginTop: 8 },
+  searchButton: { borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT, padding: 12, alignItems: 'center', marginTop: 8 },
   assignmentNote: { color: '#ff9b75', textAlign: 'center', marginTop: 10, fontSize: 12 },
   selectedMember: { color: CREAM, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.2, textAlign: 'center', marginTop: 16 },
   assignedPips: { color: GOLD, fontSize: 12, letterSpacing: 1, textAlign: 'center', marginTop: 8, marginBottom: 12 },
   assignmentPips: { gap: 8 },
   assignmentButton: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', padding: 11, alignItems: 'center' },
-  assignedButton: { borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.13)' },
+  assignedButton: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   assignmentButtonText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1 },
-  assignedButtonText: { color: GOLD },
+  assignedButtonText: { color: BUTTON_ACCENT },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.84)', justifyContent: 'center', padding: 24 },
+  modalSheet: { backgroundColor: '#090909', borderWidth: 1, borderColor: GOLD, borderRadius: 10, padding: 16 },
+  modalTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 1.5, textAlign: 'center', marginBottom: 8 },
+  modalCopy: { color: CREAM, fontSize: 12, lineHeight: 18, textAlign: 'center', marginBottom: 14 },
+  confirmTarget: { borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT, padding: 12, alignItems: 'center', marginTop: 12 },
+  confirmTargetText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1 },
+  modalClose: { borderWidth: 1, borderColor: 'rgba(237,224,196,0.3)', padding: 12, alignItems: 'center', marginTop: 12 },
+  modalCloseText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.5 },
 });

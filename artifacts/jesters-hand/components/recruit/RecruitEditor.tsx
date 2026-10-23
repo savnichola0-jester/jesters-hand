@@ -22,6 +22,7 @@ import {
 import PostCanvas, { FONT_FAMILIES, fontFamilyFor } from './PostCanvas';
 import RecruitViewer from './RecruitViewer';
 import { appWindow } from '@/lib/appWindow';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 
 const CREAM = '#EDE0C4';
 const GOLD  = '#D4A853';
@@ -564,11 +565,11 @@ const st = StyleSheet.create({
   hBtn: { padding: 8, marginLeft: 4 },
   actionRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingVertical: 8 },
   actionBtn: {
-    flex: 1, borderWidth: 1, borderColor: GOLD, borderRadius: 6,
-    paddingVertical: 8, alignItems: 'center', backgroundColor: 'rgba(212,168,83,0.08)',
+    flex: 1, borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 6,
+    paddingVertical: 8, alignItems: 'center', backgroundColor: BUTTON_ACCENT_SOFT,
   },
-  publishBtn: { backgroundColor: GOLD },
-  actionTxt: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1 },
+  publishBtn: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
+  actionTxt: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1 },
   canvasArea: { flex: 1 },
   canvasScroll: { alignItems: 'center', paddingVertical: 10 },
   refLabel: {
@@ -614,7 +615,7 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.5)', borderRadius: 5,
     paddingHorizontal: 10, paddingVertical: 6,
   },
-  chipOn: { backgroundColor: 'rgba(212,168,83,0.25)', borderColor: GOLD },
+  chipOn: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
   chipTxt: { color: CREAM, fontSize: 12 },
   panelLabel: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Inter_500Medium', fontSize: 11, marginLeft: 4 },
   swatch: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(237,224,196,0.4)' },

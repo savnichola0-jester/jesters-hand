@@ -9,6 +9,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { useWhisper } from '@/contexts/WhisperContext';
 import {
   Conversation,
@@ -669,13 +670,13 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: 'rgba(200,165,60,0.07)',
   },
-  memberRowSelected: { backgroundColor: 'rgba(212,168,83,0.06)' },
+  memberRowSelected: { backgroundColor: BUTTON_ACCENT_SOFT },
   checkBox: {
     width: 22, height: 22, borderRadius: 4,
     borderWidth: 1.5, borderColor: 'rgba(200,165,60,0.35)',
     alignItems: 'center', justifyContent: 'center',
   },
-  checkBoxSelected: { backgroundColor: GOLD, borderColor: GOLD },
+  checkBoxSelected: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
   memberAvatar: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: 'rgba(200,165,60,0.12)',
@@ -695,5 +696,5 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   createBtnDisabled: { opacity: 0.4 },
-  createBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2 },
+  createBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2 },
 });

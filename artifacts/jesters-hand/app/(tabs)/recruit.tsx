@@ -18,6 +18,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import {
   RecruitSection, RecruitPost, DesignElement,
   listenRecruitSection, saveRecruitPost, setRecruitStatus, deleteRecruitPost,
@@ -491,15 +492,15 @@ const st = StyleSheet.create({
     flex: 1, minHeight: 38, borderRadius: 8, borderWidth: 1,
     borderColor: 'rgba(212,168,83,0.3)', alignItems: 'center', justifyContent: 'center',
   },
-  rsvpButtonOn: { borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.13)' },
+  rsvpButtonOn: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   rsvpText: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Cinzel_600SemiBold', fontSize: 9 },
-  rsvpTextOn: { color: GOLD },
+  rsvpTextOn: { color: BUTTON_ACCENT },
 
   actionBtn: {
     marginTop: 10, borderRadius: 8,
-    borderWidth: 1, borderColor: GOLD,
-    backgroundColor: 'rgba(212,168,83,0.1)',
+    borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT,
     paddingVertical: 12, alignItems: 'center',
   },
-  actionBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
+  actionBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
 });

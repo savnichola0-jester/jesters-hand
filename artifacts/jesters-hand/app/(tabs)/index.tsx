@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { ElementData } from '@/components/DraggableElement';
 import {
   LockscreenLayout, fetchLockscreenLayout, publishLockscreenLayout, scaleLayout,
@@ -616,7 +617,7 @@ const styles = StyleSheet.create({
   },
   doneBtn: {
     flex: 1.2,
-    backgroundColor: 'rgba(200,165,60,0.15)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(200,165,60,0.45)',
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
   },
   doneBtnText: {
     fontSize: 11,
-    color: '#D4A853',
+    color: BUTTON_ACCENT,
     fontFamily: 'Inter_600SemiBold',
     letterSpacing: 2.5,
     textTransform: 'uppercase',
@@ -692,15 +693,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Cinzel_400Regular',
   },
   modalConfirmBtn: {
-    backgroundColor: 'rgba(200,165,60,0.18)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
     borderRadius: 10,
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(200,165,60,0.5)',
+    borderColor: BUTTON_ACCENT,
   },
   modalConfirmText: {
-    color: '#D4A853',
+    color: BUTTON_ACCENT,
     fontSize: 12,
     fontFamily: 'Cinzel_700Bold',
     letterSpacing: 3,

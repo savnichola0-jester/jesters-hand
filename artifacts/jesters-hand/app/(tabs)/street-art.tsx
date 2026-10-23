@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import {
   BlackBookTab, BlackBookEntry, BlackBookEntryInput,
   listenBlackBookEntries, addBlackBookEntry, updateBlackBookEntry,
@@ -722,9 +723,9 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center', justifyContent: 'center',
   },
-  subToggleActive: { borderColor: 'rgba(212,168,83,0.6)', backgroundColor: 'rgba(212,168,83,0.1)' },
+  subToggleActive: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   subToggleText: { color: 'rgba(237,224,196,0.4)', fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
-  subToggleTextActive: { color: GOLD },
+  subToggleTextActive: { color: BUTTON_ACCENT },
 
   memberRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -774,11 +775,11 @@ const s = StyleSheet.create({
 
   actionBtn: {
     height: 50, borderRadius: 10, marginTop: 10,
-    backgroundColor: 'rgba(200,165,60,0.1)',
-    borderWidth: 1.5, borderColor: 'rgba(200,165,60,0.45)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
+    borderWidth: 1.5, borderColor: BUTTON_ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
-  actionBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
+  actionBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
 
   // ── Editor sheet ──
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
@@ -815,9 +816,9 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center', justifyContent: 'center',
   },
-  choicePillOn: { borderColor: 'rgba(212,168,83,0.7)', backgroundColor: 'rgba(212,168,83,0.12)' },
+  choicePillOn: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   choicePillText: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1 },
-  choicePillTextOn: { color: GOLD },
+  choicePillTextOn: { color: BUTTON_ACCENT },
 
   percentRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   percentInput: {
@@ -831,10 +832,10 @@ const s = StyleSheet.create({
 
   saveBtn: {
     height: 50, borderRadius: 10, marginTop: 20, marginBottom: 6,
-    backgroundColor: 'rgba(200,165,60,0.1)',
-    borderWidth: 1.5, borderColor: 'rgba(200,165,60,0.45)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
+    borderWidth: 1.5, borderColor: BUTTON_ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
   saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
+  saveBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
 });

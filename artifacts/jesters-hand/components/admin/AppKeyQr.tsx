@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Image, Linking } from 'react-native';
 import QRCode from 'qrcode';
 import { SvgXml } from 'react-native-svg';
+import { BUTTON_ACCENT } from '@/lib/buttonAccent';
 
 const CREAM = '#EDE0C4';
 const GOLD  = '#D4A853';
@@ -93,10 +94,10 @@ const st = StyleSheet.create({
     backgroundColor: CREAM, padding: 8, borderRadius: 6,
   },
   btn: {
-    marginTop: 12, borderWidth: 1, borderColor: GOLD, borderRadius: 6,
+    marginTop: 12, borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 6,
     paddingVertical: 8, paddingHorizontal: 22,
   },
   btnText: {
-    color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2,
+    color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2,
   },
 });

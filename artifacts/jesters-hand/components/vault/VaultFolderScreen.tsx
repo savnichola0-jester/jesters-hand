@@ -16,6 +16,7 @@ import { Feather } from '@/components/FIcon';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { BUTTON_ACCENT, BUTTON_ACCENT_FAINT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   VaultSection, VaultStatus, VaultEntry, VaultFilePick, VaultActivityRecord,
@@ -1023,9 +1024,9 @@ const s = StyleSheet.create({
   addChapterBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     height: 38, borderRadius: 8, marginTop: 2,
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)', backgroundColor: 'rgba(212,168,83,0.06)',
+    borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_FAINT,
   },
-  addChapterText: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 10.5, letterSpacing: 1.5 },
+  addChapterText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 10.5, letterSpacing: 1.5 },
   chapterHint: {
     color: 'rgba(237,224,196,0.45)', fontFamily: 'Cinzel_400Regular', fontSize: 10.5,
     lineHeight: 15, marginTop: 8,
@@ -1112,10 +1113,10 @@ const s = StyleSheet.create({
   bookReviewBtn: {
     height: 44, borderRadius: 10, marginTop: 10,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: 'rgba(212,168,83,0.06)',
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)',
+    backgroundColor: BUTTON_ACCENT_FAINT,
+    borderWidth: 1, borderColor: BUTTON_ACCENT,
   },
-  bookReviewText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11.5, letterSpacing: 2 },
+  bookReviewText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 11.5, letterSpacing: 2 },
 
   statusPill: {
     alignSelf: 'flex-start', marginTop: 6,
@@ -1127,19 +1128,19 @@ const s = StyleSheet.create({
 
   viewBtn: {
     height: 40, borderRadius: 8, marginTop: 10,
-    backgroundColor: 'rgba(200,165,60,0.08)',
-    borderWidth: 1, borderColor: 'rgba(200,165,60,0.4)',
+    backgroundColor: BUTTON_ACCENT_FAINT,
+    borderWidth: 1, borderColor: BUTTON_ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
-  viewBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11.5, letterSpacing: 2 },
+  viewBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 11.5, letterSpacing: 2 },
 
   actionBtn: {
     height: 50, borderRadius: 10, marginTop: 10,
-    backgroundColor: 'rgba(200,165,60,0.1)',
-    borderWidth: 1.5, borderColor: 'rgba(200,165,60,0.45)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
+    borderWidth: 1.5, borderColor: BUTTON_ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
-  actionBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
+  actionBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
 
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
   sheet: {
@@ -1202,18 +1203,18 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center', justifyContent: 'center',
   },
-  choicePillOn: { borderColor: 'rgba(212,168,83,0.7)', backgroundColor: 'rgba(212,168,83,0.12)' },
+  choicePillOn: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   choicePillText: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
-  choicePillTextOn: { color: GOLD },
+  choicePillTextOn: { color: BUTTON_ACCENT },
 
   saveBtn: {
     height: 50, borderRadius: 10, marginTop: 20,
-    backgroundColor: 'rgba(212,168,83,0.15)',
-    borderWidth: 1.5, borderColor: 'rgba(212,168,83,0.6)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
+    borderWidth: 1.5, borderColor: BUTTON_ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
   saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
+  saveBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 2.5 },
 
   recordRow: {
     paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(200,165,60,0.12)',

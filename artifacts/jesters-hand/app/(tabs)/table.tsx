@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import ChatImageViewer from '@/components/ChatImageViewer';
@@ -886,7 +887,7 @@ const s = StyleSheet.create({
   voiceMicBig:      { width: 50, height: 62, opacity: 0.7 },
   voiceTitle:       { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1 },
   voiceSub:         { color: 'rgba(237,224,196,0.38)', fontFamily: 'Cinzel_400Regular', fontSize: 9, textAlign: 'center', lineHeight: 14 },
-  voiceJoinBtn:     { marginTop: 14, backgroundColor: GOLD, borderRadius: 6, paddingVertical: 9, paddingHorizontal: 26, minWidth: 120, alignItems: 'center' },
+  voiceJoinBtn:     { marginTop: 14, backgroundColor: BUTTON_ACCENT, borderRadius: 6, paddingVertical: 9, paddingHorizontal: 26, minWidth: 120, alignItems: 'center' },
   voiceJoinText:    { color: '#000', fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
   voiceRoster:      { alignSelf: 'stretch', marginTop: 8, gap: 4 },
   voiceRosterRow: {
@@ -914,9 +915,9 @@ const s = StyleSheet.create({
   },
   voiceRosterNameTalking: { color: '#A8D8AB', fontFamily: 'Cinzel_700Bold' },
   voiceBtnRow:      { flexDirection: 'row', gap: 10, marginTop: 14 },
-  voiceBtn:         { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(212,168,83,0.55)', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 14 },
+  voiceBtn:         { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT, borderRadius: 6, paddingVertical: 8, paddingHorizontal: 14 },
   voiceBtnLeave:    { borderColor: 'rgba(201,106,90,0.55)' },
-  voiceBtnText:     { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.5 },
+  voiceBtnText:     { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.5 },
 
   center:             { flex: 1, alignItems: 'center', justifyContent: 'center' },
   messageList:        { flex: 1 },
@@ -986,9 +987,9 @@ const s = StyleSheet.create({
   pickerDeleteText: {
     color: '#e05555', fontFamily: 'Cinzel_600SemiBold', fontSize: 12, letterSpacing: 0.5,
   },
-  speakBtn:    { ...MARBLE_BTN_BACKING, flexShrink: 0, width: 56, height: 36, borderRadius: 6, borderWidth: 1.5, borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.28)', alignItems: 'center', justifyContent: 'center' },
-  speakBtnOff: { borderColor: 'rgba(212,168,83,0.3)', opacity: 0.45 },
-  speakText:   { ...MARBLE_TEXT_SHADOW, color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1 },
+  speakBtn:    { ...MARBLE_BTN_BACKING, flexShrink: 0, width: 56, height: 36, borderRadius: 6, borderWidth: 1.5, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT, alignItems: 'center', justifyContent: 'center' },
+  speakBtnOff: { borderColor: 'rgba(250,105,2,0.3)', opacity: 0.45 },
+  speakText:   { ...MARBLE_TEXT_SHADOW, color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1 },
 
   readOnlyBar:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 9, borderTopWidth: 1, borderTopColor: 'rgba(212,168,83,0.2)', backgroundColor: 'rgba(0,0,0,0.65)', gap: 6, width: '100%' },
   readOnlyLock: { width: 11, height: 14, opacity: 0.5 },

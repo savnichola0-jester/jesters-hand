@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { VaultEntry } from '@/lib/vaultService';
 import {
   VaultComment, VaultReview, VaultMark, VaultTargetType,
@@ -678,9 +679,9 @@ const s = StyleSheet.create({
     flex: 1, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: 'rgba(200,165,60,0.25)', backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  tabOn: { borderColor: 'rgba(212,168,83,0.7)', backgroundColor: 'rgba(212,168,83,0.1)' },
+  tabOn: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   tabText: { color: 'rgba(237,224,196,0.45)', fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
-  tabTextOn: { color: GOLD },
+  tabTextOn: { color: BUTTON_ACCENT },
 
   filterRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   filterChip: {
@@ -689,9 +690,9 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(200,165,60,0.25)', backgroundColor: 'rgba(0,0,0,0.4)',
     maxWidth: '75%',
   },
-  filterChipOn: { borderColor: 'rgba(212,168,83,0.7)', backgroundColor: 'rgba(212,168,83,0.12)' },
+  filterChipOn: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   filterChipText: { color: 'rgba(237,224,196,0.45)', fontFamily: 'Cinzel_600SemiBold', fontSize: 9.5, letterSpacing: 1 },
-  filterChipTextOn: { color: GOLD },
+  filterChipTextOn: { color: BUTTON_ACCENT },
 
   list: { flexGrow: 1, minHeight: 120 },
   empty: {
@@ -744,16 +745,16 @@ const s = StyleSheet.create({
   reviewInput: { minHeight: 76 },
   submitBtn: {
     height: 46, borderRadius: 10,
-    backgroundColor: 'rgba(212,168,83,0.15)',
-    borderWidth: 1.5, borderColor: 'rgba(212,168,83,0.6)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
+    borderWidth: 1.5, borderColor: BUTTON_ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
-  submitText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
+  submitText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
 
   editMineBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     height: 42, borderRadius: 10, marginTop: 8,
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)', backgroundColor: 'rgba(212,168,83,0.06)',
+    borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT,
   },
-  editMineText: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 11.5, letterSpacing: 1 },
+  editMineText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 11.5, letterSpacing: 1 },
 });

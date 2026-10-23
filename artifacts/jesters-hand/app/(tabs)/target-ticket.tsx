@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { resolveMediaUrl } from '@/lib/mediaService';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import {
   TargetTicket, Suit, listenTargetTickets, formatTicketTimestamp, SUIT_LABELS,
 } from '@/lib/targetTicketService';
@@ -203,7 +204,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderBottomWidth: 0, borderColor: 'rgba(212,168,83,0.5)',
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12,
   },
-  tabText: { color: GOLD, fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 3 },
+  tabText: { color: BUTTON_ACCENT, fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 3 },
   body: {
     flex: 1, backgroundColor: '#0A0A0A',
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.5)',
@@ -221,8 +222,8 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)',
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10,
   },
-  chipActive: { backgroundColor: GOLD, borderColor: GOLD },
-  chipText: { color: GOLD, fontSize: 10, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5 },
+  chipActive: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
+  chipText: { color: BUTTON_ACCENT, fontSize: 10, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5 },
   chipTextActive: { color: '#0A0A0A' },
   mug: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(212,168,83,0.12)' },
   mugFallback: {

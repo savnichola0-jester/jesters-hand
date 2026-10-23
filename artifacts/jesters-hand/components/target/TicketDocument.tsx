@@ -7,6 +7,7 @@ import {
   TicketDraft, TicketFieldKey, Suit, SUIT_LABELS, DotColor, EvidenceEntry,
 } from '@/lib/targetTicketService';
 import { SuitIcon } from './SuitIcon';
+import { BUTTON_ACCENT } from '@/lib/buttonAccent';
 import { DotSlot, DotPickerModal, StatusDot } from './StatusDot';
 
 const GOLD = '#D4A853';
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.25)', borderRadius: 8,
     backgroundColor: 'rgba(200,165,60,0.04)',
   },
-  suitBtnActive: { borderColor: 'rgba(255,215,0,0.7)', backgroundColor: 'rgba(255,215,0,0.08)' },
+  suitBtnActive: { borderColor: BUTTON_ACCENT, backgroundColor: 'rgba(250,105,2,0.08)' },
   suitLabel: {
     fontSize: 7.5, color: 'rgba(237,224,196,0.55)', fontFamily: 'Inter_500Medium',
     textAlign: 'center', lineHeight: 10,
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
   removeEntry: { position: 'absolute', top: 6, right: 8 },
   removeEntryText: { color: 'rgba(224,85,85,0.8)', fontSize: 13 },
   addEntry: { alignSelf: 'flex-start', marginTop: 2 },
-  addEntryText: { color: GOLD, fontSize: 12, fontFamily: 'Inter_500Medium' },
+  addEntryText: { color: BUTTON_ACCENT, fontSize: 12, fontFamily: 'Inter_500Medium' },
 
   redaction: {
     ...StyleSheet.absoluteFillObject,

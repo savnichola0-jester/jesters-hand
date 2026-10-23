@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
+import { BUTTON_ACCENT, BUTTON_ACCENT_TEXT } from '@/lib/buttonAccent';
 import { Feather } from '@/components/FIcon';
 import { reloadAppAsync } from 'expo';
 
@@ -103,14 +104,14 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
           style={({ pressed }) => [
             styles.button,
             {
-              backgroundColor: colors.primary,
+              backgroundColor: BUTTON_ACCENT,
               opacity: pressed ? 0.9 : 1,
               transform: [{ scale: pressed ? 0.98 : 1 }],
             },
           ]}
         >
           <Text
-            style={[styles.buttonText, { color: colors.primaryForeground }]}
+            style={[styles.buttonText, { color: BUTTON_ACCENT_TEXT }]}
           >
             Try Again
           </Text>

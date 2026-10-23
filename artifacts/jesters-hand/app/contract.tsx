@@ -23,6 +23,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import {
   ContractDoc, ContractSection, BUNDLED_CONTRACT, listenContract, publishContract,
 } from '@/lib/contractService';
@@ -601,7 +602,7 @@ const s = StyleSheet.create({
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.72)' },
 
   backBtn:  { ...MARBLE_BTN_BACKING, flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 14 },
-  backText: { ...MARBLE_TEXT_SHADOW, color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 2 },
+  backText: { ...MARBLE_TEXT_SHADOW, color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 2 },
 
   heading: { ...MARBLE_TEXT_SHADOW, color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 19,
              letterSpacing: 1.5, textAlign: 'center', marginBottom: 12, lineHeight: 28 },
@@ -611,8 +612,8 @@ const s = StyleSheet.create({
   jesterNote: { ...MARBLE_TEXT_SHADOW, color: 'rgba(237,224,196,0.6)', fontFamily: 'Inter_400Regular', fontSize: 12 },
   amendBtn:   { ...MARBLE_BTN_BACKING, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12,
                 paddingVertical: 7, borderRadius: 8, borderWidth: 1,
-                borderColor: 'rgba(200,165,60,0.45)', backgroundColor: 'rgba(200,165,60,0.1)' },
-  amendText:  { ...MARBLE_TEXT_SHADOW, color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 2 },
+                borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
+  amendText:  { ...MARBLE_TEXT_SHADOW, color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 2 },
 
   updateBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12,
                   borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,215,0,0.4)',
@@ -660,7 +661,7 @@ const s = StyleSheet.create({
   addBtn:  { ...MARBLE_BTN_BACKING, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
              paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderStyle: 'dashed',
              borderColor: 'rgba(200,165,60,0.4)', marginBottom: 18 },
-  addText: { ...MARBLE_TEXT_SHADOW, color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 2 },
+  addText: { ...MARBLE_TEXT_SHADOW, color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 2 },
   cancelRow:  { alignItems: 'center', paddingVertical: 16 },
   cancelText: { ...MARBLE_TEXT_SHADOW, color: 'rgba(237,224,196,0.55)', fontFamily: 'Cinzel_600SemiBold',
                 fontSize: 10, letterSpacing: 2 },
@@ -674,10 +675,10 @@ const s = StyleSheet.create({
   msgText: { color: '#FF6B6B', fontFamily: 'Inter_500Medium', fontSize: 12, flex: 1 },
 
   goldBtn: { height: 52, borderRadius: 10, marginTop: 16,
-             backgroundColor: 'rgba(200,165,60,0.1)',
-             borderWidth: 1, borderColor: 'rgba(200,165,60,0.45)',
+             backgroundColor: BUTTON_ACCENT_SOFT,
+             borderWidth: 1, borderColor: BUTTON_ACCENT,
              alignItems: 'center', justifyContent: 'center' },
-  goldBtnText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
+  goldBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
 
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
                 paddingVertical: 4 },

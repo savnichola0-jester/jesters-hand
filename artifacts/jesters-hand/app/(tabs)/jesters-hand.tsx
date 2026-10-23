@@ -17,6 +17,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import {
@@ -1518,13 +1519,13 @@ const st = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
   archiveTabActive: {
-    borderColor: GOLD, backgroundColor: 'rgba(200,165,60,0.12)',
+    borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT,
   },
   archiveTabText: {
     color: 'rgba(237,224,196,0.45)', fontFamily: 'Cinzel_700Bold',
     fontSize: 10, letterSpacing: 2,
   },
-  archiveTabTextActive: { color: GOLD },
+  archiveTabTextActive: { color: BUTTON_ACCENT },
   contractSignature: {
     alignItems: 'center', overflow: 'hidden', borderRadius: 8, padding: 8,
     borderWidth: 1, borderColor: 'rgba(200,165,60,0.3)',
@@ -1585,20 +1586,20 @@ const st = StyleSheet.create({
     fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1.2,
   },
   rowBtns: { flexDirection: 'row', gap: 8 },
-  activateBtn: { backgroundColor: GOLD, borderColor: GOLD },
+  activateBtn: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
   actBtn: {
     flex: 1, height: 30, borderRadius: 7, borderWidth: 1,
     borderColor: 'rgba(200,165,60,0.4)', backgroundColor: '#080808',
     alignItems: 'center', justifyContent: 'center',
   },
-  actBtnActive: { backgroundColor: GOLD, borderColor: GOLD },
+  actBtnActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
   actBtnDanger: { borderColor: 'rgba(176,58,58,0.6)' },
   actBtnText: {
-    color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 9.5, letterSpacing: 1,
+    color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 9.5, letterSpacing: 1,
   },
   sendCheckInsBtn: {
-    minHeight: 40, borderRadius: 8, borderWidth: 1, borderColor: GOLD,
-    backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center',
+    minHeight: 40, borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 8, marginVertical: 12,
   },
   sendCheckInsBtnDisabled: { opacity: 0.65 },
@@ -1682,19 +1683,19 @@ const st = StyleSheet.create({
     borderColor: 'rgba(200,165,60,0.25)', backgroundColor: '#080808',
     alignItems: 'center', justifyContent: 'center',
   },
-  filterBtnActive: { borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.12)' },
+  filterBtnActive: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   filterBtnText: {
     color: 'rgba(237,224,196,0.4)', fontFamily: 'Cinzel_600SemiBold',
     fontSize: 10, letterSpacing: 1.2,
   },
-  filterBtnTextActive: { color: GOLD },
+  filterBtnTextActive: { color: BUTTON_ACCENT },
   resolveBtn: {
-    height: 46, borderRadius: 8, borderWidth: 1.5, borderColor: GOLD,
-    backgroundColor: 'rgba(212,168,83,0.12)',
+    height: 46, borderRadius: 8, borderWidth: 1.5, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT,
     alignItems: 'center', justifyContent: 'center',
   },
   resolveBtnText: {
-    color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2,
+    color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2,
   },
   discardBtn: {
     height: 46, borderRadius: 8, borderWidth: 1.5, borderColor: RED,
@@ -1728,7 +1729,7 @@ const st = StyleSheet.create({
   },
   invSearchBtn: {
     height: 42, paddingHorizontal: 16, borderRadius: 8,
-    backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: BUTTON_ACCENT, alignItems: 'center', justifyContent: 'center',
   },
   invSearchBtnText: {
     color: '#0A0A0A', fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.5,
@@ -1818,7 +1819,7 @@ const st = StyleSheet.create({
     borderColor: 'rgba(200,165,60,0.4)', backgroundColor: '#080808',
     alignItems: 'center', justifyContent: 'center',
   },
-  modalBtnPrimary: { backgroundColor: GOLD, borderColor: GOLD },
+  modalBtnPrimary: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
   modalBtnDanger: { backgroundColor: 'rgba(176,58,58,0.12)', borderColor: RED },
   modalBtnText: { color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 12, letterSpacing: 1 },
 });

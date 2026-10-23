@@ -11,6 +11,7 @@ import {
   Image, Platform, Dimensions, ScrollView,
 } from 'react-native';
 import { Feather } from '@/components/FIcon';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { VaultEntry, fetchProtectedImage, getProtectedFetchInfo, ProtectedImageHandle } from '@/lib/vaultService';
 import VaultDiscussion, { VaultDiscussionTarget } from '@/components/vault/VaultDiscussion';
 import { appWindow, APP_MAX_W } from '@/lib/appWindow';
@@ -1009,11 +1010,11 @@ const v = StyleSheet.create({
   chaptersBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 220,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
-    backgroundColor: 'rgba(212,168,83,0.1)', borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)',
+    backgroundColor: BUTTON_ACCENT_SOFT, borderWidth: 1, borderColor: BUTTON_ACCENT,
     marginLeft: 'auto',
   },
   chaptersBtnText: {
-    flexShrink: 1, color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1,
+    flexShrink: 1, color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1,
   },
   chapterList: {
     marginHorizontal: 14, marginBottom: 8, borderRadius: 10,
@@ -1039,9 +1040,9 @@ const v = StyleSheet.create({
   discussBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
     height: 46, marginHorizontal: 14, marginVertical: 10, borderRadius: 10,
-    backgroundColor: 'rgba(212,168,83,0.1)',
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
+    borderWidth: 1, borderColor: BUTTON_ACCENT,
   },
-  discussBarEnd: { backgroundColor: 'rgba(212,168,83,0.2)', borderColor: GOLD },
-  discussText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.6 },
+  discussBarEnd: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
+  discussText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.6 },
 });

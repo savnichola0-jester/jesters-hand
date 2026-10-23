@@ -13,6 +13,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { deleteChatImage, uploadChatImage } from '@/lib/chatMediaService';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { useWhisper } from '@/contexts/WhisperContext';
 import {
   Message, Conversation, Member,
@@ -909,7 +910,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingVertical: 9, paddingHorizontal: 8, borderRadius: 8,
   },
-  addMemberRowSelected: { backgroundColor: 'rgba(212,168,83,0.12)' },
+  addMemberRowSelected: { backgroundColor: BUTTON_ACCENT_SOFT },
   addMemberAvatar: {
     width: 30, height: 30, borderRadius: 15,
     borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)',

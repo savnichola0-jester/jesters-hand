@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import {
   Deal, DealInput, DealTaskType, DealDuration, DealMemberStats, DealCompletion,
   listenDeals, listenAllDealStats, listenAllDealCompletions,
@@ -350,9 +351,9 @@ const s = StyleSheet.create({
   root: { flex: 1 },
   tabs: { flexDirection: 'row', padding: 16, gap: 12 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabActive: { borderBottomColor: GOLD },
+  tabActive: { borderBottomColor: BUTTON_ACCENT },
   tabText: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 1 },
-  tabTextActive: { color: GOLD },
+  tabTextActive: { color: BUTTON_ACCENT },
 
   content: { padding: 16, paddingBottom: 100 },
   msgBanner: { padding: 12, marginBottom: 12, borderRadius: 8, borderWidth: 1 },
@@ -365,9 +366,9 @@ const s = StyleSheet.create({
 
   durationRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   durBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(237,224,196,0.2)', borderRadius: 8 },
-  durBtnActive: { borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.15)' },
+  durBtnActive: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   durText: { color: 'rgba(237,224,196,0.4)', fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
-  durTextActive: { color: GOLD },
+  durTextActive: { color: BUTTON_ACCENT },
 
   input: { backgroundColor: '#111', borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)', borderRadius: 8, color: CREAM, paddingHorizontal: 12, paddingVertical: 10, fontFamily: 'Cinzel_400Regular', marginBottom: 12 },
 
@@ -384,18 +385,18 @@ const s = StyleSheet.create({
     gap: 12
   },
   taskTypeBtn: {
-    backgroundColor: 'rgba(212,168,83,0.15)',
+    backgroundColor: BUTTON_ACCENT_SOFT,
     borderWidth: 1,
-    borderColor: GOLD,
+    borderColor: BUTTON_ACCENT,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 12,
   },
   tapToChange: { color: 'rgba(212,168,83,0.6)', fontSize: 9, fontFamily: 'Cinzel_700Bold', marginTop: 4 },
-  assignBtn: { marginTop: 6, padding: 10, borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', borderRadius: 8, alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
+  assignBtn: { marginTop: 6, padding: 10, borderWidth: 1, borderColor: 'rgba(250,105,2,0.45)', borderRadius: 8, alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
   assignLabel: { color: 'rgba(237,224,196,0.55)', fontFamily: 'Cinzel_600SemiBold', fontSize: 9, letterSpacing: 1 },
-  assignValue: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 16, marginTop: 3 },
+  assignValue: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 16, marginTop: 3 },
   assignPlaceholder: { color: '#FF9A7A', fontSize: 12 },
   removeTaskBtn: {
     flexDirection: 'row',
@@ -411,8 +412,8 @@ const s = StyleSheet.create({
   removeTaskText: { color: '#FF6B6B', fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1 },
   addBtnText: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 1 },
 
-  submitBtn: { backgroundColor: 'rgba(212,168,83,0.15)', borderWidth: 1, borderColor: GOLD, borderRadius: 8, alignItems: 'center', paddingVertical: 14 },
-  submitText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
+  submitBtn: { backgroundColor: BUTTON_ACCENT_SOFT, borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 8, alignItems: 'center', paddingVertical: 14 },
+  submitText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
 
   list: { gap: 12 },
   managementSection: { marginTop: 32 },
@@ -423,8 +424,8 @@ const s = StyleSheet.create({
   badgeText: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Cinzel_600SemiBold', fontSize: 9, textTransform: 'uppercase' },
   dealMeta: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Cinzel_400Regular', fontSize: 12, marginBottom: 16 },
   dealActions: { flexDirection: 'row', gap: 12 },
-  actionBtn: { flex: 1, paddingVertical: 10, borderWidth: 1, borderColor: GOLD, borderRadius: 6, alignItems: 'center' },
-  actionText: { color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
+  actionBtn: { flex: 1, paddingVertical: 10, borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 6, alignItems: 'center' },
+  actionText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
 
   userCard: { backgroundColor: '#050505', borderWidth: 1, borderColor: 'rgba(212,168,83,0.2)', borderRadius: 8, padding: 16 },
   userHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
@@ -435,9 +436,9 @@ const s = StyleSheet.create({
 
   milestonesRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   msBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(237,224,196,0.2)', alignItems: 'center', justifyContent: 'center' },
-  msBtnActive: { borderColor: GOLD, backgroundColor: 'rgba(212,168,83,0.15)' },
+  msBtnActive: { borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT },
   msText: { color: 'rgba(237,224,196,0.4)', fontFamily: 'Cinzel_700Bold', fontSize: 12 },
-  msTextActive: { color: GOLD },
+  msTextActive: { color: BUTTON_ACCENT },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.82)', justifyContent: 'center', padding: 24 },
   modalSheet: { maxHeight: '78%', backgroundColor: '#090909', borderWidth: 1, borderColor: GOLD, borderRadius: 12, padding: 16 },
   modalTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 2, textAlign: 'center', marginBottom: 12 },

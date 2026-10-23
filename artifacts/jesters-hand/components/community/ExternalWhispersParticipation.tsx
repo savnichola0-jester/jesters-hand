@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { Feather } from '@/components/FIcon';
 import { InWorldCard, CardPip, CardTitle } from '@/components/InWorldCard';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { appWindow } from '@/lib/appWindow';
 
 const WHISPERS_URL = 'https://54-ante-up-or-bleed-out-publishing-website.replit.app/whispers';
@@ -113,10 +114,10 @@ const s = StyleSheet.create({
   cardContent: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   pip: { fontSize: 18, minHeight: 24 },
   prompt: { fontSize: 13, lineHeight: 19 },
-  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1, borderColor: GOLD, borderRadius: 7, paddingVertical: 9, paddingHorizontal: 10, marginTop: 4, backgroundColor: 'rgba(0,0,0,0.45)' },
-  ctaText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1 },
+  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 7, paddingVertical: 9, paddingHorizontal: 10, marginTop: 4, backgroundColor: BUTTON_ACCENT_SOFT },
+  ctaText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1 },
   error: { color: '#FF9A7A', fontFamily: 'Cinzel_600SemiBold', fontSize: 12, textAlign: 'center', marginTop: 10 },
   authorSection: { marginTop: 28, padding: 16, borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', backgroundColor: 'rgba(0,0,0,0.55)' },
   authorCopy: { color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 12, lineHeight: 19, textAlign: 'center', marginTop: 12 },
-  authorCta: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: GOLD, padding: 12, marginTop: 16 },
+  authorCta: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT, padding: 12, marginTop: 16 },
 });

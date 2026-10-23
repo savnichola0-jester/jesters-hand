@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT } from '@/lib/buttonAccent';
 import { useColors } from '@/hooks/useColors';
 import {
   GameRoomMessage, listenGameRoomMessages, sendGameRoomMessage,
@@ -215,7 +216,7 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
     joinButton: {
       minHeight: 32, paddingHorizontal: 10, gap: 6, flexDirection: 'row',
       alignItems: 'center', justifyContent: 'center',
-      backgroundColor: colors.primary, borderRadius: colors.radius,
+      backgroundColor: BUTTON_ACCENT, borderRadius: colors.radius,
     },
     joinText: { color: colors.primaryForeground, fontSize: 10, fontWeight: '800', letterSpacing: 0.7 },
     list: { minHeight: 120, paddingHorizontal: 12 },
