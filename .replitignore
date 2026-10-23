@@ -3,3 +3,6 @@
 
 # No need to store the pnpm store twice.
 .local
+
+# Local-only rebuild inputs (e.g. pristine pre-drip originals)
+generated-artifacts/

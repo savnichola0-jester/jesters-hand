@@ -43,10 +43,12 @@ import {
 } from '@/lib/shopifyService';
 import { CartLine, loadCart, saveCart } from '@/lib/cartStorage';
 import { MARBLE_TEXT_SHADOW } from '@/lib/legibility';
+import { BloodDrip } from '@/components/BloodDrip';
 
 const NAV_DAGGER = require('../../assets/images/nav_dagger.png');
 const NAV_CARDS  = require('../../assets/images/nav_cards.png');
 const MARBLE     = require('../../assets/images/wood_bg.png');
+const UNIFORM_EMBLEM = require('../../assets/images/uniform_emblem.png');
 
 const NAV_H = 52;
 const SIDE  = 16;
@@ -661,15 +663,17 @@ export default function UniformScreen() {
         {view === 'landing' ? (
           <View style={[st.body, st.bodyRounded]}>
             <View style={st.landingFill}>
-              {/* "54" badge — parchment square, ornate hairline, gold glow */}
-              <View style={st.badgeGlow}>
-                <View style={st.badge}>
-                  <View style={st.badgeInner}>
-                    <Text style={st.badgeText}>54</Text>
-                  </View>
-                </View>
+              {/* Store identity: the 54 Shadows At Command emblem, unaltered */}
+              <View style={st.emblemWrap}>
+                <Image
+                  source={UNIFORM_EMBLEM}
+                  style={st.emblem}
+                  resizeMode="contain"
+                  accessibilityLabel="54 Shadows At Command"
+                />
+                <BloodDrip width={64} height={30} seed={21} count={3} style={st.emblemDrip} />
               </View>
-
+              <Text style={st.storeName}>54 SHADOWS AT COMMAND</Text>
               {/* Two-tone headline: gold line over cream line */}
               <Text style={st.heroLineGold}>THE SYSTEM</Text>
               <Text style={st.heroLineCream}>CONTINUES HERE</Text>
@@ -1336,23 +1340,13 @@ const st = StyleSheet.create({
 
   // Landing / hero
   landingFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 8 },
-  badgeGlow: {
-    padding: 14, borderRadius: 40, marginBottom: 4,
-    backgroundColor: 'rgba(212,168,83,0.10)',
-    shadowColor: GOLD, shadowOpacity: 0.9, shadowRadius: 18, shadowOffset: { width: 0, height: 0 },
-    ...(Platform.OS === 'android' ? { elevation: 8 } : null),
+  emblemWrap: { width: 132, height: 158, alignItems: 'center', marginBottom: 2 },
+  emblem: { width: 132, height: 158 },
+  emblemDrip: { position: 'absolute', bottom: -6, left: 34 },
+  storeName: {
+    color: 'rgba(212,168,83,0.85)', fontFamily: 'Cinzel_600SemiBold', fontSize: 10.5,
+    letterSpacing: 3, textAlign: 'center', marginBottom: 4,
   },
-  badge: {
-    width: 60, height: 60, borderRadius: 6,
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.75)',
-    backgroundColor: '#141008', padding: 3,
-  },
-  badgeInner: {
-    flex: 1, borderWidth: 1, borderColor: 'rgba(212,168,83,0.35)', borderRadius: 3,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(237,224,196,0.05)',
-  },
-  badgeText: { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 24, letterSpacing: 1 },
   heroLineGold: {
     color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 22, letterSpacing: 5, textAlign: 'center',
   },

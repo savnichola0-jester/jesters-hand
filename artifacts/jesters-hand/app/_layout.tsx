@@ -39,6 +39,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { sweepVaultTempFiles } from '@/lib/vaultService';
 import { Platform, StyleSheet, View } from 'react-native';
 import { APP_MAX_W } from '@/lib/appWindow';
+import { ScreenDrip } from '@/components/BloodDrip';
 import { configureNativePushNotifications } from '@/lib/pushService';
 import { auth } from '@/lib/firebase';
 import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
@@ -85,11 +86,11 @@ function RootLayoutNav() {
 function PhoneShell({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   if (Platform.OS !== 'web') {
-    return <View style={[shellStyles.native, { paddingBottom: insets.bottom }]}>{children}</View>;
+    return <View style={[shellStyles.native, { paddingBottom: insets.bottom }]}>{children}<ScreenDrip /></View>;
   }
   return (
     <View style={shellStyles.outer}>
-      <View style={shellStyles.column}>{children}</View>
+      <View style={shellStyles.column}>{children}<ScreenDrip /></View>
     </View>
   );
 }
