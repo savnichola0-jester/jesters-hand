@@ -23,6 +23,8 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
   const insets = useSafeAreaInsets();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
+  const shortError = `${error.name || 'Error'}: ${error.message || 'No message supplied.'}`.slice(0, 500);
 
   const handleRestart = async () => {
     try {
@@ -75,6 +77,26 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
         <Text style={[styles.message, { color: colors.mutedForeground }]}>
           Please reload the app to continue.
         </Text>
+
+        <Pressable
+          onPress={() => setShowErrorDetails(show => !show)}
+          accessibilityLabel={showErrorDetails ? 'Hide error details' : 'Show error details'}
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          <Text style={[styles.detailsToggle, { color: colors.mutedForeground }]}>
+            {showErrorDetails ? 'Hide error details' : 'Show error details'}
+          </Text>
+        </Pressable>
+
+        {showErrorDetails ? (
+          <Text
+            selectable
+            style={[styles.errorSummary, { color: colors.mutedForeground }]}
+          >
+            {shortError}
+          </Text>
+        ) : null}
 
         <Pressable
           onPress={handleRestart}
@@ -193,6 +215,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  detailsToggle: {
+    fontSize: 13,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  errorSummary: {
+    maxWidth: 560,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
   },
   topButton: {
     position: 'absolute',
