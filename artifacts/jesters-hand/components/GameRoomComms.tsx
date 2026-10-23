@@ -229,7 +229,7 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
       paddingLeft: 12, paddingRight: 8,
     },
-    input: { flex: 1, color: colors.text, fontSize: 14, maxHeight: 88, paddingVertical: 10 },
+    input: { flex: 1, color: colors.text, fontSize: 14, maxHeight: 88, paddingVertical: 10, paddingHorizontal: 10, borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 8 },
     sendButton: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
     error: { color: colors.destructive, fontSize: 12, paddingHorizontal: 12, paddingTop: 7 },
   });

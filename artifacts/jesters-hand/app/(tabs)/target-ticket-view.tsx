@@ -400,7 +400,7 @@ const s = StyleSheet.create({
   },
   composerInput: {
     flex: 1, minHeight: 44, maxHeight: 110,
-    backgroundColor: '#0A0A0A', borderWidth: 1, borderColor: 'rgba(212,168,83,0.35)',
+    backgroundColor: '#0A0A0A', borderWidth: 1, borderColor: BUTTON_ACCENT,
     borderRadius: 10, color: CREAM, paddingHorizontal: 12, paddingVertical: 11,
     fontSize: 13.5, fontFamily: 'Inter_400Regular',
   },

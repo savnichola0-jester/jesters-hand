@@ -718,7 +718,7 @@ export function SpreadCanvas({ value, onChange, editable, height, onPickPhoto, o
 
 const styles = StyleSheet.create({
   frame: {
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.35)', borderRadius: 8,
+    borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 8,
     overflow: 'hidden', backgroundColor: '#120E06',
   },
   board: { flex: 1 },
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     minHeight: 90, maxHeight: 180, backgroundColor: 'rgba(200,165,60,0.07)',
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.35)', borderRadius: 8,
+    borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 8,
     color: CREAM, padding: 12, fontSize: 14, fontFamily: 'Inter_400Regular',
     textAlignVertical: 'top',
   },

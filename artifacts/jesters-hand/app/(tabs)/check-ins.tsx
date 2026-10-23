@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   button: { borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT, paddingVertical: 13, paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center', minHeight: 44 },
   buttonText: { color: BUTTON_ACCENT, fontSize: 10, letterSpacing: 0.7, fontFamily: FONT, textAlign: 'center' },
   helper: { color: DIM, fontSize: 10, lineHeight: 16 },
-  input: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.48)', color: CREAM, padding: 12, fontSize: 14, minHeight: 44, backgroundColor: 'rgba(0,0,0,0.7)' },
+  input: { borderWidth: 1, borderColor: BUTTON_ACCENT, color: CREAM, padding: 12, fontSize: 14, minHeight: 44, backgroundColor: 'rgba(0,0,0,0.7)' },
   link: { color: GOLD, textAlign: 'center', padding: 10, fontSize: 11, fontFamily: FONT },
   reward: { color: CREAM, lineHeight: 20, fontSize: 12 },
   memberCard: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.35)', backgroundColor: 'rgba(0,0,0,0.62)' },

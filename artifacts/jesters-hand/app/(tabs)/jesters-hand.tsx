@@ -1723,7 +1723,7 @@ const st = StyleSheet.create({
   invSearchRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   invSearchInput: {
     flex: 1, height: 42, borderRadius: 8, borderWidth: 1,
-    borderColor: 'rgba(200,165,60,0.35)', backgroundColor: '#080808',
+    borderColor: BUTTON_ACCENT, backgroundColor: '#080808',
     color: CREAM, paddingHorizontal: 12, fontFamily: 'Inter_400Regular', fontSize: 13,
     letterSpacing: 1,
   },
@@ -1809,7 +1809,7 @@ const st = StyleSheet.create({
   },
   modalInput: {
     height: 44, borderRadius: 8, borderWidth: 1,
-    borderColor: 'rgba(200,165,60,0.35)', backgroundColor: '#080808',
+    borderColor: BUTTON_ACCENT, backgroundColor: '#080808',
     color: CREAM, paddingHorizontal: 12, fontFamily: 'Inter_400Regular', fontSize: 13,
   },
   modalError: { color: RED, fontFamily: 'Inter_500Medium', fontSize: 12 },

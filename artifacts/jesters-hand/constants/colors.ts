@@ -17,7 +17,7 @@ const colors = {
     destructive: '#E05555',
     destructiveForeground: '#FFFFFF',
     border: 'rgba(200,165,60,0.3)',
-    input: 'rgba(200,165,60,0.2)',
+    input: '#FA6902',
   },
   dark: {
     text: '#F5E8C8',
@@ -37,7 +37,7 @@ const colors = {
     destructive: '#E05555',
     destructiveForeground: '#FFFFFF',
     border: 'rgba(200,165,60,0.3)',
-    input: 'rgba(200,165,60,0.2)',
+    input: '#FA6902',
   },
   radius: 4,
 };

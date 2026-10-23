@@ -607,7 +607,7 @@ const s = StyleSheet.create({
   fieldLabel: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 10,
                 letterSpacing: 2, marginBottom: 8, marginTop: 6, opacity: 0.8 },
   input: { width: '100%', height: 48, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8,
-           borderWidth: 1, borderColor: 'rgba(237,224,196,0.18)', color: CREAM,
+           borderWidth: 1, borderColor: BUTTON_ACCENT, color: CREAM,
            fontFamily: 'Inter_400Regular', fontSize: 14, paddingHorizontal: 14, marginBottom: 8 },
 
   msgRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 2 },

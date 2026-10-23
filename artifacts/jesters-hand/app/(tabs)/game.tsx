@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   savedRoom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingVertical: 9, borderTopWidth: 1, borderColor: 'rgba(212,168,83,0.2)' },
   resumeArrow: { color: GOLD, fontSize: 25, paddingHorizontal: 8 },
   heading: { color: GOLD, fontSize: 11, fontFamily: FONT, letterSpacing: 1.1 },
-  input: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.48)', color: CREAM, padding: 12, fontSize: 15, minHeight: 47, backgroundColor: 'rgba(0,0,0,0.7)', letterSpacing: 1.2 },
+  input: { borderWidth: 1, borderColor: BUTTON_ACCENT, color: CREAM, padding: 12, fontSize: 15, minHeight: 47, backgroundColor: 'rgba(0,0,0,0.7)', letterSpacing: 1.2 },
   button: { borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT, paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', minHeight: 47 },
   buttonQuiet: { backgroundColor: 'rgba(0,0,0,0.6)', borderColor: 'rgba(250,105,2,0.35)' },
   buttonDisabled: { opacity: 0.42 },

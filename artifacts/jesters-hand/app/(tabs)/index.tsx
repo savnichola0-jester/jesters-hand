@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: 'rgba(0,0,0,0.58)',
     borderWidth: 1.5,
-    borderColor: 'rgba(200,165,60,0.65)',
+    borderColor: BUTTON_ACCENT,
     borderRadius: 4,
     color: '#F5E8C8',
     paddingHorizontal: 14,

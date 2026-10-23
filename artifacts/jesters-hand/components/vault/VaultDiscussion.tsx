@@ -728,7 +728,7 @@ const s = StyleSheet.create({
   input: {
     flex: 1, minHeight: 42, maxHeight: 110,
     backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8, borderWidth: 1.2, borderColor: 'rgba(200,165,60,0.5)',
+    borderRadius: 8, borderWidth: 1.2, borderColor: BUTTON_ACCENT,
     color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 12.5,
     paddingHorizontal: 12, paddingVertical: 10,
   },

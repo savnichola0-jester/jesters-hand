@@ -885,14 +885,14 @@ const s = StyleSheet.create({
   titleInput: {
     height: 42,
     backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8, borderWidth: 1.2, borderColor: 'rgba(200,165,60,0.5)',
+    borderRadius: 8, borderWidth: 1.2, borderColor: BUTTON_ACCENT,
     color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 13,
     paddingHorizontal: 12, textAlign: 'center',
   },
   descInput: {
     minHeight: 130, maxHeight: 190,
     backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8, borderWidth: 1.2, borderColor: 'rgba(200,165,60,0.5)',
+    borderRadius: 8, borderWidth: 1.2, borderColor: BUTTON_ACCENT,
     color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 13,
     padding: 12,
   },
@@ -900,7 +900,7 @@ const s = StyleSheet.create({
   optionInput: {
     height: 40,
     backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8, borderWidth: 1.2, borderColor: 'rgba(200,165,60,0.5)',
+    borderRadius: 8, borderWidth: 1.2, borderColor: BUTTON_ACCENT,
     color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 13,
     paddingHorizontal: 12,
   },
@@ -953,7 +953,7 @@ const s = StyleSheet.create({
   commentInput: {
     flex: 1, minHeight: 42, maxHeight: 110,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 10, borderWidth: 1, borderColor: 'rgba(200,165,60,0.3)',
+    borderRadius: 10, borderWidth: 1, borderColor: BUTTON_ACCENT,
     color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 13,
     paddingHorizontal: 12, paddingVertical: 10,
   },

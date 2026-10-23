@@ -975,7 +975,7 @@ const s = StyleSheet.create({
     flex: 1, minWidth: 0, flexShrink: 1,
     height: 36,
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 6, borderWidth: 1, borderColor: 'rgba(212,168,83,0.65)',
+    borderRadius: 6, borderWidth: 1, borderColor: BUTTON_ACCENT,
     color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 11,
     paddingHorizontal: 8,
   },

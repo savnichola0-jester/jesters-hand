@@ -205,7 +205,7 @@ const s = StyleSheet.create({
   },
   input: {
     flex: 1, minHeight: 42, maxHeight: 90, borderRadius: 9, borderWidth: 1,
-    borderColor: 'rgba(212,168,83,0.35)', color: CREAM, paddingHorizontal: 12, paddingVertical: 9,
+    borderColor: BUTTON_ACCENT, color: CREAM, paddingHorizontal: 12, paddingVertical: 9,
     backgroundColor: 'rgba(0,0,0,0.45)', fontFamily: 'Inter_400Regular', fontSize: 13,
   },
   send: {

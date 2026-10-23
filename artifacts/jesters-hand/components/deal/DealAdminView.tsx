@@ -370,7 +370,7 @@ const s = StyleSheet.create({
   durText: { color: 'rgba(237,224,196,0.4)', fontFamily: 'Cinzel_600SemiBold', fontSize: 10, letterSpacing: 1 },
   durTextActive: { color: BUTTON_ACCENT },
 
-  input: { backgroundColor: '#111', borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)', borderRadius: 8, color: CREAM, paddingHorizontal: 12, paddingVertical: 10, fontFamily: 'Cinzel_400Regular', marginBottom: 12 },
+  input: { backgroundColor: '#111', borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 8, color: CREAM, paddingHorizontal: 12, paddingVertical: 10, fontFamily: 'Cinzel_400Regular', marginBottom: 12 },
 
   cardScroller: { flexGrow: 0, marginVertical: 16, marginHorizontal: -16 },
   cardSpread: { paddingHorizontal: 16, gap: 16 },

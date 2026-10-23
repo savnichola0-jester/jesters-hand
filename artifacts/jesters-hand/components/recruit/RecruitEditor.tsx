@@ -607,7 +607,7 @@ const st = StyleSheet.create({
   },
   textInput: {
     minHeight: 64, maxHeight: 130, color: CREAM, fontFamily: 'Inter_400Regular', fontSize: 15,
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)', borderRadius: 6, padding: 10,
+    borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 6, padding: 10,
     textAlignVertical: 'top',
   },
   chipRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },

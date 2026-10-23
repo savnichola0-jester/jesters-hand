@@ -522,7 +522,7 @@ const s = StyleSheet.create({
   assignmentCopy: { color: CREAM, fontSize: 12, lineHeight: 18, textAlign: 'center', marginBottom: 12 },
   assignmentPanel: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', backgroundColor: 'rgba(0,0,0,0.55)', padding: 14, marginBottom: 20 },
   assignmentTitle: { color: GOLD, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.5, fontSize: 12, textAlign: 'center', marginBottom: 12 },
-  jokerInput: { borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)', color: CREAM, fontSize: 15, paddingHorizontal: 12, paddingVertical: 11, textAlign: 'center' },
+  jokerInput: { borderWidth: 1, borderColor: BUTTON_ACCENT, color: CREAM, fontSize: 15, paddingHorizontal: 12, paddingVertical: 11, textAlign: 'center' },
   searchButton: { borderWidth: 1, borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT, padding: 12, alignItems: 'center', marginTop: 8 },
   assignmentNote: { color: '#ff9b75', textAlign: 'center', marginTop: 10, fontSize: 12 },
   selectedMember: { color: CREAM, fontFamily: 'Cinzel_700Bold', letterSpacing: 1.2, textAlign: 'center', marginTop: 16 },

@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: 'rgba(200,165,60,0.06)',
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)', borderRadius: 7,
+    borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 7,
     color: CREAM, paddingHorizontal: 12, paddingVertical: 10,
     fontSize: 13.5, fontFamily: 'Inter_400Regular',
   },

@@ -13,7 +13,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { deleteChatImage, uploadChatImage } from '@/lib/chatMediaService';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { useWhisper } from '@/contexts/WhisperContext';
 import {
   Message, Conversation, Member,
@@ -822,7 +822,7 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(12,8,4,0.7)',
     borderWidth: 1.5,
-    borderColor: '#C8983A',
+    borderColor: BUTTON_ACCENT,
     borderRadius: 8,
     color: CREAM,
     fontFamily: 'Cinzel_400Regular',

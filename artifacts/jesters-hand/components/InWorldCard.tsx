@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ImageBackground, StyleSheet, StyleProp, ViewStyle, TextStyle, Text, TextInput, TextInputProps } from 'react-native';
+import { BUTTON_ACCENT } from '@/lib/buttonAccent';
 
 const CARD_BG = require('@/assets/images/in_world_card.png');
 const GOLD = '#D4A853';
@@ -90,7 +91,7 @@ const s = StyleSheet.create({
   input: {
     backgroundColor: 'rgba(0,0,0,0.6)',
     borderWidth: 1,
-    borderColor: 'rgba(212,168,83,0.4)',
+    borderColor: BUTTON_ACCENT,
     borderRadius: 8,
     color: CREAM,
     paddingHorizontal: 12,

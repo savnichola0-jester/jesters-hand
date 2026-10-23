@@ -1181,7 +1181,7 @@ const s = StyleSheet.create({
   input: {
     height: 42,
     backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8, borderWidth: 1.2, borderColor: 'rgba(200,165,60,0.5)',
+    borderRadius: 8, borderWidth: 1.2, borderColor: BUTTON_ACCENT,
     color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 13,
     paddingHorizontal: 12,
   },

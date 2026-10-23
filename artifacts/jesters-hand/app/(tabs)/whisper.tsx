@@ -659,7 +659,7 @@ const s = StyleSheet.create({
     height: 38, backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 10, borderWidth: 1, borderColor: 'rgba(200,165,60,0.12)',
   },
-  searchInput: { flex: 1, color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 12, height: 38 },
+  searchInput: { flex: 1, color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 12, height: 38, borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 8, paddingHorizontal: 10 },
   selectedCount: {
     color: GOLD, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1,
     marginHorizontal: 16, marginBottom: 4,

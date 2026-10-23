@@ -9,6 +9,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/contexts/AuthContext';
+import { BUTTON_ACCENT } from '@/lib/buttonAccent';
 import {
   TicketDraft, EMPTY_SPREAD, createTargetTicket, updateTargetTicket,
   listenTargetTicket, uploadSpreadPhoto,
@@ -243,7 +244,7 @@ const s = StyleSheet.create({
   },
   tabInput: {
     color: GOLD, fontSize: 12, fontFamily: 'Cinzel_700Bold', letterSpacing: 2,
-    paddingVertical: 0,
+    paddingVertical: 0, borderBottomWidth: 1, borderColor: BUTTON_ACCENT,
   },
   body: {
     backgroundColor: '#0A0A0A',

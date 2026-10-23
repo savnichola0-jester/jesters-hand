@@ -569,7 +569,7 @@ const s = StyleSheet.create({
   fieldValue: { color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 13, lineHeight: 20 },
   inputLocked: { opacity: 0.55 },
   input: { width: '100%', height: 48, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8,
-    borderWidth: 1, borderColor: 'rgba(237,224,196,0.18)', color: CREAM,
+    borderWidth: 1, borderColor: BUTTON_ACCENT, color: CREAM,
     fontFamily: 'Cinzel_400Regular', fontSize: 13, paddingHorizontal: 14 },
 
   // Bottom buttons

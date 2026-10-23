@@ -1609,7 +1609,7 @@ const st = StyleSheet.create({
   },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   searchInput: {
-    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)',
+    borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
     backgroundColor: 'rgba(5,3,0,0.6)', color: CREAM,
     fontFamily: 'Inter_400Regular', fontSize: 11,
     paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8,
@@ -1622,7 +1622,7 @@ const st = StyleSheet.create({
   chipText: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Inter_500Medium', fontSize: 10.5 },
   chipTextActive: { color: CREAM },
   input: {
-    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)',
+    borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
     backgroundColor: 'rgba(255,255,255,0.03)', color: CREAM,
     paddingHorizontal: 10, paddingVertical: 9,
     fontFamily: 'Inter_400Regular', fontSize: 12,
