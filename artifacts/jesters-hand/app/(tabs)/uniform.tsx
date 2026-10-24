@@ -25,7 +25,7 @@ import { Feather } from '@/components/FIcon';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
+import { BUTTON_ACCENT } from '@/lib/buttonAccent';
 import { getAllMembers } from '@/lib/ticketService';
 import {
   LOCKER_KINDS, LockerKind, IssuedRecord,
@@ -481,7 +481,7 @@ export default function UniformScreen() {
                     accessibilityLabel={`Claim ${p.name}`}
                   >
                     {buying ? (
-                      <ActivityIndicator size="small" color="#0B0906" />
+                      <ActivityIndicator size="small" color={CREAM} />
                     ) : (
                       <Text style={st.buyBtnText}>CLAIM YOURS  →</Text>
                     )}
@@ -496,7 +496,7 @@ export default function UniformScreen() {
                     activeOpacity={0.85}
                     accessibilityLabel={`Add ${p.name} to cart`}
                   >
-                    <Feather name="plus" size={13} color={GOLD} />
+                    <Feather name="plus" size={13} color={CREAM} />
                     <Text style={st.cartAddBtnText}>ADD TO CART</Text>
                   </TouchableOpacity>
                   <Text style={st.buyHint}>Secure checkout opens in your browser.</Text>
@@ -742,7 +742,7 @@ export default function UniformScreen() {
                         activeOpacity={0.85}
                         accessibilityLabel={`Open cart, ${cartCount} items`}
                       >
-                        <Feather name="shopping-bag" size={14} color="#0B0906" />
+                        <Feather name="shopping-bag" size={14} color={CREAM} />
                         <Text style={st.cartBarText}>
                           CART — {cartCount} {cartCount === 1 ? 'ITEM' : 'ITEMS'}
                         </Text>
@@ -776,7 +776,7 @@ export default function UniformScreen() {
                         activeOpacity={0.85}
                         accessibilityLabel="Stock the Armory"
                       >
-                        <Feather name="plus" size={14} color="#0B0906" />
+                        <Feather name="plus" size={14} color={CREAM} />
                         <Text style={st.stockBtnText}>STOCK THE ARMORY</Text>
                       </TouchableOpacity>
                     )}
@@ -883,7 +883,7 @@ export default function UniformScreen() {
                         activeOpacity={0.85}
                         accessibilityLabel="Issue equipment to members"
                       >
-                        <Feather name="plus" size={14} color="#0B0906" />
+                        <Feather name="plus" size={14} color={CREAM} />
                         <Text style={st.issueBtnText}>ISSUE EQUIPMENT</Text>
                       </TouchableOpacity>
                     )}
@@ -947,7 +947,7 @@ export default function UniformScreen() {
                   activeOpacity={0.85}
                   accessibilityLabel={`Open cart, ${cartCount} items`}
                 >
-                  <Feather name="shopping-bag" size={18} color="#0B0906" />
+                  <Feather name="shopping-bag" size={18} color={CREAM} />
                   <View style={st.cartFabBadge}>
                     <Text style={st.cartFabBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
                   </View>
@@ -985,7 +985,7 @@ export default function UniformScreen() {
                       style={st.cartQtyBtn}
                       accessibilityLabel={`Decrease quantity of ${l.productName}`}
                     >
-                      <Feather name="minus" size={13} color={GOLD} />
+                      <Feather name="minus" size={13} color={CREAM} />
                     </TouchableOpacity>
                     <Text style={st.cartQtyText}>{l.quantity}</Text>
                     <TouchableOpacity
@@ -994,7 +994,7 @@ export default function UniformScreen() {
                       style={st.cartQtyBtn}
                       accessibilityLabel={`Increase quantity of ${l.productName}`}
                     >
-                      <Feather name="plus" size={13} color={GOLD} />
+                      <Feather name="plus" size={13} color={CREAM} />
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity
@@ -1002,7 +1002,7 @@ export default function UniformScreen() {
                     hitSlop={8}
                     accessibilityLabel={`Remove ${l.productName} from cart`}
                   >
-                    <Feather name="x" size={15} color="rgba(200,80,60,0.85)" />
+                    <Feather name="x" size={15} color={CREAM} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -1022,7 +1022,7 @@ export default function UniformScreen() {
                 accessibilityLabel="Check out"
               >
                 {cartCheckingOut
-                  ? <ActivityIndicator color="#0B0906" />
+                  ? <ActivityIndicator color={CREAM} />
                   : <Text style={st.primaryBtnText}>CHECK OUT  →</Text>}
               </TouchableOpacity>
               {cart.length > 0 && (
@@ -1136,7 +1136,7 @@ export default function UniformScreen() {
                 activeOpacity={0.85}
               >
                 {issuing
-                  ? <ActivityIndicator color="#0B0906" />
+                  ? <ActivityIndicator color={CREAM} />
                   : <Text style={st.primaryBtnText}>ISSUE</Text>}
               </TouchableOpacity>
               <TouchableOpacity
@@ -1258,7 +1258,7 @@ export default function UniformScreen() {
                     <ProductPhoto path={form.existingPhotoPath} style={st.photoPreview} />
                   ) : (
                     <View style={st.photoBtnEmpty}>
-                      <Feather name="camera" size={18} color="rgba(212,168,83,0.6)" />
+                      <Feather name="camera" size={18} color={CREAM} />
                       <Text style={st.photoBtnText}>Choose a photo</Text>
                     </View>
                   )}
@@ -1275,7 +1275,7 @@ export default function UniformScreen() {
                   accessibilityLabel={form.productId ? 'Save changes' : 'Add to the Armory'}
                 >
                   {saving ? (
-                    <ActivityIndicator size="small" color="#0B0906" />
+                    <ActivityIndicator size="small" color={CREAM} />
                   ) : (
                     <Text style={st.primaryBtnText}>
                       {form.productId ? 'SAVE CHANGES' : 'ADD TO THE ARMORY'}
@@ -1323,7 +1323,7 @@ const st = StyleSheet.create({
     borderColor: 'rgba(200,165,60,0.18)',
     justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4,
   },
-  tabActive: { backgroundColor: '#0D0D0D', borderColor: 'rgba(200,165,60,0.4)' },
+  tabActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
   tabText: {
     color: 'rgba(237,224,196,0.35)', fontFamily: 'Cinzel_600SemiBold',
     fontSize: 11, letterSpacing: 1.2,
@@ -1364,17 +1364,20 @@ const st = StyleSheet.create({
     textAlign: 'center', marginBottom: 14, textTransform: 'uppercase',
   },
   primaryBtn: {
-    alignSelf: 'stretch', borderRadius: 8, backgroundColor: GOLD,
+    alignSelf: 'stretch', borderRadius: 8, backgroundColor: BUTTON_ACCENT,
     paddingVertical: 13, alignItems: 'center',
   },
-  primaryBtnText: { color: '#0B0906', fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 2 },
+  primaryBtnText: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 2 },
   secondaryBtn: {
-    alignSelf: 'stretch', borderRadius: 8, borderWidth: 1, borderColor: GOLD,
-    backgroundColor: 'rgba(212,168,83,0.08)', paddingVertical: 13, alignItems: 'center',
+    alignSelf: 'stretch', borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT, paddingVertical: 13, alignItems: 'center',
   },
-  secondaryBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
-  linkBtn: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 8 },
-  linkBtnText: { color: BUTTON_ACCENT, fontFamily: 'Inter_600SemiBold', fontSize: 11.5, letterSpacing: 2 },
+  secondaryBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
+  linkBtn: {
+    alignSelf: 'stretch', borderRadius: 8, backgroundColor: BUTTON_ACCENT,
+    paddingVertical: 13, alignItems: 'center',
+  },
+  linkBtnText: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 11.5, letterSpacing: 2 },
 
   // Armory
   pageTitle: {
@@ -1390,12 +1393,12 @@ const st = StyleSheet.create({
     marginBottom: 16,
   },
   pill: {
-    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)',
+    borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
     paddingHorizontal: 12, paddingVertical: 7,
   },
   pillActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
-  pillText: { color: BUTTON_ACCENT, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
-  pillTextActive: { color: '#0B0906' },
+  pillText: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
+  pillTextActive: { color: CREAM },
   armoryEmpty: { alignItems: 'center', paddingVertical: 56, paddingHorizontal: 16 },
   armoryEmptyText: {
     color: 'rgba(237,224,196,0.45)', fontFamily: 'Inter_500Medium', fontSize: 11.5,
@@ -1444,41 +1447,41 @@ const st = StyleSheet.create({
   },
   variantRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   variantChip: {
-    borderWidth: 1, borderColor: 'rgba(212,168,83,0.4)', borderRadius: 6,
+    borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 6,
     paddingVertical: 6, paddingHorizontal: 12, backgroundColor: 'rgba(0,0,0,0.35)',
   },
   variantChipActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
-  variantChipText: { color: BUTTON_ACCENT, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
-  variantChipTextActive: { color: '#0B0906' },
+  variantChipText: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
+  variantChipTextActive: { color: CREAM },
   buyBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     borderRadius: 8, backgroundColor: BUTTON_ACCENT, paddingVertical: 11,
   },
-  buyBtnText: { color: '#0B0906', fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
+  buyBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
   cartAddBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
-    backgroundColor: BUTTON_ACCENT_SOFT, paddingVertical: 10, marginTop: 8,
+    backgroundColor: BUTTON_ACCENT, paddingVertical: 10, marginTop: 8,
   },
-  cartAddBtnText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
+  cartAddBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
   cartBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: 8, backgroundColor: BUTTON_ACCENT,
     paddingVertical: 10, paddingHorizontal: 12, marginBottom: 14,
   },
-  cartBarText: { color: '#0B0906', fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.6, flex: 1 },
-  cartBarTotal: { color: '#0B0906', fontFamily: 'Inter_600SemiBold', fontSize: 12 },
+  cartBarText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.6, flex: 1 },
+  cartBarTotal: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 12 },
   cartFab: {
     position: 'absolute', right: 14, bottom: 18,
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: BUTTON_ACCENT, alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 3 },
     elevation: 6,
   },
   cartFabBadge: {
     position: 'absolute', top: -4, right: -4,
     minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 4,
-    backgroundColor: '#0B0906', borderWidth: 1, borderColor: GOLD,
+    backgroundColor: '#0B0906', borderWidth: 1, borderColor: BUTTON_ACCENT,
     alignItems: 'center', justifyContent: 'center',
   },
   cartFabBadgeText: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 10 },
@@ -1499,7 +1502,8 @@ const st = StyleSheet.create({
   cartQtyBox: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cartQtyBtn: {
     width: 24, height: 24, borderRadius: 6, borderWidth: 1,
-    borderColor: 'rgba(212,168,83,0.45)', alignItems: 'center', justifyContent: 'center',
+    borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT,
+    alignItems: 'center', justifyContent: 'center',
   },
   cartQtyText: {
     color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 12, minWidth: 16, textAlign: 'center',
@@ -1523,9 +1527,9 @@ const st = StyleSheet.create({
   },
   stockBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderRadius: 8, backgroundColor: GOLD, paddingVertical: 10, marginBottom: 14,
+    borderRadius: 8, backgroundColor: BUTTON_ACCENT, paddingVertical: 10, marginBottom: 14,
   },
-  stockBtnText: { color: '#0B0906', fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.6 },
+  stockBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.6 },
   featured: {
     borderRadius: 10, borderWidth: 1, borderColor: 'rgba(212,168,83,0.45)',
     backgroundColor: 'rgba(212,168,83,0.06)', padding: 12, marginBottom: 14,
@@ -1585,10 +1589,10 @@ const st = StyleSheet.create({
   viewerBox: { marginBottom: 12 },
   issueBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    alignSelf: 'stretch', borderRadius: 8, backgroundColor: GOLD,
+    alignSelf: 'stretch', borderRadius: 8, backgroundColor: BUTTON_ACCENT,
     paddingVertical: 10, marginBottom: 12,
   },
-  issueBtnText: { color: '#0B0906', fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
+  issueBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
 
   // Issue modal
   modalBackdrop: {
@@ -1615,11 +1619,11 @@ const st = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8,
   },
   chip: {
-    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(212,168,83,0.3)',
+    borderRadius: 14, borderWidth: 1, borderColor: BUTTON_ACCENT,
     paddingHorizontal: 10, paddingVertical: 6, maxWidth: '100%',
   },
-  chipActive: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
-  chipText: { color: 'rgba(237,224,196,0.6)', fontFamily: 'Inter_500Medium', fontSize: 10.5 },
+  chipActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
+  chipText: { color: CREAM, fontFamily: 'Inter_500Medium', fontSize: 10.5 },
   chipTextActive: { color: CREAM },
   input: {
     borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
@@ -1661,11 +1665,11 @@ const st = StyleSheet.create({
   switchLabel: { color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1.2 },
   switchHint: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Inter_400Regular', fontSize: 10, marginTop: 2 },
   photoBtn: {
-    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(200,165,60,0.25)',
+    borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
     backgroundColor: 'rgba(255,255,255,0.02)', overflow: 'hidden',
   },
   photoBtnEmpty: { alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 22 },
-  photoBtnText: { color: 'rgba(212,168,83,0.7)', fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1 },
+  photoBtnText: { color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1 },
   photoPreview: { width: '100%', height: 150 },
   photoHint: {
     color: 'rgba(237,224,196,0.4)', fontFamily: 'Inter_400Regular', fontSize: 9.5, marginTop: 5,
