@@ -25,7 +25,7 @@ import { Feather } from '@/components/FIcon';
 import WhisperNavIcon from '@/components/WhisperNavIcon';
 import BellNavIcon from '@/components/BellNavIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUTTON_ACCENT } from '@/lib/buttonAccent';
+import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import { getAllMembers } from '@/lib/ticketService';
 import {
   LOCKER_KINDS, LockerKind, IssuedRecord,
@@ -1323,7 +1323,7 @@ const st = StyleSheet.create({
     borderColor: 'rgba(200,165,60,0.18)',
     justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4,
   },
-  tabActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
+  tabActive: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
   tabText: {
     color: 'rgba(237,224,196,0.35)', fontFamily: 'Cinzel_600SemiBold',
     fontSize: 11, letterSpacing: 1.2,
@@ -1364,17 +1364,19 @@ const st = StyleSheet.create({
     textAlign: 'center', marginBottom: 14, textTransform: 'uppercase',
   },
   primaryBtn: {
-    alignSelf: 'stretch', borderRadius: 8, backgroundColor: BUTTON_ACCENT,
+    alignSelf: 'stretch', borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT,
     paddingVertical: 13, alignItems: 'center',
   },
   primaryBtnText: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 12, letterSpacing: 2 },
   secondaryBtn: {
     alignSelf: 'stretch', borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
-    backgroundColor: BUTTON_ACCENT, paddingVertical: 13, alignItems: 'center',
+    backgroundColor: BUTTON_ACCENT_SOFT, paddingVertical: 13, alignItems: 'center',
   },
   secondaryBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
   linkBtn: {
-    alignSelf: 'stretch', borderRadius: 8, backgroundColor: BUTTON_ACCENT,
+    alignSelf: 'stretch', borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT,
     paddingVertical: 13, alignItems: 'center',
   },
   linkBtnText: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 11.5, letterSpacing: 2 },
@@ -1396,7 +1398,7 @@ const st = StyleSheet.create({
     borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
     paddingHorizontal: 12, paddingVertical: 7,
   },
-  pillActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
+  pillActive: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
   pillText: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
   pillTextActive: { color: CREAM },
   armoryEmpty: { alignItems: 'center', paddingVertical: 56, paddingHorizontal: 16 },
@@ -1450,23 +1452,25 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 6,
     paddingVertical: 6, paddingHorizontal: 12, backgroundColor: 'rgba(0,0,0,0.35)',
   },
-  variantChipActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
+  variantChipActive: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
   variantChipText: { color: CREAM, fontFamily: 'Inter_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
   variantChipTextActive: { color: CREAM },
   buyBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderRadius: 8, backgroundColor: BUTTON_ACCENT, paddingVertical: 11,
+    borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT, paddingVertical: 11,
   },
   buyBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 2 },
   cartAddBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
-    backgroundColor: BUTTON_ACCENT, paddingVertical: 10, marginTop: 8,
+    backgroundColor: BUTTON_ACCENT_SOFT, paddingVertical: 10, marginTop: 8,
   },
   cartAddBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
   cartBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 8, backgroundColor: BUTTON_ACCENT,
+    borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT,
     paddingVertical: 10, paddingHorizontal: 12, marginBottom: 14,
   },
   cartBarText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.6, flex: 1 },
@@ -1474,7 +1478,8 @@ const st = StyleSheet.create({
   cartFab: {
     position: 'absolute', right: 14, bottom: 18,
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: BUTTON_ACCENT, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT, alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 3 },
     elevation: 6,
   },
@@ -1502,7 +1507,7 @@ const st = StyleSheet.create({
   cartQtyBox: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cartQtyBtn: {
     width: 24, height: 24, borderRadius: 6, borderWidth: 1,
-    borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT,
+    borderColor: BUTTON_ACCENT, backgroundColor: BUTTON_ACCENT_SOFT,
     alignItems: 'center', justifyContent: 'center',
   },
   cartQtyText: {
@@ -1527,7 +1532,8 @@ const st = StyleSheet.create({
   },
   stockBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderRadius: 8, backgroundColor: BUTTON_ACCENT, paddingVertical: 10, marginBottom: 14,
+    borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT, paddingVertical: 10, marginBottom: 14,
   },
   stockBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.6 },
   featured: {
@@ -1589,7 +1595,8 @@ const st = StyleSheet.create({
   viewerBox: { marginBottom: 12 },
   issueBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    alignSelf: 'stretch', borderRadius: 8, backgroundColor: BUTTON_ACCENT,
+    alignSelf: 'stretch', borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
+    backgroundColor: BUTTON_ACCENT_SOFT,
     paddingVertical: 10, marginBottom: 12,
   },
   issueBtnText: { color: CREAM, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
@@ -1622,7 +1629,7 @@ const st = StyleSheet.create({
     borderRadius: 14, borderWidth: 1, borderColor: BUTTON_ACCENT,
     paddingHorizontal: 10, paddingVertical: 6, maxWidth: '100%',
   },
-  chipActive: { backgroundColor: BUTTON_ACCENT, borderColor: BUTTON_ACCENT },
+  chipActive: { backgroundColor: BUTTON_ACCENT_SOFT, borderColor: BUTTON_ACCENT },
   chipText: { color: CREAM, fontFamily: 'Inter_500Medium', fontSize: 10.5 },
   chipTextActive: { color: CREAM },
   input: {
@@ -1666,7 +1673,7 @@ const st = StyleSheet.create({
   switchHint: { color: 'rgba(237,224,196,0.5)', fontFamily: 'Inter_400Regular', fontSize: 10, marginTop: 2 },
   photoBtn: {
     borderRadius: 8, borderWidth: 1, borderColor: BUTTON_ACCENT,
-    backgroundColor: 'rgba(255,255,255,0.02)', overflow: 'hidden',
+    backgroundColor: BUTTON_ACCENT_SOFT, overflow: 'hidden',
   },
   photoBtnEmpty: { alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 22 },
   photoBtnText: { color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 11, letterSpacing: 1 },
