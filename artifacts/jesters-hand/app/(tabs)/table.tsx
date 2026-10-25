@@ -102,6 +102,10 @@ export default function TableScreen() {
   const [active,    setActive]    = useState<ActiveChannel>({ ...TEXT_CHANNELS[0], isVoice: false });
   const [messages,  setMessages]  = useState<TableMessage[]>([]);
   const [loading,   setLoading]   = useState(false);
+  const [channelError, setChannelError] = useState<string | null>(null);
+  const [messageError, setMessageError] = useState<string | null>(null);
+  const [listenerRetry, setListenerRetry] = useState(0);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
 
   // ── Input state ───────────────────────────────────────────────────────────
   const [inputText, setInputText] = useState('');
@@ -168,14 +172,29 @@ export default function TableScreen() {
 
   // Subscribe to messages
   useEffect(() => {
-    if (active.isVoice) { setMessages([]); return; }
+    if (active.isVoice) {
+      setMessages([]);
+      setChannelError(null);
+      return;
+    }
     setLoading(true);
+    setChannelError(null);
     const unsub = listenTableMessages(active.id, msgs => {
       setMessages(msgs);
       setLoading(false);
+      setChannelError(null);
+    }, error => {
+      console.error('[Table] message listener error:', error);
+      setMessages([]);
+      setLoading(false);
+      setChannelError(
+        (error as { code?: string }).code === 'permission-denied'
+          ? 'You can’t read this channel with the current account.'
+          : 'Could not load this channel. Check your connection and retry.',
+      );
     });
     return unsub;
-  }, [active.id, active.isVoice]);
+  }, [active.id, active.isVoice, listenerRetry]);
 
   // Auto-scroll to latest
   useEffect(() => {
@@ -197,13 +216,22 @@ export default function TableScreen() {
   const handleSend = useCallback(async () => {
     if (!user || !jokerId || !inputText.trim() || sending) return;
     setSending(true);
+    const draft = inputText;
     const text = inputText.trim();
-    setInputText('');
-    setMentionQuery(null);
+    setMessageError(null);
     try {
       await sendTableMessage(active.id, user.uid, jokerId, text);
+      setInputText(current => current === draft ? '' : current);
+      setMentionQuery(null);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    } catch (e) { console.error('[Table] send error:', e); }
+    } catch (e) {
+      console.error('[Table] send error:', e);
+      setMessageError(
+        (e as { code?: string }).code === 'permission-denied'
+          ? 'Your account cannot post in this channel.'
+          : 'Message not sent. Your text is still here; check your connection and try again.',
+      );
+    }
     finally     { setSending(false); }
   }, [user, jokerId, inputText, sending, active.id]);
 
@@ -215,19 +243,24 @@ export default function TableScreen() {
     });
     if (res.canceled || !res.assets[0]) return;
     setSending(true);
+    const draft = inputText;
     const text = inputText.trim();
-    setInputText('');
-    setMentionQuery(null);
+    setMessageError(null);
     let uploadedImageUrl: string | null = null;
     try {
       uploadedImageUrl = await uploadChatImage(user.uid, res.assets[0].uri, res.assets[0].mimeType);
       await sendTableMessage(active.id, user.uid, jokerId, text, uploadedImageUrl);
+      setInputText(current => current === draft ? '' : current);
+      setMentionQuery(null);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     } catch (e) {
       console.error('[Table] attach error:', e);
-      if (uploadedImageUrl) await deleteChatImage(uploadedImageUrl);
-      setInputText(text);
-      Alert.alert('Could not attach image', e instanceof Error ? e.message : 'Please try again.');
+      if (uploadedImageUrl) await deleteChatImage(uploadedImageUrl).catch(() => {});
+      setMessageError(
+        (e as { code?: string }).code === 'permission-denied'
+          ? 'Your account cannot post in this channel.'
+          : 'Image not sent. Your caption is still here; check your connection and try again.',
+      );
     } finally {
       setSending(false);
     }
@@ -267,8 +300,20 @@ export default function TableScreen() {
     }).catch(console.error);
   }, [user, mutedChannels]);
 
-  const selectText  = (ch: Channel)      => { setActive({ ...ch, isVoice: false }); setInputText(''); setMentionQuery(null); };
-  const selectVoice = (ch: VoiceChannel) =>   setActive({ ...ch, isVoice: true  });
+  const selectText = (ch: Channel) => {
+    setActive({ ...ch, isVoice: false });
+    setInputText('');
+    setMentionQuery(null);
+    setChannelError(null);
+    setMessageError(null);
+    setVoiceError(null);
+  };
+  const selectVoice = (ch: VoiceChannel) => {
+    setActive({ ...ch, isVoice: true });
+    setVoiceError(null);
+    setChannelError(null);
+    setMessageError(null);
+  };
 
   // ── Live voice (Agora) ─────────────────────────────────────────────────────
   const [voiceSession,  setVoiceSession]  = useState<VoiceSession | null>(null);
@@ -330,6 +375,7 @@ export default function TableScreen() {
   const joinVoice = useCallback(async (channelId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setVoiceJoining(true);
+    setVoiceError(null);
     try {
       const session = await joinVoiceChannel(channelId, jokerId ?? '??-??', {
         onMembersChanged: setVoiceMembers,
@@ -342,7 +388,8 @@ export default function TableScreen() {
       setVoiceSession(session);
       setVoiceMuted(false);
     } catch (e: any) {
-      Alert.alert('Voice', e?.message ?? 'Could not join the voice channel.');
+      console.error('[Table] voice join error:', e);
+      setVoiceError(e?.message ?? 'Could not join the voice channel. Check your connection and try again.');
     } finally {
       setVoiceJoining(false);
     }
@@ -622,6 +669,7 @@ export default function TableScreen() {
               ) : (
                 <>
                   <Text style={s.voiceSub}>Pull up a chair and speak.</Text>
+                  {voiceError ? <Text style={s.voiceError}>{voiceError}</Text> : null}
                   <TouchableOpacity
                     style={s.voiceJoinBtn}
                     onPress={() => joinVoice(active.id)}
@@ -643,6 +691,19 @@ export default function TableScreen() {
 
           ) : (
             <>
+              {channelError ? (
+                <View style={s.channelErrorRow}>
+                  <Text style={s.channelErrorText}>{channelError}</Text>
+                  <TouchableOpacity
+                    onPress={() => setListenerRetry(attempt => attempt + 1)}
+                    activeOpacity={0.8}
+                    style={s.retryBtn}
+                  >
+                    <Text style={s.retryText}>RETRY</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
               {/* Messages */}
               <FlatList
                 ref={flatListRef}
@@ -654,8 +715,14 @@ export default function TableScreen() {
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
                   <View style={s.emptyWrap}>
-                    <Text style={s.emptyText}>No messages yet.</Text>
-                    {canPost && <Text style={s.emptySub}>Be the first to speak.</Text>}
+                    {channelError ? (
+                      <Text style={s.emptyText}>Messages could not be loaded.</Text>
+                    ) : (
+                      <>
+                        <Text style={s.emptyText}>No messages yet.</Text>
+                        {canPost && <Text style={s.emptySub}>Be the first to speak.</Text>}
+                      </>
+                    )}
                   </View>
                 }
               />
@@ -680,37 +747,40 @@ export default function TableScreen() {
 
               {/* Input bar or read-only bar */}
               {canPost ? (
-                <View style={s.inputBar}>
-                  <TouchableOpacity
-                    style={s.attachBtn}
-                    onPress={handleAttach}
-                    disabled={sending}
-                    activeOpacity={0.75}
-                  >
-                    <Feather name="image" size={18} color={sending ? 'rgba(212,168,83,0.35)' : GOLD} />
-                  </TouchableOpacity>
-                  <TextInput
-                    style={s.input}
-                    value={inputText}
-                    onChangeText={handleInputChange}
-                    placeholder="Say your piece…"
-                    placeholderTextColor="rgba(237,224,196,0.35)"
-                    returnKeyType="send"
-                    onSubmitEditing={handleSend}
-                    blurOnSubmit={false}
-                  />
-                  <TouchableOpacity
-                    style={[s.speakBtn, (!inputText.trim() || sending) && s.speakBtnOff]}
-                    onPress={handleSend}
-                    disabled={!inputText.trim() || sending}
-                    activeOpacity={0.8}
-                  >
-                    {sending
-                      ? <ActivityIndicator size="small" color={GOLD} />
-                      : <Text style={s.speakText}>Speak</Text>
-                    }
-                  </TouchableOpacity>
-                </View>
+                <>
+                  {messageError ? <Text style={s.messageError}>{messageError}</Text> : null}
+                  <View style={s.inputBar}>
+                    <TouchableOpacity
+                      style={s.attachBtn}
+                      onPress={handleAttach}
+                      disabled={sending}
+                      activeOpacity={0.75}
+                    >
+                      <Feather name="image" size={18} color={sending ? 'rgba(212,168,83,0.35)' : GOLD} />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={s.input}
+                      value={inputText}
+                      onChangeText={handleInputChange}
+                      placeholder="Say your piece…"
+                      placeholderTextColor="rgba(237,224,196,0.35)"
+                      returnKeyType="send"
+                      onSubmitEditing={handleSend}
+                      blurOnSubmit={false}
+                    />
+                    <TouchableOpacity
+                      style={[s.speakBtn, (!inputText.trim() || sending) && s.speakBtnOff]}
+                      onPress={handleSend}
+                      disabled={!inputText.trim() || sending}
+                      activeOpacity={0.8}
+                    >
+                      {sending
+                        ? <ActivityIndicator size="small" color={GOLD} />
+                        : <Text style={s.speakText}>Speak</Text>
+                      }
+                    </TouchableOpacity>
+                  </View>
+                </>
               ) : (
                 <View style={s.readOnlyBar}>
                   <Image source={TABLE_LOCK} style={s.readOnlyLock} resizeMode="contain" />
@@ -887,6 +957,7 @@ const s = StyleSheet.create({
   voiceMicBig:      { width: 50, height: 62, opacity: 0.7 },
   voiceTitle:       { color: GOLD, fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1 },
   voiceSub:         { color: 'rgba(237,224,196,0.38)', fontFamily: 'Cinzel_400Regular', fontSize: 9, textAlign: 'center', lineHeight: 14 },
+  voiceError:       { color: '#F0A29B', fontFamily: 'Cinzel_400Regular', fontSize: 9, textAlign: 'center', lineHeight: 14, marginTop: 8, paddingHorizontal: 18 },
   voiceJoinBtn:     { marginTop: 14, backgroundColor: BUTTON_ACCENT, borderRadius: 6, paddingVertical: 9, paddingHorizontal: 26, minWidth: 120, alignItems: 'center' },
   voiceJoinText:    { color: '#000', fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 2 },
   voiceRoster:      { alignSelf: 'stretch', marginTop: 8, gap: 4 },
@@ -922,6 +993,19 @@ const s = StyleSheet.create({
   center:             { flex: 1, alignItems: 'center', justifyContent: 'center' },
   messageList:        { flex: 1 },
   messageListContent: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 4 },
+  channelErrorRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 8, paddingVertical: 7,
+    backgroundColor: 'rgba(30,8,8,0.92)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(229,62,62,0.35)',
+  },
+  channelErrorText: { flex: 1, color: '#F0A29B', fontFamily: 'Cinzel_400Regular', fontSize: 9, lineHeight: 13 },
+  retryBtn: { paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: BUTTON_ACCENT, borderRadius: 5 },
+  retryText: { color: BUTTON_ACCENT, fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1 },
+  messageError: {
+    color: '#F0A29B', fontFamily: 'Cinzel_400Regular', fontSize: 9, lineHeight: 13,
+    paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(30,8,8,0.84)',
+  },
 
   // Message row
   msgRow:        { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 11, gap: 6 },

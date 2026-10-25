@@ -4,6 +4,7 @@ import {
   increment, arrayUnion, arrayRemove, runTransaction, writeBatch,
   Timestamp, QuerySnapshot, DocumentData,
 } from 'firebase/firestore';
+import { getPocketConversations } from '@workspace/api-client-react';
 import { db, auth } from './firebase';
 import { getApiDomain } from './apiConfig';
 import { sendPushToUsers } from './pushService';
@@ -39,31 +40,40 @@ export interface Member {
   mugUrl?: string;
 }
 
+interface ConversationDirectoryEntry {
+  id: string;
+  memberUids: string[];
+  isGroup: boolean;
+}
+
+const conversationDirectoryRefreshers = new Set<() => void>();
+
+function notifyConversationDirectoryChanged(): void {
+  for (const refresh of conversationDirectoryRefreshers) refresh();
+}
+
+async function fetchConversationDirectory(): Promise<ConversationDirectoryEntry[]> {
+  const payload = await getPocketConversations();
+  return payload.conversations;
+}
+
 // ── Get or create a 1-1 DM ───────────────────────────────────────────────────
 
 export async function getOrCreateDM(
   currentUid: string,
   recipientUid: string,
 ): Promise<string> {
-  // Query all conversations for the current user, filter for 1-1 with recipient
-  const snap = await getDocs(
-    query(
-      collection(db, 'conversations'),
-      where('memberUids', 'array-contains', currentUid),
-      where('isGroup', '==', false),
-    ),
+  // The server filters the protected Check-In namespace before returning any
+  // ordinary conversation IDs. A client-side broad membership query is denied
+  // by design because it could expose another member's private Check-In thread.
+  const existing = await fetchConversationDirectory();
+  const match = existing.find(conversation =>
+    !conversation.isGroup &&
+    conversation.memberUids.length === 2 &&
+    conversation.memberUids.includes(currentUid) &&
+    conversation.memberUids.includes(recipientUid),
   );
-
-  for (const d of snap.docs) {
-    const data = d.data();
-    if (
-      Array.isArray(data.memberUids) &&
-      data.memberUids.includes(recipientUid) &&
-      data.memberUids.length === 2
-    ) {
-      return d.id;
-    }
-  }
+  if (match) return match.id;
 
   // Create new DM
   const ref = await addDoc(collection(db, 'conversations'), {
@@ -75,6 +85,7 @@ export async function getOrCreateDM(
     lastMessageAt: null,
     unreadCounts:  { [currentUid]: 0, [recipientUid]: 0 },
   });
+  notifyConversationDirectoryChanged();
   return ref.id;
 }
 
@@ -99,6 +110,7 @@ export async function createGroup(
     lastMessageAt: null,
     unreadCounts,
   });
+  notifyConversationDirectoryChanged();
   return ref.id;
 }
 
@@ -139,6 +151,7 @@ export async function addMembersToGroup(
     });
   }
   await batch.commit();
+  notifyConversationDirectoryChanged();
 
   // Mirror the "added you" notifications to devices — best-effort.
   void sendPushToUsers(
@@ -278,12 +291,11 @@ export function listenConversations(
   uid: string,
   cb: (conversations: Conversation[]) => void,
 ): () => void {
-  const q = query(
-    collection(db, 'conversations'),
-    where('memberUids', 'array-contains', uid),
-  );
-  let ordinary: Conversation[] = [];
+  const ordinary = new Map<string, Conversation>();
+  const ordinarySubscriptions = new Map<string, () => void>();
   let ownCheckIn: Conversation | null = null;
+  let stopped = false;
+  let refreshing = false;
   const mapConversation = (id: string, data: DocumentData): Conversation => ({
     id, kind: data.kind, memberUids: data.memberUids ?? [],
     isGroup: data.isGroup ?? false, groupName: data.groupName,
@@ -292,12 +304,69 @@ export function listenConversations(
     unreadCounts: data.unreadCounts ?? {},
   });
   const emit = () => {
-    const convs = [...ordinary, ...(ownCheckIn ? [ownCheckIn] : [])];
+    const convs = [...ordinary.values(), ...(ownCheckIn ? [ownCheckIn] : [])];
     convs.sort((a, b) => (b.lastMessageAt?.toMillis() ?? 0) - (a.lastMessageAt?.toMillis() ?? 0));
     cb(convs);
   };
+  const refreshDirectory = async () => {
+    if (stopped || refreshing) return;
+    refreshing = true;
+    try {
+      const directory = await fetchConversationDirectory();
+      if (stopped) return;
+      const allowedIds = new Set(directory.map(conversation => conversation.id));
+
+      for (const [id, unsubscribe] of ordinarySubscriptions) {
+        if (allowedIds.has(id)) continue;
+        unsubscribe();
+        ordinarySubscriptions.delete(id);
+        ordinary.delete(id);
+      }
+
+      for (const conversation of directory) {
+        if (ordinarySubscriptions.has(conversation.id)) continue;
+        const unsubscribe = onSnapshot(
+          doc(db, 'conversations', conversation.id),
+          snapshot => {
+            if (!snapshot.exists()) {
+              ordinary.delete(conversation.id);
+              emit();
+              return;
+            }
+            const data = snapshot.data();
+            const deletedBy: string[] = data.deletedBy ?? [];
+            const isPrivateCheckIn =
+              conversation.id.startsWith('checkins_') ||
+              conversation.id.startsWith('checkin-') ||
+              data.kind === 'check_ins' ||
+              data.checkInProtected === true;
+            if (deletedBy.includes(uid) || isPrivateCheckIn) {
+              ordinary.delete(conversation.id);
+            } else {
+              ordinary.set(conversation.id, mapConversation(conversation.id, data));
+            }
+            emit();
+          },
+          error => {
+            ordinary.delete(conversation.id);
+            ordinarySubscriptions.delete(conversation.id);
+            console.warn('[Pocket] conversation subscription failed:', error.code);
+            emit();
+          },
+        );
+        ordinarySubscriptions.set(conversation.id, unsubscribe);
+      }
+      emit();
+    } catch (error) {
+      console.warn('[Pocket] conversation directory request failed:', error);
+      emit();
+    } finally {
+      refreshing = false;
+    }
+  };
+
   // Ownership is provable for this exact path, unlike the broad membership
-  // query. Keep its unread counter live even when that query is denied.
+  // query. Keep its unread counter live on its own subscription.
   const stopPrivate = onSnapshot(doc(db, 'conversations', `checkins_${uid}`), snap => {
     ownCheckIn = snap.exists() && !(snap.data().deletedBy ?? []).includes(uid)
       ? mapConversation(snap.id, snap.data()) : null;
@@ -307,20 +376,19 @@ export function listenConversations(
     emit();
     console.warn('[Pocket] private thread subscription failed:', error.code);
   });
-  const stopOrdinary = onSnapshot(q, (snap: QuerySnapshot<DocumentData>) => {
-    ordinary = snap.docs
-      .filter(d => {
-        const deletedBy: string[] = d.data().deletedBy ?? [];
-        return !deletedBy.includes(uid) && !d.id.startsWith('checkins_')
-          && !d.id.startsWith('checkin-') && d.data().kind !== 'check_ins';
-      })
-      .map(d => mapConversation(d.id, d.data()));
-    emit();
-  }, error => {
-    console.warn('[Pocket] conversation list subscription failed:', error.code);
-    emit();
-  });
-  return () => { stopPrivate(); stopOrdinary(); };
+  const refreshNow = () => { void refreshDirectory(); };
+  conversationDirectoryRefreshers.add(refreshNow);
+  void refreshDirectory();
+  const refreshTimer = setInterval(() => { void refreshDirectory(); }, 20_000);
+  return () => {
+    stopped = true;
+    clearInterval(refreshTimer);
+    conversationDirectoryRefreshers.delete(refreshNow);
+    stopPrivate();
+    for (const unsubscribe of ordinarySubscriptions.values()) unsubscribe();
+    ordinarySubscriptions.clear();
+    ordinary.clear();
+  };
 }
 
 // ── Real-time messages in a conversation ──────────────────────────────────────

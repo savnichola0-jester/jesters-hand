@@ -35,6 +35,17 @@ const CREAM = '#EDE0C4';
 const GOLD  = '#D4A853';
 const RED   = '#E53E3E';
 
+function conversationStartError(error: unknown, action: string): string {
+  const code = (error as { code?: string } | null)?.code;
+  if (code === 'permission-denied') {
+    return `You can’t ${action} right now. Check that both accounts are active.`;
+  }
+  if (code === 'unavailable') {
+    return 'Connection interrupted. Check your internet and try again.';
+  }
+  return `Couldn’t ${action}. Check your connection and try again.`;
+}
+
 export default function WhisperScreen() {
   const insets    = useSafeAreaInsets();
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
@@ -58,6 +69,7 @@ export default function WhisperScreen() {
   const [groupName, setGroupName]                 = useState('');
   const [memberFilter, setMemberFilter]           = useState('');
   const [creatingGroup, setCreatingGroup]         = useState(false);
+  const [groupError, setGroupError]               = useState<string | null>(null);
 
   // Compose action sheet state
   const [composeSheetVisible, setComposeSheetVisible] = useState(false);
@@ -66,6 +78,8 @@ export default function WhisperScreen() {
   const [dmModalVisible, setDmModalVisible]       = useState(false);
   const [dmFilter, setDmFilter]                   = useState('');
   const [openingDm, setOpeningDm]                 = useState(false);
+  const [dmError, setDmError]                     = useState<string | null>(null);
+  const [routeError, setRouteError]               = useState<string | null>(null);
 
   // Members for each modal — exclude current user, derived from the live list
   const otherMembers = allMembersLive.filter(m => m.uid !== user?.uid);
@@ -92,8 +106,12 @@ export default function WhisperScreen() {
     if (!ruid || !user || handledRecipient.current === ruid) return;
     handledRecipient.current = ruid;
     getOrCreateDM(user.uid, ruid).then(convId => {
+      setRouteError(null);
       router.push({ pathname: '/(tabs)/chat', params: { conversationId: convId } });
-    }).catch(console.error);
+    }).catch(error => {
+      console.error('[Whisper] profile DM error:', error);
+      setRouteError(conversationStartError(error, 'open this conversation'));
+    });
   }, [params.recipientUid, user]);
 
   const openConversation = useCallback((conv: Conversation) => {
@@ -122,18 +140,21 @@ export default function WhisperScreen() {
   // ── New DM modal ───────────────────────────────────────────────────────────
   const openDmModal = useCallback(() => {
     setDmFilter('');
+    setDmError(null);
     setDmModalVisible(true);
   }, []);
 
   const startDm = useCallback(async (recipientUid: string) => {
     if (!user || openingDm) return;
     setOpeningDm(true);
+    setDmError(null);
     try {
       const convId = await getOrCreateDM(user.uid, recipientUid);
       setDmModalVisible(false);
       router.push({ pathname: '/(tabs)/chat', params: { conversationId: convId } });
     } catch (e) {
       console.error('[Whisper] startDm error:', e);
+      setDmError(conversationStartError(e, 'start this DM'));
     } finally {
       setOpeningDm(false);
     }
@@ -153,6 +174,7 @@ export default function WhisperScreen() {
     setSelectedUids(new Set());
     setGroupName('');
     setMemberFilter('');
+    setGroupError(null);
     setGroupModalVisible(true);
   }, []);
 
@@ -168,12 +190,14 @@ export default function WhisperScreen() {
   const confirmCreateGroup = useCallback(async () => {
     if (!user || selectedUids.size === 0) return;
     setCreatingGroup(true);
+    setGroupError(null);
     try {
       const convId = await createGroup(user.uid, Array.from(selectedUids), groupName || 'Group');
       setGroupModalVisible(false);
       router.push({ pathname: '/(tabs)/chat', params: { conversationId: convId } });
     } catch (e) {
       console.error('[Whisper] createGroup error:', e);
+      setGroupError(conversationStartError(e, 'create this group'));
     } finally {
       setCreatingGroup(false);
     }
@@ -217,16 +241,22 @@ export default function WhisperScreen() {
         </View>
       </View>
 
+      {routeError ? (
+        <View style={[s.routeError, { top: navBottom + 4 }]}>
+          <Text style={s.operationErrorText}>{routeError}</Text>
+        </View>
+      ) : null}
+
       {/* ── Conversation list ── */}
       {conversations.length === 0 ? (
-        <View style={[s.center, { top: navBottom }]}>
+        <View style={[s.center, { top: navBottom + (routeError ? 48 : 0) }]}>
           <Feather name="message-circle" size={38} color="rgba(212,168,83,0.25)" />
           <Text style={[MARBLE_TEXT_SHADOW, s.emptyText]}>No deals in your Pocket yet.</Text>
           <Text style={[MARBLE_TEXT_SHADOW, s.emptySubText]}>Start a DM from The Hand, or create a group.</Text>
         </View>
       ) : (
         <FlatList
-          style={{ position: 'absolute', top: navBottom, left: 0, right: 0, bottom: 0 }}
+          style={{ position: 'absolute', top: navBottom + (routeError ? 48 : 0), left: 0, right: 0, bottom: 0 }}
           contentContainerStyle={{ paddingVertical: 8 }}
           showsVerticalScrollIndicator={false}
           data={conversations}
@@ -393,6 +423,7 @@ export default function WhisperScreen() {
                 onChangeText={setDmFilter}
               />
             </View>
+            {dmError ? <Text style={s.operationError}>{dmError}</Text> : null}
 
             {/* Member list */}
             {!membersReady ? (
@@ -472,6 +503,7 @@ export default function WhisperScreen() {
                 onChangeText={setMemberFilter}
               />
             </View>
+            {groupError ? <Text style={s.operationError}>{groupError}</Text> : null}
 
             {/* Selected count */}
             {selectedUids.size > 0 && (
@@ -597,6 +629,19 @@ const s = StyleSheet.create({
   center: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 10 },
   emptyText:    { color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 13, opacity: 0.5 },
   emptySubText: { color: CREAM, fontFamily: 'Cinzel_400Regular', fontSize: 11, opacity: 0.35, textAlign: 'center', paddingHorizontal: 40 },
+  routeError: {
+    position: 'absolute', left: 12, right: 12, zIndex: 18,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(229,62,62,0.55)',
+    backgroundColor: 'rgba(30,8,8,0.96)',
+  },
+  operationError: {
+    color: '#F0A29B', fontFamily: 'Cinzel_400Regular', fontSize: 11,
+    lineHeight: 16, marginHorizontal: 16, marginVertical: 6,
+  },
+  operationErrorText: {
+    color: '#F0A29B', fontFamily: 'Cinzel_400Regular', fontSize: 11, lineHeight: 16,
+  },
 
   // Conversation rows
   convRow: {

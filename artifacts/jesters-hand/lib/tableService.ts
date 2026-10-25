@@ -65,25 +65,30 @@ export interface TableMessage {
 export function listenTableMessages(
   channelId: string,
   cb: (msgs: TableMessage[]) => void,
+  onError?: (error: Error) => void,
 ): () => void {
   const q = query(
     collection(db, 'tableMessages', channelId, 'messages'),
     orderBy('sentAt', 'asc'),
     fsLimit(100),
   );
-  return onSnapshot(q, snap => {
-    cb(
-      snap.docs.map(d => ({
-        id:            d.id,
-        senderUid:     d.data().senderUid     ?? '',
-        senderJokerId: d.data().senderJokerId ?? '??-??',
-        text:          d.data().text          ?? '',
-        imageUrl:      d.data().imageUrl      ?? undefined,
-        sentAt:        d.data().sentAt        ?? null,
-        reactions:     d.data().reactions     ?? {},
-      }))
-    );
-  });
+  return onSnapshot(
+    q,
+    snap => {
+      cb(
+        snap.docs.map(d => ({
+          id:            d.id,
+          senderUid:     d.data().senderUid     ?? '',
+          senderJokerId: d.data().senderJokerId ?? '??-??',
+          text:          d.data().text          ?? '',
+          imageUrl:      d.data().imageUrl      ?? undefined,
+          sentAt:        d.data().sentAt        ?? null,
+          reactions:     d.data().reactions     ?? {},
+        })),
+      );
+    },
+    error => onError?.(error),
+  );
 }
 
 /** Send a message to a channel. */

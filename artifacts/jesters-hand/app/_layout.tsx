@@ -43,10 +43,12 @@ import { ScreenDrip } from '@/components/BloodDrip';
 import { configureNativePushNotifications } from '@/lib/pushService';
 import { auth } from '@/lib/firebase';
 import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
+import { getApiDomain } from '@/lib/apiConfig';
 
 SplashScreen.preventAutoHideAsync();
 
-setBaseUrl(process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : null);
+const apiDomain = getApiDomain();
+setBaseUrl(apiDomain ? `https://${apiDomain}` : null);
 setAuthTokenGetter(async () => auth.currentUser?.getIdToken() ?? null);
 
 // Web: lock the document so the page itself can never scroll or rubber-band

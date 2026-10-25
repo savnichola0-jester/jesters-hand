@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: admin
+    description: Pinned Hand member administration
+  - name: chat
+    description: Member Pocket conversation directory
 paths:
   /healthz:
     get:
@@ -24,8 +28,127 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /admin/activate:
+    post:
+      operationId: activateMember
+      tags: [admin]
+      summary: Activate an assigned member
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivationRequest"
+      responses:
+        "200":
+          description: Member activated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  activated:
+                    type: boolean
+                required: [ok, activated]
+        "403":
+          description: Caller is not an active pinned Hand admin
+  /admin/check-ins/send-today:
+    post:
+      operationId: sendTodayCheckIns
+      tags: [admin]
+      summary: Idempotently issue today's check-ins as a backup
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Today's issuance batch and audit identifier
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  dateKey:
+                    type: string
+                  eligible:
+                    type: integer
+                  issued:
+                    type: integer
+                  alreadyIssued:
+                    type: integer
+                  failed:
+                    type: integer
+                  pushFailed:
+                    type: integer
+                  stale:
+                    type: integer
+                  staleDay:
+                    type: boolean
+                  failures:
+                    type: array
+                    items:
+                      type: string
+                  pushFailures:
+                    type: array
+                    items:
+                      type: string
+                  staleRecipients:
+                    type: array
+                    items:
+                      type: string
+                  dealerUids:
+                    type: array
+                    items:
+                      type: string
+                  exitCode:
+                    type: integer
+                    enum: [0, 1]
+                  auditId:
+                    type: string
+                required: [ok, dateKey, eligible, issued, alreadyIssued, failed, pushFailed, stale, staleDay, failures, pushFailures, staleRecipients, dealerUids, exitCode, auditId]
+        "403":
+          description: Caller is not an active pinned Hand admin
+        "500":
+          description: The send failed; audit status is returned when available
+  /chat/conversations:
+    get:
+      operationId: getPocketConversations
+      tags: [chat]
+      summary: List the caller's ordinary Pocket conversations
+      description: Returns only non-Check-In conversations the authenticated caller belongs to.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Safe conversation IDs for member-only client subscriptions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PocketConversationDirectory"
+        "401":
+          description: Invalid or missing Firebase ID token
+        "403":
+          description: Caller is not an active account
+        "503":
+          description: Conversation directory unavailable
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID token
   schemas:
+    ActivationRequest:
+      type: object
+      properties:
+        targetUid:
+          type: string
+      required: [targetUid]
     HealthStatus:
       type: object
       properties:
@@ -33,4 +156,22 @@ components:
           type: string
       required:
         - status
+    PocketConversationDirectory:
+      type: object
+      properties:
+        conversations:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              memberUids:
+                type: array
+                items:
+                  type: string
+              isGroup:
+                type: boolean
+            required: [id, memberUids, isGroup]
+      required: [conversations]
 
