@@ -13,7 +13,7 @@ const RULE = '#644A2E';
 const MUTED = '#79684F';
 const RED = '#762B22';
 
-type TextStyle = 'headline' | 'deck' | 'body' | 'small' | 'bullet' | 'quote';
+type TextStyle = 'masthead' | 'headline' | 'deck' | 'body' | 'small' | 'bullet' | 'quote';
 
 export interface JestersDeskDocumentProps {
   width: number;
@@ -53,11 +53,11 @@ function TextSlot({
         s.slotText,
         s[variant],
         {
-          fontSize: (variant === 'headline' ? 27 : variant === 'deck' ? 15 : variant === 'small' ? 10 : variant === 'quote' ? 14 : 13) * scale,
-          lineHeight: (variant === 'headline' ? 35 : variant === 'deck' ? 23 : variant === 'small' ? 18 : variant === 'quote' ? 23 : variant === 'bullet' ? 20 : 22) * scale,
-          color: value ? INK : MUTED,
+          fontSize: (variant === 'masthead' ? 32 : variant === 'headline' ? 27 : variant === 'deck' ? 15 : variant === 'small' ? 10 : variant === 'quote' ? 14 : 13) * scale,
+          lineHeight: (variant === 'masthead' ? 38 : variant === 'headline' ? 35 : variant === 'deck' ? 23 : variant === 'small' ? 18 : variant === 'quote' ? 23 : variant === 'bullet' ? 20 : 22) * scale,
+          color: value || variant === 'masthead' ? INK : MUTED,
         },
-        !value && s.placeholderText,
+        !value && variant !== 'masthead' && s.placeholderText,
       ]}>
         {value || placeholder}
       </Text>
@@ -219,7 +219,7 @@ export default function JestersDeskDocument({
           <View style={s.metaCell}>{slot('date', 'DATE: ENTER DATE HERE', 'small')}</View>
           <View style={s.metaCell}>{slot('edition_number', '7TH EDITION', 'small')}</View>
         </View>
-        <Text style={[s.masthead, { fontSize: 32 * scale, lineHeight: 38 * scale }]}>THE JESTER’S DESK</Text>
+        {slot('publication_title', 'THE JESTER’S DESK', 'masthead')}
         {slot('tagline', 'A DIGITAL NEWSPAPER FOR UPDATES, STORIES, AND MORE', 'small')}
         <StaticLine>HOME　 |　 NEWS　 |　 FEATURES　 |　 SERIALS　 |　 ARCHIVES　 |　 ABOUT</StaticLine>
 

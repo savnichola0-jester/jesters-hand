@@ -66,7 +66,7 @@ export interface PhotoElement extends ElementBase {
 export type DesignElement = TextElement | PhotoElement;
 
 export const DESK_TEXT_KEYS = [
-  'volume', 'edition', 'date', 'edition_number', 'tagline',
+  'publication_title', 'volume', 'edition', 'date', 'edition_number', 'tagline',
   'main_headline', 'main_subtitle', 'byline', 'main_date', 'story_intro', 'story_body',
   'quick_news_1', 'quick_news_2', 'quick_news_3',
   'inside_edition_1', 'inside_edition_2', 'inside_edition_3', 'inside_edition_4',
