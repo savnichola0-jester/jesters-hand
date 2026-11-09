@@ -68,7 +68,7 @@ function TextSlot({
 
 function PhotoSlot({
   field, content, label = 'PHOTO HERE', aspectRatio = 1.55, scale, editable, onPress,
-  containerStyle,
+  containerStyle, thumbnail = false,
 }: {
   field: DeskPhotoKey;
   content: JestersDeskContent;
@@ -78,6 +78,7 @@ function PhotoSlot({
   editable?: boolean;
   onPress?: () => void;
   containerStyle?: StyleProp<ViewStyle>;
+  thumbnail?: boolean;
 }) {
   const path = content.photos[field];
   const [uri, setUri] = useState<string | null>(null);
@@ -115,10 +116,10 @@ function PhotoSlot({
       {uri ? (
         <Image source={{ uri }} resizeMode="cover" style={StyleSheet.absoluteFill} />
       ) : (
-        <View style={s.photoPlaceholder}>
+        <View style={[s.photoPlaceholder, thumbnail && s.thumbnailPlaceholder]}>
           {loading
             ? <ActivityIndicator color={RULE} />
-            : <Text style={[s.photoText, { fontSize: 12 * scale }]}>{editable ? 'TAP TO ADD PHOTO' : label}</Text>}
+            : <Text maxFontSizeMultiplier={1.3} style={[s.photoText, { fontSize: 12 * scale }]}>{thumbnail ? '+' : editable ? 'TAP TO ADD PHOTO' : label}</Text>}
         </View>
       )}
       {editable && uri ? <Text style={[s.photoEditTag, { fontSize: 8 * scale }]}>CHANGE PHOTO</Text> : null}
@@ -141,6 +142,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function PaperPage({ children }: { children: React.ReactNode }) {
   return <View style={s.page}>{children}</View>;
+}
+
+// Only these wrappers participate in horizontal flex sizing. Sections and text
+// inside them must keep their intrinsic height in Android's Yoga layout.
+function Columns({ children, three = false }: { children: React.ReactNode; three?: boolean }) {
+  return (
+    <View style={s.columns}>
+      {React.Children.map(children, child => child == null ? null : (
+        <View style={three ? s.thirdColumn : s.halfColumn}>{child}</View>
+      ))}
+    </View>
+  );
 }
 
 function StaticLine({ children }: { children: string }) {
@@ -167,6 +180,7 @@ function PhotoTextCard({
           field={photo}
           content={content}
           aspectRatio={horizontal ? 1 : 1.35}
+          thumbnail={horizontal}
           scale={scale}
           editable={editable}
           onPress={() => onPickPhoto?.(photo)}
@@ -224,7 +238,7 @@ export default function JestersDeskDocument({
         <StaticLine>HOME　 |　 NEWS　 |　 FEATURES　 |　 SERIALS　 |　 ARCHIVES　 |　 ABOUT</StaticLine>
 
         <View style={s.leadGrid}>
-          <View style={s.leadStory}>
+          <View style={[s.leadStory, compact && s.compactLeadStory]}>
             {slot('main_headline', 'MAIN HEADLINE GOES HERE', 'headline')}
             {slot('main_subtitle', 'A SUBHEADLINE OR TAGLINE FOR THE LEAD STORY GOES HERE', 'deck')}
             <View style={s.byline}>
@@ -255,7 +269,7 @@ export default function JestersDeskDocument({
 
         {!compact ? (
           <>
-            <View style={s.twoColumns}>
+            <Columns>
               <Section title="Announcements">
                 {slot('announcements_intro', 'Share an important update or reminder.')}
                 {slot('announcement_1', 'Site update or new section')}
@@ -267,8 +281,8 @@ export default function JestersDeskDocument({
                 {slot('short_note_2', 'Another short note')}
                 {slot('short_note_3', 'One more quick item')}
               </Section>
-            </View>
-            <View style={s.twoColumns}>
+            </Columns>
+            <Columns>
               <Section title="Feature Highlight">
                 {photo('feature_photo', 'PHOTO HERE', 1.7)}
                 {slot('feature_title', 'A special focus or featured story', 'deck')}
@@ -278,8 +292,8 @@ export default function JestersDeskDocument({
                 {slot('editor_note', 'A short message from the editor goes here.', 'body')}
                 <Text style={s.signature}>— The Editor</Text>
               </Section>
-            </View>
-            <View style={s.twoColumns}>
+            </Columns>
+            <Columns>
               <Section title="Serial Update">
                 {slot('serial_title', 'The latest from an ongoing series', 'deck')}
                 {photo('serial_photo', 'PHOTO HERE', 2)}
@@ -290,7 +304,7 @@ export default function JestersDeskDocument({
                 {photo('closer_photo', 'PHOTO HERE', 2)}
                 {slot('closer_summary', 'Take a closer look at a specific detail or topic.', 'small')}
               </Section>
-            </View>
+            </Columns>
             <Text style={s.continueText}>SCROLL DOWN FOR MORE　⌄</Text>
           </>
         ) : null}
@@ -303,15 +317,15 @@ export default function JestersDeskDocument({
             <Section title="Special Feature">
               {slot('special_title', 'SPECIAL FEATURE HEADLINE GOES HERE', 'headline')}
               {slot('special_subtitle', 'A closer look at the story behind the headline', 'deck')}
-              <View style={s.twoColumns}>
-              {photo('special_photo', 'PHOTO HERE', 1.5, true)}
-              <View style={s.summaryColumn}>
-                {slot('special_summary', 'A key introduction or summary for this featured story.', 'body')}
-              </View>
-              </View>
+              <Columns>
+                {photo('special_photo', 'PHOTO HERE', 1.5, true)}
+                <View style={s.summaryColumn}>
+                  {slot('special_summary', 'A key introduction or summary for this featured story.', 'body')}
+                </View>
+              </Columns>
               <Text style={s.readLink}>READ THE FULL FEATURE　→</Text>
             </Section>
-            <View style={s.twoColumns}>
+            <Columns>
               <Section title="The Details">
                 {slot('details_title', 'Key facts and context', 'deck')}
                 {slot('details_body', 'A clear overview of the main details.', 'body')}
@@ -323,8 +337,8 @@ export default function JestersDeskDocument({
                 {slot('behind_title', 'The context, the process, and the bigger picture', 'deck')}
                 {slot('behind_body', 'A short look at how the story came together.', 'body')}
               </Section>
-            </View>
-            <View style={s.twoColumns}>
+            </Columns>
+            <Columns>
               <Section title="How It Unfolds">
                 {slot('timeline_1', '1. First development')}
                 {slot('timeline_2', '2. Next turning point')}
@@ -336,8 +350,8 @@ export default function JestersDeskDocument({
                 {slot('reader_note_2', 'Another reader thought')}
                 {slot('reader_note_3', 'A third comment or takeaway')}
               </Section>
-            </View>
-            <View style={s.twoColumns}>
+            </Columns>
+            <Columns>
               <Section title="From the Desk">
                 {slot('from_desk_note', 'An editorial note or perspective from the desk.', 'body')}
               </Section>
@@ -345,8 +359,8 @@ export default function JestersDeskDocument({
                 {photo('from_desk_photo', 'PHOTO HERE', 1.2)}
                 {slot('photo_caption', 'A related photo caption or context', 'small')}
               </View>
-            </View>
-            <View style={s.twoColumns}>
+            </Columns>
+            <Columns>
               <Section title="Announcement Board">
                 {slot('board_item_1', 'Site update or new section')}
                 {slot('board_item_2', 'A special announcement')}
@@ -358,10 +372,10 @@ export default function JestersDeskDocument({
                 {slot('schedule_3', 'APR 18 — New series or deep dive')}
                 {slot('schedule_4', 'APR 22 — Follow-up or next chapter')}
               </Section>
-            </View>
+            </Columns>
             <Section title="What’s Next">
               {slot('whats_next', 'A brief look at upcoming coverage and stories.', 'body')}
-              <View style={s.twoColumns}>
+              <Columns>
                 <View style={s.section}>
                   {photo('upcoming_photo_1', 'PHOTO HERE', 1.45)}
                   {slot('next_topic_1', 'UPCOMING TOPIC PREVIEW', 'small')}
@@ -370,7 +384,7 @@ export default function JestersDeskDocument({
                   {photo('upcoming_photo_2', 'PHOTO HERE', 1.45)}
                   {slot('next_topic_2', 'ANOTHER FEATURE AHEAD', 'small')}
                 </View>
-              </View>
+              </Columns>
             </Section>
           </PaperPage>
 
@@ -378,13 +392,13 @@ export default function JestersDeskDocument({
             <Text style={s.continueText}>THE JESTER’S DESK CONTINUES</Text>
             <Section title="Archive Spotlight">
               {slot('archive_spotlight_title', 'Popular stories from the Jester’s archive', 'deck')}
-              <View style={s.threeColumns}>
+              <Columns three>
                 <PhotoTextCard photo="archive_spotlight_photo_1" title="archive_story_1_title" copy="archive_story_1_copy" content={content} scale={scale} editable={editable} onEditText={onEditText} onPickPhoto={onPickPhoto} />
                 <PhotoTextCard photo="archive_spotlight_photo_2" title="archive_story_2_title" copy="archive_story_2_copy" content={content} scale={scale} editable={editable} onEditText={onEditText} onPickPhoto={onPickPhoto} />
                 <PhotoTextCard photo="archive_spotlight_photo_3" title="archive_story_3_title" copy="archive_story_3_copy" content={content} scale={scale} editable={editable} onEditText={onEditText} onPickPhoto={onPickPhoto} />
-              </View>
+              </Columns>
             </Section>
-            <View style={s.twoColumns}>
+            <Columns>
               <Section title="Reader Favorites">
                 {slot('favorite_1', 'A reader-loved story')}
                 {slot('favorite_2', 'Another top read')}
@@ -399,18 +413,18 @@ export default function JestersDeskDocument({
                   <PhotoTextCard horizontal photo="archive_photo_3" title="archive_item_3_title" copy="archive_item_3_copy" content={content} scale={scale} editable={editable} onEditText={onEditText} onPickPhoto={onPickPhoto} />
                 </View>
               </Section>
-            </View>
+            </Columns>
             <Section title="People I Trust">
-              <View style={s.twoColumns}>
+              <Columns>
                 {photo('trusted_people_photo', 'PHOTO HERE', 1.35, true)}
                 <View style={s.summaryColumn}>
                   {slot('trusted_people_caption', 'Add a photo caption or note about the people you trust.', 'body')}
                 </View>
-              </View>
+              </Columns>
             </Section>
             <Section title="Stay Connected">
               {slot('stay_connected_copy', 'News, updates, and more from the Jester’s Desk.', 'deck')}
-              <View style={s.twoColumns}>
+              <Columns>
                 <View style={s.section}>
                   {slot('newsletter_copy', 'Get the Desk Dispatch with new stories and updates.', 'small')}
                   {slot('newsletter_email', 'YOUR EMAIL HERE', 'small')}
@@ -423,19 +437,19 @@ export default function JestersDeskDocument({
                   {slot('follow_3', 'Join the community')}
                   {slot('follow_4', 'Get update alerts')}
                 </View>
-              </View>
+              </Columns>
             </Section>
             <Section title="Submit a Whisper">
               {slot('whisper_title', 'Have a tip, topic, or story idea?', 'deck')}
-              <View style={s.twoColumns}>
+              <Columns>
                 {photo('whisper_photo', 'PHOTO HERE', 1.3, true)}
                 <View style={s.section}>
                   {slot('whisper_copy', 'Share a story lead, curious find, or idea for future features.', 'body')}
                   {slot('whisper_button', 'SEND A WHISPER TO THE DESK　→', 'small')}
                 </View>
-              </View>
+              </Columns>
             </Section>
-            <View style={s.twoColumns}>
+            <Columns>
               <Section title="Final Note">
                 {slot('final_note_body', 'A brief editorial note to close the edition.', 'body')}
               </Section>
@@ -443,7 +457,7 @@ export default function JestersDeskDocument({
                 {slot('jester_says', 'A short, memorable quote or parting thought.', 'quote')}
                 <Text style={s.signature}>— THE JESTER’S DESK</Text>
               </Section>
-            </View>
+            </Columns>
             <View style={s.footer}>
               <Text style={s.mastheadSmall}>THE JESTER’S DESK</Text>
               <StaticLine>STORIES　 •　 FEATURES　 •　 ARCHIVE　 •　 COMMUNITY</StaticLine>
@@ -470,9 +484,9 @@ const s = StyleSheet.create({
   masthead: { color: INK, fontFamily: 'PlayfairDisplay_700Bold', fontWeight: '900', textAlign: 'center', letterSpacing: 0.8, marginTop: 8, marginBottom: 2 },
   mastheadSmall: { color: INK, fontFamily: 'PlayfairDisplay_700Bold', fontSize: 19, textAlign: 'center', letterSpacing: 1.2 },
   staticLine: { color: INK, fontFamily: 'PlayfairDisplay_700Bold', fontSize: 9, textAlign: 'center', marginVertical: 5, letterSpacing: 0.4 },
-  textSlot: { position: 'relative', flexShrink: 1, paddingVertical: 4, paddingHorizontal: 3, marginVertical: 1 },
+  textSlot: { position: 'relative', flexShrink: 0, minWidth: 0, maxWidth: '100%', paddingVertical: 4, paddingHorizontal: 3, marginVertical: 1 },
   editableSlot: { borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(118,43,34,0.48)', backgroundColor: 'rgba(255,250,238,0.28)', paddingTop: 13 },
-  slotText: { color: INK, fontFamily: 'EBGaramond_400Regular', flexShrink: 1 },
+  slotText: { color: INK, fontFamily: 'EBGaramond_400Regular', flexShrink: 0 },
   headline: { fontFamily: 'PlayfairDisplay_700Bold', fontWeight: '900', textAlign: 'center', letterSpacing: -0.4 },
   deck: { fontFamily: 'EBGaramond_400Regular_Italic', fontStyle: 'italic', textAlign: 'center' },
   body: { fontFamily: 'EBGaramond_400Regular' },
@@ -483,28 +497,31 @@ const s = StyleSheet.create({
   placeholderText: { fontStyle: 'italic', opacity: 0.8 },
   editTag: { position: 'absolute', right: 3, top: 2, color: RED, backgroundColor: PAPER, paddingHorizontal: 2, zIndex: 1, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
   photoSlot: {
-    width: '100%', overflow: 'hidden', borderColor: RULE,
+    width: '100%', flexShrink: 0, overflow: 'hidden', borderColor: RULE,
     backgroundColor: PAPER_LIGHT, alignItems: 'center', justifyContent: 'center', marginVertical: 5,
   },
   photoPlaceholder: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', padding: 8 },
+  thumbnailPlaceholder: { padding: 2 },
   photoText: { color: MUTED, fontFamily: 'PlayfairDisplay_700Bold', textAlign: 'center', letterSpacing: 0.6 },
   photoEditTag: { position: 'absolute', right: 4, bottom: 4, backgroundColor: PAPER_LIGHT, color: RED, paddingHorizontal: 5, paddingVertical: 2, fontFamily: 'Inter_700Bold' },
-  leadGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, borderTopWidth: 2, borderBottomWidth: 2, borderColor: INK, paddingVertical: 8, marginTop: 7 },
-  leadStory: { flex: 1.35, minWidth: 190 },
-  sideColumn: { flex: 0.85, minWidth: 150 },
-  inlinePhoto: { flexGrow: 1, flexShrink: 1, flexBasis: '42%', minWidth: 120, width: 'auto' },
-  summaryColumn: { flex: 1, minWidth: 135 },
-  byline: { flexDirection: 'row', gap: 6, justifyContent: 'space-between', marginVertical: 2 },
-  section: { flex: 1, minWidth: 135, borderWidth: 1, borderColor: 'rgba(100,74,46,0.68)', padding: 7, marginVertical: 4, backgroundColor: 'rgba(255,248,233,0.17)' },
+  leadGrid: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 10, borderTopWidth: 2, borderBottomWidth: 2, borderColor: INK, paddingVertical: 8, marginTop: 7 },
+  leadStory: { flexGrow: 1.35, flexShrink: 0, flexBasis: 190, minWidth: 0 },
+  compactLeadStory: { flexBasis: '100%' },
+  sideColumn: { flexGrow: 0.85, flexShrink: 0, flexBasis: 150, minWidth: 0 },
+  inlinePhoto: { width: '100%' },
+  summaryColumn: { flexShrink: 0, minWidth: 0 },
+  byline: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'space-between', marginVertical: 2 },
+  section: { flexShrink: 0, minWidth: 0, borderWidth: 1, borderColor: 'rgba(100,74,46,0.68)', padding: 7, marginVertical: 4, backgroundColor: 'rgba(255,248,233,0.17)' },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 },
   sectionTitle: { color: INK, fontFamily: 'PlayfairDisplay_700Bold', fontSize: 13, textAlign: 'center', textTransform: 'uppercase', flexShrink: 1 },
   rule: { height: 1, backgroundColor: RULE, flex: 1 },
-  twoColumns: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', gap: 7, marginTop: 5 },
-  threeColumns: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-  archiveCard: { flex: 1, minWidth: 95, borderWidth: 1, borderColor: 'rgba(100,74,46,0.55)', padding: 4, marginVertical: 3 },
+  columns: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 7, marginTop: 5 },
+  halfColumn: { flexGrow: 1, flexShrink: 0, flexBasis: '45%', minWidth: 135 },
+  thirdColumn: { flexGrow: 1, flexShrink: 0, flexBasis: '30%', minWidth: 95 },
+  archiveCard: { flexShrink: 0, minWidth: 0, borderWidth: 1, borderColor: 'rgba(100,74,46,0.55)', padding: 4, marginVertical: 3 },
   archiveRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, borderWidth: 1, borderColor: 'rgba(100,74,46,0.5)', padding: 3, marginVertical: 2 },
   archiveThumb: { width: 48, flexShrink: 0 },
-  archiveRowBody: { flex: 1, minWidth: 0 },
+  archiveRowBody: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 },
   readLink: { color: INK, fontFamily: 'PlayfairDisplay_700Bold', textAlign: 'center', textDecorationLine: 'underline', fontSize: 10, marginTop: 5 },
   signature: { color: INK, fontFamily: 'EBGaramond_400Regular_Italic', fontStyle: 'italic', textAlign: 'right', marginTop: 5 },
   continueText: { color: INK, fontFamily: 'PlayfairDisplay_700Bold', textAlign: 'center', letterSpacing: 1.2, marginVertical: 8, fontSize: 11 },
