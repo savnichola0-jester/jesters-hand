@@ -20,11 +20,13 @@ import { Feather } from '@/components/FIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 import {
-  RecruitSection, RecruitPost, DesignElement,
+  RecruitSection, RecruitPost, RecruitPostDesign, emptyJestersDeskContent,
   listenRecruitSection, saveRecruitPost, setRecruitStatus, deleteRecruitPost,
-  newPostId, parseDesign, RecruitRsvp, listenRecruitRsvp, setRecruitRsvp,
+  newPostId, parseRecruitPostDesign, RecruitRsvp, listenRecruitRsvp, setRecruitRsvp,
 } from '@/lib/recruitService';
 import PostCanvas from '@/components/recruit/PostCanvas';
+import JestersDeskDocument from '@/components/recruit/JestersDeskTemplate';
+import JestersDeskEditor from '@/components/recruit/JestersDeskEditor';
 import RecruitViewer from '@/components/recruit/RecruitViewer';
 import RecruitEditor from '@/components/recruit/RecruitEditor';
 import SocialPostSheet from '@/components/SocialPostSheet';
@@ -67,8 +69,7 @@ const SECTION_META: Record<RecruitSection, {
 
 interface ViewingState {
   section: RecruitSection;
-  elements: DesignElement[];
-  template: 'blank' | 'example';
+  design: RecruitPostDesign;
   title: string;
   post?: RecruitPost;
   isReference?: boolean;
@@ -78,7 +79,7 @@ interface EditingState {
   postId: string;
   isNew: boolean;
   title: string;
-  elements: DesignElement[];
+  design: RecruitPostDesign;
 }
 
 export default function RecruitScreen() {
@@ -128,24 +129,29 @@ export default function RecruitScreen() {
   // ── Admin actions ───────────────────────────────────────────────────────────
 
   const startNew = () => {
-    setEditing({ postId: newPostId(), isNew: true, title: '', elements: [] });
+    setEditing({
+      postId: newPostId(),
+      isNew: true,
+      title: section === 'recruit' ? 'The Jester’s Desk' : 'The Jester’s Verdict',
+      design: { template: 'jesters-desk', content: emptyJestersDeskContent() },
+    });
   };
 
   const editPost = (p: RecruitPost) => {
-    setEditing({ postId: p.id, isNew: false, title: p.title, elements: parseDesign(p.design) });
+    setEditing({ postId: p.id, isNew: false, title: p.title, design: parseRecruitPostDesign(p.design) });
   };
 
   const savedOnce = React.useRef<Set<string>>(new Set());
-  const handleSave = async (title: string, elements: DesignElement[], publish: boolean) => {
+  const handleSave = async (title: string, design: RecruitPostDesign, publish: boolean) => {
     if (!user || !editing) return;
     const isNew = editing.isNew && !savedOnce.current.has(editing.postId);
-    await saveRecruitPost(editing.postId, section, user.uid, title, elements, publish ? 'published' : 'draft', isNew);
+    await saveRecruitPost(editing.postId, section, user.uid, title, design, publish ? 'published' : 'draft', isNew);
     savedOnce.current.add(editing.postId);
     if (publish) {
       setEditing(null);
       setSuccess(section === 'recruit' ? 'Recruit published.' : 'Verdict published.');
     } else {
-      setEditing(e => e ? { ...e, isNew: false, title, elements } : e);
+      setEditing(e => e ? { ...e, isNew: false, title, design } : e);
       setSuccess('Draft saved.');
     }
   };
@@ -184,53 +190,57 @@ export default function RecruitScreen() {
 
   // ── Cards ───────────────────────────────────────────────────────────────────
 
-  const PostCard = ({ p }: { p: RecruitPost }) => (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      style={st.card}
-      onPress={() => setViewing({
-        section, elements: parseDesign(p.design), template: 'blank', title: p.title,
-        post: p,
-      })}
-      onLongPress={isAdmin ? () => postMenu(p) : undefined}
-    >
-      <View style={st.cardCanvas} pointerEvents="none">
-        <PostCanvas section={section} elements={parseDesign(p.design)} width={CARD_W - 2} />
-      </View>
-      <Text style={st.cardTitle} numberOfLines={1}>{p.title}</Text>
-      {p.status === 'published' ? (
-        <View style={st.socialSummary}>
-          <Text style={st.socialSummaryText}>
-            {Object.values(p.reactions).reduce((n, uids) => n + uids.length, 0)} MARKS
-          </Text>
-          <Text style={st.socialSummaryText}>{p.commentCount} COMMENTS</Text>
+  const PostCard = ({ p }: { p: RecruitPost }) => {
+    const design = parseRecruitPostDesign(p.design);
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={st.card}
+        onPress={() => setViewing({ section, design, title: p.title, post: p })}
+        onLongPress={isAdmin ? () => postMenu(p) : undefined}
+      >
+        <View style={[st.cardCanvas, design.template === 'jesters-desk' && st.deskCardCanvas]} pointerEvents="none">
+          {design.template === 'jesters-desk'
+            ? <JestersDeskDocument compact width={CARD_W - 14} content={design.content} />
+            : <PostCanvas section={section} elements={design.elements} width={CARD_W - 2} />}
         </View>
-      ) : null}
-      {isAdmin ? (
-        <View style={st.cardBadgeRow}>
-          <Text style={[st.badge, p.status === 'published' ? st.badgePub : st.badgeDraft]}>
-            {p.status === 'published' ? 'PUBLISHED' : 'DRAFT'}
-          </Text>
-          <TouchableOpacity onPress={() => postMenu(p)} hitSlop={8}>
-            <Feather name="edit" size={14} color={GOLD} />
-          </TouchableOpacity>
-        </View>
-      ) : null}
-    </TouchableOpacity>
-  );
+        <Text style={st.cardTitle} numberOfLines={1}>{p.title}</Text>
+        {p.status === 'published' ? (
+          <View style={st.socialSummary}>
+            <Text style={st.socialSummaryText}>
+              {Object.values(p.reactions).reduce((n, uids) => n + uids.length, 0)} MARKS
+            </Text>
+            <Text style={st.socialSummaryText}>{p.commentCount} COMMENTS</Text>
+          </View>
+        ) : null}
+        {isAdmin ? (
+          <View style={st.cardBadgeRow}>
+            <Text style={[st.badge, p.status === 'published' ? st.badgePub : st.badgeDraft]}>
+              {p.status === 'published' ? 'PUBLISHED' : 'DRAFT'}
+            </Text>
+            <TouchableOpacity onPress={() => postMenu(p)} hitSlop={8}>
+              <Feather name="edit" size={14} color={GOLD} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
 
   // The reference example lives inside the editor, so the grid only ever
   // shows the blank template card.
   const TemplateCard = () => (
     <TouchableOpacity activeOpacity={0.85} style={st.card} onPress={startNew}>
-      <View style={st.cardCanvas} pointerEvents="none">
-        <PostCanvas section={section} elements={[]} width={CARD_W - 2} template="blank" />
+      <View style={[st.cardCanvas, st.deskCardCanvas]} pointerEvents="none">
+        <JestersDeskDocument compact width={CARD_W - 14} content={emptyJestersDeskContent()} />
       </View>
-      <Text style={st.cardTitle} numberOfLines={1}>Blank Template — tap to design</Text>
+      <Text style={st.cardTitle} numberOfLines={1}>
+        {section === 'recruit' ? 'The Jester’s Desk · Tap to edit' : 'The Jester’s Verdict · Tap to edit'}
+      </Text>
     </TouchableOpacity>
   );
 
-  // Build the grid: admin sees templates first, then drafts, then published.
+  // One new-post template first, then saved drafts and posts.
   type Row = { key: string; node: React.ReactNode };
   const gridItems: { key: string; render: () => React.ReactNode }[] = [];
   if (isAdmin) {
@@ -354,12 +364,16 @@ export default function RecruitScreen() {
           ) : undefined}
         >
           <View style={st.socialCanvas}>
-            <PostCanvas
-              section={viewing.section}
-              elements={viewing.elements}
-              width={Math.min(SW - 62, 320)}
-              template={viewing.template}
-            />
+            {viewing.design.template === 'jesters-desk'
+              ? <JestersDeskDocument
+                  width={Math.min(SW - 62, 640)}
+                  content={viewing.design.content}
+                />
+              : <PostCanvas
+                  section={viewing.section}
+                  elements={viewing.design.elements}
+                  width={Math.min(SW - 62, 320)}
+                />}
             <Text style={st.watermark}>{watermark}</Text>
           </View>
           <Text style={st.protectedNotice}>{meta.notice}</Text>
@@ -369,8 +383,9 @@ export default function RecruitScreen() {
           visible
           onClose={() => setViewing(null)}
           section={viewing.section}
-          elements={viewing.elements}
-          template={viewing.template}
+          elements={viewing.design.template === 'classic' ? viewing.design.elements : []}
+          template={viewing.design.template === 'jesters-desk' ? 'desk' : 'blank'}
+          deskContent={viewing.design.template === 'jesters-desk' ? viewing.design.content : undefined}
           title={viewing.title}
           watermark={watermark}
           notice={viewing.isReference ? 'Reference example — cannot be edited or published' : meta.notice}
@@ -379,16 +394,29 @@ export default function RecruitScreen() {
 
       {/* ── Editor (admin only) ── */}
       {isAdmin && editing ? (
-        <RecruitEditor
-          visible
-          section={section}
-          postId={editing.postId}
-          initialTitle={editing.title}
-          initialElements={editing.elements}
-          watermark={watermark}
-          onCancel={() => setEditing(null)}
-          onSave={handleSave}
-        />
+        editing.design.template === 'jesters-desk' ? (
+          <JestersDeskEditor
+            visible
+            section={section}
+            postId={editing.postId}
+            initialTitle={editing.title}
+            initialContent={editing.design.content}
+            watermark={watermark}
+            onCancel={() => setEditing(null)}
+            onSave={(title, content, publish) => handleSave(title, { template: 'jesters-desk', content }, publish)}
+          />
+        ) : (
+          <RecruitEditor
+            visible
+            section={section}
+            postId={editing.postId}
+            initialTitle={editing.title}
+            initialElements={editing.design.elements}
+            watermark={watermark}
+            onCancel={() => setEditing(null)}
+            onSave={(title, elements, publish) => handleSave(title, { template: 'classic', elements }, publish)}
+          />
+        )
       ) : null}
     </View>
   );
@@ -462,6 +490,7 @@ const st = StyleSheet.create({
     borderRadius: 6, overflow: 'hidden',
     borderWidth: 1, borderColor: 'rgba(200,165,60,0.25)',
   },
+  deskCardCanvas: { height: CARD_W * 0.92, alignItems: 'center' },
   cardTitle: {
     color: CREAM, fontFamily: 'Cinzel_600SemiBold', fontSize: 10.5,
     letterSpacing: 0.6, marginTop: 6, textAlign: 'center',

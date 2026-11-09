@@ -65,6 +65,63 @@ export interface PhotoElement extends ElementBase {
 
 export type DesignElement = TextElement | PhotoElement;
 
+export const DESK_TEXT_KEYS = [
+  'volume', 'edition', 'date', 'edition_number', 'tagline',
+  'main_headline', 'main_subtitle', 'byline', 'main_date', 'story_intro', 'story_body',
+  'quick_news_1', 'quick_news_2', 'quick_news_3',
+  'inside_edition_1', 'inside_edition_2', 'inside_edition_3', 'inside_edition_4',
+  'announcements_intro', 'announcement_1', 'announcement_2', 'announcement_3',
+  'short_note_1', 'short_note_2', 'short_note_3',
+  'feature_title', 'feature_summary', 'editor_note',
+  'serial_title', 'serial_summary', 'closer_title', 'closer_summary',
+  'special_title', 'special_subtitle', 'special_summary',
+  'details_title', 'details_body', 'detail_point_1', 'detail_point_2', 'detail_point_3',
+  'behind_title', 'behind_body',
+  'timeline_1', 'timeline_2', 'timeline_3', 'timeline_4',
+  'reader_note_1', 'reader_note_2', 'reader_note_3',
+  'from_desk_note', 'photo_caption',
+  'board_item_1', 'board_item_2', 'board_item_3',
+  'schedule_1', 'schedule_2', 'schedule_3', 'schedule_4',
+  'whats_next', 'next_topic_1', 'next_topic_2',
+  'archive_spotlight_title',
+  'archive_story_1_title', 'archive_story_1_copy',
+  'archive_story_2_title', 'archive_story_2_copy',
+  'archive_story_3_title', 'archive_story_3_copy',
+  'favorite_1', 'favorite_2', 'favorite_3',
+  'from_archive_title',
+  'archive_item_1_title', 'archive_item_1_copy',
+  'archive_item_2_title', 'archive_item_2_copy',
+  'archive_item_3_title', 'archive_item_3_copy',
+  'stay_connected_copy', 'newsletter_copy', 'newsletter_email', 'newsletter_button',
+  'follow_copy', 'follow_1', 'follow_2', 'follow_3', 'follow_4',
+  'trusted_people_caption',
+  'whisper_title', 'whisper_copy', 'whisper_button',
+  'final_note_body', 'jester_says',
+] as const;
+
+export const DESK_PHOTO_KEYS = [
+  'main_photo', 'feature_photo', 'serial_photo', 'closer_photo', 'special_photo', 'from_desk_photo',
+  'upcoming_photo_1', 'upcoming_photo_2',
+  'archive_spotlight_photo_1', 'archive_spotlight_photo_2', 'archive_spotlight_photo_3',
+  'archive_photo_1', 'archive_photo_2', 'archive_photo_3', 'whisper_photo', 'trusted_people_photo',
+] as const;
+
+export type DeskTextKey = typeof DESK_TEXT_KEYS[number];
+export type DeskPhotoKey = typeof DESK_PHOTO_KEYS[number];
+
+export interface JestersDeskContent {
+  text: Partial<Record<DeskTextKey, string>>;
+  photos: Partial<Record<DeskPhotoKey, string>>;
+}
+
+export type RecruitPostDesign =
+  | { template: 'classic'; elements: DesignElement[] }
+  | { template: 'jesters-desk'; content: JestersDeskContent };
+
+export function emptyJestersDeskContent(): JestersDeskContent {
+  return { text: {}, photos: {} };
+}
+
 export interface RecruitPost {
   id: string;
   section: RecruitSection;
@@ -137,6 +194,47 @@ export function parseDesign(json: string): DesignElement[] {
   return out;
 }
 
+function parseJestersDeskContent(raw: unknown): JestersDeskContent {
+  if (!raw || typeof raw !== 'object') return emptyJestersDeskContent();
+  const source = raw as Record<string, unknown>;
+  const textSource = source.text && typeof source.text === 'object'
+    ? source.text as Record<string, unknown> : {};
+  const photoSource = source.photos && typeof source.photos === 'object'
+    ? source.photos as Record<string, unknown> : {};
+  const text: JestersDeskContent['text'] = {};
+  const photos: JestersDeskContent['photos'] = {};
+
+  for (const key of DESK_TEXT_KEYS) {
+    const value = textSource[key];
+    if (typeof value === 'string') text[key] = value.slice(0, 5000);
+  }
+  for (const key of DESK_PHOTO_KEYS) {
+    const value = photoSource[key];
+    if (typeof value !== 'string') continue;
+    const mediaPath = replitMediaPath(value);
+    const safePointer = value.startsWith('jhmedia://')
+      && !!mediaPath
+      && /^users\/[\w-]+\/admin-[\w-]+-[\w-]+\.jpg$/.test(mediaPath);
+    if (safePointer) photos[key] = value;
+  }
+  return { text, photos };
+}
+
+/** Existing posts are stored as DesignElement arrays. New Desk posts use a
+ *  versioned object inside the same design string, so no existing documents
+ *  or Firestore rules need to be rewritten. */
+export function parseRecruitPostDesign(json: string): RecruitPostDesign {
+  let parsed: unknown;
+  try { parsed = JSON.parse(json); } catch { return { template: 'classic', elements: [] }; }
+  if (Array.isArray(parsed)) return { template: 'classic', elements: parseDesign(json) };
+  if (!parsed || typeof parsed !== 'object') return { template: 'classic', elements: [] };
+  const source = parsed as Record<string, unknown>;
+  if (source.template === 'jesters-desk' && source.version === 1) {
+    return { template: 'jesters-desk', content: parseJestersDeskContent(source.content) };
+  }
+  return { template: 'classic', elements: [] };
+}
+
 // ── Listeners ─────────────────────────────────────────────────────────────────
 
 export function listenRecruitSection(
@@ -175,19 +273,20 @@ export async function saveRecruitPost(
   section: RecruitSection,
   uid: string,
   title: string,
-  elements: DesignElement[],
+  design: RecruitPostDesign,
   status: RecruitStatus,
   isNew: boolean,
 ): Promise<void> {
   const before = isNew ? null : await getDoc(doc(db, 'recruitPosts', postId));
-  // Strip transient local uris before persisting.
-  const clean = elements.map(el =>
-    el.type === 'photo' ? { ...el, localUri: undefined } : el);
+  const serializedDesign = design.template === 'jesters-desk'
+    ? JSON.stringify({ version: 1, template: 'jesters-desk', content: parseJestersDeskContent(design.content) })
+    : JSON.stringify(design.elements.map(el =>
+      el.type === 'photo' ? { ...el, localUri: undefined } : el));
   const data = {
     section,
     status,
     title: title.trim() || (section === 'recruit' ? 'Untitled Recruit' : 'Untitled Verdict'),
-    design: JSON.stringify(clean),
+    design: serializedDesign,
     createdBy: uid,
     reactions: {},
     commentCount: 0,

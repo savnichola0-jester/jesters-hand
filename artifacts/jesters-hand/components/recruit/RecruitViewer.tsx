@@ -10,8 +10,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@/components/FIcon';
-import { DesignElement, RecruitSection } from '@/lib/recruitService';
+import {
+  DesignElement, emptyJestersDeskContent, JestersDeskContent, RecruitSection,
+} from '@/lib/recruitService';
 import PostCanvas from './PostCanvas';
+import JestersDeskDocument from './JestersDeskTemplate';
 import { VaultWatermark } from '@/components/vault/VaultViewer';
 import { appWindow } from '@/lib/appWindow';
 
@@ -24,7 +27,8 @@ export interface RecruitViewerProps {
   section: RecruitSection;
   elements: DesignElement[];
   /** blank design background vs completed reference example */
-  template?: 'blank' | 'example';
+  template?: 'blank' | 'example' | 'desk';
+  deskContent?: JestersDeskContent;
   title?: string;
   /** e.g. "RECRUIT ACCESS — ID 14-54"; omit to hide the watermark (admin previews still pass one). */
   watermark?: string;
@@ -33,14 +37,14 @@ export interface RecruitViewerProps {
 }
 
 export default function RecruitViewer({
-  visible, onClose, section, elements, template = 'blank', title, watermark, notice,
+  visible, onClose, section, elements, template = 'blank', deskContent, title, watermark, notice,
 }: RecruitViewerProps) {
   const insets = useSafeAreaInsets();
   const { width: SW, height: SH } = appWindow();
   // Fit the 2:3 page into the screen, leaving room for the header.
   const maxW = SW - 16;
   const maxH = SH - insets.top - insets.bottom - 90;
-  const pageW = Math.min(maxW, maxH * (1024 / 1536));
+  const pageW = template === 'desk' ? Math.min(maxW, 724) : Math.min(maxW, maxH * (1024 / 1536));
 
   const webProtect: any = useMemo(() => Platform.OS === 'web'
     ? { onContextMenu: (e: any) => e.preventDefault() } : {}, []);
@@ -62,7 +66,9 @@ export default function RecruitViewer({
           showsVerticalScrollIndicator={false}
         >
           <View style={st.pageWrap}>
-            <PostCanvas section={section} elements={elements} width={pageW} template={template} />
+            {template === 'desk'
+              ? <JestersDeskDocument width={pageW} content={deskContent ?? emptyJestersDeskContent()} />
+              : <PostCanvas section={section} elements={elements} width={pageW} template={template} />}
           </View>
         </ScrollView>
         {watermark ? <VaultWatermark label={watermark} /> : null}
