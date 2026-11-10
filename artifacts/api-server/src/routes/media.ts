@@ -2,12 +2,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { Storage, type File } from "@google-cloud/storage";
 import { Router, type IRouter, type Request } from "express";
 import { Transform } from "node:stream";
-import { verifyFirebaseIdToken } from "../lib/firebaseAuth";
-import {
-  adminConfigured,
-  firestoreBase,
-  getAccessToken,
-} from "../lib/firestoreAdmin";
+import { actorFor, readMemberDocument as readDocument, type MemberActor as Actor } from "../lib/memberActor";
 import {
   isCurrentReplitVaultObject,
   isVaultCoverPath,
@@ -46,19 +41,6 @@ const VAULT_TYPES = new Set([
 const PHOTO_LIMIT = 10 * 1024 * 1024;
 const VAULT_LIMIT = 100 * 1024 * 1024;
 
-type FirestoreValue = {
-  booleanValue?: boolean;
-  stringValue?: string;
-};
-type FirestoreDoc = { fields?: Record<string, FirestoreValue> };
-type Actor = {
-  uid: string;
-  base: string;
-  oauth: string;
-  isHandAdmin: boolean;
-  isKeeper: boolean;
-};
-
 function logicalPathParam(value: unknown): string | null {
   if (typeof value === "string") return value;
   if (Array.isArray(value) && value.every((part) => typeof part === "string")) {
@@ -71,49 +53,8 @@ function pathQuery(req: Request): string | null {
   return typeof req.query.path === "string" ? req.query.path : null;
 }
 
-function bearer(req: Request): string {
-  const header = req.headers.authorization ?? "";
-  if (header.startsWith("Bearer ")) return header.slice(7).trim();
-  if (header.startsWith("Firebase ")) return header.slice(9).trim();
-  return "";
-}
-
-async function readDocument(
-  base: string,
-  oauth: string,
-  documentPath: string,
-): Promise<FirestoreDoc | null> {
-  const response = await fetch(`${base}/${documentPath}`, {
-    headers: { Authorization: `Bearer ${oauth}` },
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`Firestore read failed (${response.status})`);
-  return await response.json() as FirestoreDoc;
-}
-
-async function actorFor(req: Request): Promise<Actor | null> {
-  const project = process.env["EXPO_PUBLIC_FIREBASE_PROJECT_ID"];
-  const idToken = bearer(req);
-  const uid = project && idToken ? await verifyFirebaseIdToken(idToken, project) : null;
-  const oauth = uid && adminConfigured() ? await getAccessToken() : null;
-  if (!project || !uid || !oauth) return null;
-  const base = firestoreBase(project);
-  const user = await readDocument(base, oauth, `users/${encodeURIComponent(uid)}`);
-  const fields = user?.fields;
-  if (!fields || fields["suspended"]?.booleanValue === true) return null;
-  const handAdmin =
-    fields["isAdmin"]?.booleanValue === true &&
-    ["00-00", "01-54"].includes(fields["jokerId"]?.stringValue ?? "");
-  return {
-    uid,
-    base,
-    oauth,
-    isHandAdmin: handAdmin,
-    isKeeper: handAdmin && fields["jokerId"]?.stringValue === "00-00",
-  };
-}
-
 function mayWrite(path: MediaPath, actor: Actor): boolean {
+  if (path.kind === "dossier-photo") return actor.isKeeper && path.uid === actor.uid;
   if (path.kind === "mug") return path.uid === actor.uid || actor.isHandAdmin;
   if (path.kind === "admin-photo") return actor.isHandAdmin;
   if (path.kind === "target-photo") return path.uid === actor.uid;
@@ -122,6 +63,7 @@ function mayWrite(path: MediaPath, actor: Actor): boolean {
 }
 
 function mayDelete(path: MediaPath, actor: Actor): boolean {
+  if (path.kind === "dossier-photo") return actor.isKeeper && path.uid === actor.uid;
   if (path.kind === "chat-photo") return path.uid === actor.uid || actor.isHandAdmin;
   if (path.kind === "mug" || path.kind === "target-photo") {
     return path.uid === actor.uid || actor.isHandAdmin;
@@ -144,6 +86,60 @@ function fileFor(path: string): File {
   const { bucket, name } = privateObjectLocation(path);
   return storage.bucket(bucket).file(name);
 }
+
+// Public installation is intentionally unauthenticated. The object name is fixed:
+// callers cannot use this route to read other members' private App Storage files.
+router.get("/install/android.apk", async (req, res) => {
+  try {
+    const file = fileFor("releases/android/current.apk");
+    const [metadata] = await file.getMetadata();
+    const size = Number(metadata.size);
+    if (!Number.isSafeInteger(size) || size <= 0) throw new Error("Invalid APK size");
+    res.setHeader("Content-Type", "application/vnd.android.package-archive");
+    res.setHeader("Content-Disposition", 'attachment; filename="jesters-hand.apk"');
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Cache-Control", "no-store");
+    const range = req.headers.range;
+    let start = 0;
+    let end = size - 1;
+    if (range) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+      if (!match || (!match[1] && !match[2])) {
+        res.setHeader("Content-Range", `bytes */${size}`);
+        return void res.status(416).end();
+      }
+      if (!match[1]) {
+        const suffix = Number(match[2]);
+        if (!Number.isSafeInteger(suffix) || suffix <= 0) {
+          res.setHeader("Content-Range", `bytes */${size}`);
+          return void res.status(416).end();
+        }
+        start = Math.max(0, size - suffix);
+      } else {
+        start = Number(match[1]);
+        if (match[2]) end = Number(match[2]);
+      }
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) ||
+          start >= size || start > end) {
+        res.setHeader("Content-Range", `bytes */${size}`);
+        return void res.status(416).end();
+      }
+      end = Math.min(end, size - 1);
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${size}`);
+      res.status(206);
+    }
+    res.setHeader("Content-Length", String(end - start + 1));
+    if (req.method === "HEAD") return void res.end();
+    file.createReadStream({ start, end })
+      .on("error", () => res.destroy())
+      .pipe(res);
+  } catch (error) {
+    if ((error as { code?: number }).code === 404) {
+      return void res.status(503).send("Android installer is not available");
+    }
+    return void res.status(503).send("Android installer is temporarily unavailable");
+  }
+});
 
 function uploadLimit(path: MediaPath): number {
   return path.kind === "vault-file" && !isVaultCoverPath(path)
@@ -215,7 +211,7 @@ router.post("/media/upload", async (req, res) => {
     req.resume();
     return void res.status(413).json({ error: "media exceeds size limit" });
   }
-  const token = parsedPath.kind === "vault-file" ? null : randomBytes(32).toString("base64url");
+  const token = ["vault-file", "dossier-photo"].includes(parsedPath.kind) ? null : randomBytes(32).toString("base64url");
   try {
     const file = fileFor(path);
     const oldGeneration = await currentGeneration(file);
@@ -302,13 +298,16 @@ router.get("/media/public/*logicalPath", async (req, res) => {
 router.get("/media/private", async (req, res) => {
   const path = pathQuery(req);
   const parsedPath = path ? validateMediaPath(path) : null;
-  if (!path || !parsedPath || parsedPath.kind !== "vault-file") {
+  if (!path || !parsedPath || !["vault-file", "dossier-photo"].includes(parsedPath.kind)) {
     return void res.status(400).json({ error: "invalid media path" });
   }
   const actor = await actorFor(req);
   if (!actor) return void res.status(403).json({ error: "active member required" });
   try {
-    if (!(await checkVaultReadAccess(actor, parsedPath, path))) {
+    const allowed = parsedPath.kind === "dossier-photo"
+      ? actor.isKeeper && parsedPath.uid === actor.uid
+      : await checkVaultReadAccess(actor, parsedPath, path);
+    if (!allowed) {
       return void res.status(403).json({ error: "forbidden" });
     }
     const file = fileFor(path);

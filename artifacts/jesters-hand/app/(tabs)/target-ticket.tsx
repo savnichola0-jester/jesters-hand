@@ -36,7 +36,7 @@ export default function TargetTicketScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user } = useAuth();
+  const { user, isJester } = useAuth();
   useEffect(() => { if (user === null) router.replace('/'); }, [user]);
 
   const [tickets, setTickets] = useState<TargetTicket[]>([]);
@@ -125,8 +125,21 @@ export default function TargetTicketScreen() {
 
       {/* The tabbed case file — its body is the scrolling feed frame */}
       <View style={[s.folderWrap, { top: navBottom + 12 }]}>
-        <View style={[s.tab, { width: Math.min(SW * 0.55, 230), height: TAB_H }]}>
-          <Text style={s.tabText} numberOfLines={1}>TARGET TICKETS</Text>
+        <View style={{ flexDirection: 'row', gap: 4 }}>
+          <View style={[s.tab, { width: Math.min(SW * (isJester ? 0.4 : 0.55), 230), height: TAB_H }]}>
+            <Text style={[s.tabText, isJester && { fontSize: 10, letterSpacing: 1 }]} numberOfLines={1}>TARGET TICKETS</Text>
+          </View>
+          {isJester && (
+            <TouchableOpacity
+              style={[s.tab, { flex: 1, height: TAB_H }]}
+              onPress={() => router.push('/(tabs)/jesters-dossier')}
+              testID="open-jesters-dossier"
+              accessibilityRole="button"
+              accessibilityLabel="Open The Jester's Dossier"
+            >
+              <Text style={[s.tabText, { fontSize: 10, letterSpacing: 0.4 }]} numberOfLines={1}>The Jester's Dossier</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <View style={s.body}>
           {/* Suit filter chips */}
@@ -196,6 +209,11 @@ const s = StyleSheet.create({
     color: CREAM, fontSize: 16, fontFamily: 'Cinzel_700Bold', letterSpacing: 1,
   },
   dagIcon: { width: 34, height: 34 },
+  dossierBtn: {
+    width: 32, height: 32, borderRadius: 16, marginRight: 4,
+    borderWidth: 1, borderColor: 'rgba(142,27,27,0.9)', backgroundColor: 'rgba(142,27,27,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
   sqIcon:  { width: 34, height: 34 },
 
   folderWrap: { position: 'absolute', left: SIDE, right: SIDE, bottom: 86 },

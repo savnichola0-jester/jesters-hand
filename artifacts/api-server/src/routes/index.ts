@@ -11,6 +11,9 @@ import suitsRouter from "./suits";
 import auditRouter from "./audit";
 import activityRouter from "./activity";
 import mediaRouter from "./media";
+import checkInsRouter from "./checkIns";
+import gamesRouter from "./games";
+import dossiersRouter from "./dossiers";
 
 const router: IRouter = Router();
 
@@ -26,5 +29,8 @@ router.use(suitsRouter);
 router.use(auditRouter);
 router.use(activityRouter);
 router.use(mediaRouter);
+router.use(checkInsRouter);
+router.use(gamesRouter);
+router.use(dossiersRouter);
 
 export default router;

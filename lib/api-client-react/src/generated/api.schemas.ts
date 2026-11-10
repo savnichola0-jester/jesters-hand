@@ -5,6 +5,43 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type DossierCategory = typeof DossierCategory[keyof typeof DossierCategory];
+
+
+export const DossierCategory = {
+  Title_Reveal: 'Title Reveal',
+  Travel_Reveal: 'Travel Reveal',
+  Theory_Confirmed: 'Theory Confirmed',
+  Exposed_Pattern: 'Exposed Pattern',
+  Hitting_Connection: 'Hitting Connection',
+  Redirection: 'Redirection',
+} as const;
+
+export interface DossierInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+  category: DossierCategory;
+  /** @maxLength 500000 */
+  document: string;
+  /** @minimum 0 */
+  version: number;
+  archived: boolean;
+}
+
+export interface Dossier {
+  id: string;
+  title: string;
+  category: DossierCategory;
+  document: string;
+  version: number;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ActivationRequest {
   targetUid: string;
 }
@@ -22,6 +59,10 @@ export type PocketConversationDirectoryConversationsItem = {
 export interface PocketConversationDirectory {
   conversations: PocketConversationDirectoryConversationsItem[];
 }
+
+export type ListDossiersParams = {
+archived?: boolean;
+};
 
 export type ActivateMember200 = {
   ok: boolean;

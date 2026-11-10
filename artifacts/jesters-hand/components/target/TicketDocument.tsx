@@ -57,10 +57,11 @@ function Stars({ value, onChange }: { value: number; onChange?: (v: number) => v
   );
 }
 
-export function TicketDocument({ draft, onChange, editable }: {
+export function TicketDocument({ draft, onChange, editable, hideSuit = false }: {
   draft: TicketDraft;
   onChange?: (next: TicketDraft) => void;
   editable: boolean;
+  hideSuit?: boolean;
 }) {
   const [dotField, setDotField] = useState<TicketFieldKey | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
@@ -93,6 +94,7 @@ export function TicketDocument({ draft, onChange, editable }: {
       )}
 
       {/* Suit / Category */}
+      {!hideSuit && <>
       <FieldHeader label="Suit" dot={dotFor('suit')} onDot={openDot('suit')} />
       <View style={styles.suitRow}>
         {SUITS.map(su => {
@@ -113,6 +115,7 @@ export function TicketDocument({ draft, onChange, editable }: {
           );
         })}
       </View>
+      </>}
 
       {/* Supporting Evidence */}
       <FieldHeader label="Supporting Evidence" dot={dotFor('evidence')} onDot={openDot('evidence')} />

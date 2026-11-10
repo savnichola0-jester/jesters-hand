@@ -22,7 +22,10 @@ import type {
 import type {
   ActivateMember200,
   ActivationRequest,
+  Dossier,
+  DossierInput,
   HealthStatus,
+  ListDossiersParams,
   PocketConversationDirectory,
   SendTodayCheckIns200
 } from './api.schemas';
@@ -53,6 +56,286 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListDossiersUrl = (params?: ListDossiersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/dossiers?${stringifiedParams}` : `/api/dossiers`
+}
+
+export const listDossiers = async (params?: ListDossiersParams, options?: RequestInit): Promise<Dossier[]> => {
+
+  return customFetch<Dossier[]>(getListDossiersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDossiersQueryKey = (params?: ListDossiersParams,) => {
+    return [
+    `/api/dossiers`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDossiersQueryOptions = <TData = Awaited<ReturnType<typeof listDossiers>>, TError = ErrorType<void>>(params?: ListDossiersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDossiersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDossiers>>> = ({ signal }) => listDossiers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDossiers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDossiersQueryResult = NonNullable<Awaited<ReturnType<typeof listDossiers>>>
+export type ListDossiersQueryError = ErrorType<void>
+
+
+
+export function useListDossiers<TData = Awaited<ReturnType<typeof listDossiers>>, TError = ErrorType<void>>(
+ params?: ListDossiersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDossiersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateDossierUrl = () => {
+
+
+
+
+  return `/api/dossiers`
+}
+
+export const createDossier = async (dossierInput: DossierInput, options?: RequestInit): Promise<Dossier> => {
+
+  return customFetch<Dossier>(getCreateDossierUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(dossierInput)
+  }
+);}
+
+
+
+
+
+export const getCreateDossierMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDossier>>, TError,{data: BodyType<DossierInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDossier>>, TError,{data: BodyType<DossierInput>}, TContext> => {
+
+const mutationKey = ['createDossier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDossier>>, {data: BodyType<DossierInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createDossier(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDossierMutationResult = NonNullable<Awaited<ReturnType<typeof createDossier>>>
+    export type CreateDossierMutationBody = BodyType<DossierInput>
+    export type CreateDossierMutationError = ErrorType<void>
+
+    export const useCreateDossier = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDossier>>, TError,{data: BodyType<DossierInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDossier>>,
+        TError,
+        {data: BodyType<DossierInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDossierMutationOptions(options));
+    }
+
+export const getGetDossierUrl = (id: string,) => {
+
+
+
+
+  return `/api/dossiers/${id}`
+}
+
+export const getDossier = async (id: string, options?: RequestInit): Promise<Dossier> => {
+
+  return customFetch<Dossier>(getGetDossierUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDossierQueryKey = (id: string,) => {
+    return [
+    `/api/dossiers/${id}`
+    ] as const;
+    }
+
+
+export const getGetDossierQueryOptions = <TData = Awaited<ReturnType<typeof getDossier>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDossier>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDossierQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDossier>>> = ({ signal }) => getDossier(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDossier>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDossierQueryResult = NonNullable<Awaited<ReturnType<typeof getDossier>>>
+export type GetDossierQueryError = ErrorType<void>
+
+
+
+export function useGetDossier<TData = Awaited<ReturnType<typeof getDossier>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDossier>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDossierQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateDossierUrl = (id: string,) => {
+
+
+
+
+  return `/api/dossiers/${id}`
+}
+
+export const updateDossier = async (id: string,
+    dossierInput: DossierInput, options?: RequestInit): Promise<Dossier> => {
+
+  return customFetch<Dossier>(getUpdateDossierUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(dossierInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateDossierMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDossier>>, TError,{id: string;data: BodyType<DossierInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDossier>>, TError,{id: string;data: BodyType<DossierInput>}, TContext> => {
+
+const mutationKey = ['updateDossier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDossier>>, {id: string;data: BodyType<DossierInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDossier(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDossierMutationResult = NonNullable<Awaited<ReturnType<typeof updateDossier>>>
+    export type UpdateDossierMutationBody = BodyType<DossierInput>
+    export type UpdateDossierMutationError = ErrorType<void>
+
+    export const useUpdateDossier = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDossier>>, TError,{id: string;data: BodyType<DossierInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDossier>>,
+        TError,
+        {id: string;data: BodyType<DossierInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateDossierMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

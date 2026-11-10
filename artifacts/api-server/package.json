@@ -7,7 +7,17 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
+    "check-ins:daily": "pnpm run build && node --enable-source-maps ./dist/issueDailyCheckIns.mjs",
+    "check-ins:scheduled": "pnpm run build && node --enable-source-maps ./dist/issueDailyCheckIns.mjs --scheduled",
+    "check-ins:migrate-activation": "node --enable-source-maps ./scripts/migrate-check-in-activation.mjs",
+    "test:check-in-batch": "node --experimental-strip-types --test scripts/check-in-batch-test.mjs",
+    "test:check-in-schedule": "node --experimental-strip-types --test scripts/check-in-schedule-test.mjs",
+    "test:game-room-access": "node --experimental-strip-types --test scripts/game-room-access-test.mjs",
+    "test:games-content": "node --experimental-strip-types --test scripts/games-content-test.mjs",
+    "test:games-emulator": "pnpm exec firebase emulators:exec --config scripts/check-in-emulator.firebase.json --only firestore --project demo-games \"FIRESTORE_EMULATOR_HOST=127.0.0.1:28080 EXPO_PUBLIC_FIREBASE_PROJECT_ID=demo-games NODE_ENV=test node scripts/run-games-emulator-test.mjs\"",
+    "test:check-in-emulator": "pnpm exec firebase emulators:exec --config scripts/check-in-emulator.firebase.json --only firestore --project demo-check-in \"FIRESTORE_EMULATOR_HOST=127.0.0.1:28080 EXPO_PUBLIC_FIREBASE_PROJECT_ID=demo-check-in node scripts/run-check-in-emulator-test.mjs\"",
     "test:media-paths": "node --experimental-strip-types ./scripts/media-path-test.mjs",
+    "test:dossiers": "node ./scripts/dossiers-test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

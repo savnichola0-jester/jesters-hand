@@ -8,6 +8,107 @@
 import * as zod from 'zod';
 
 
+export const listDossiersQueryArchivedDefault = false;
+
+export const ListDossiersQueryParams = zod.object({
+  "archived": zod.coerce.boolean().default(listDossiersQueryArchivedDefault)
+})
+
+export const ListDossiersResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "category": zod.enum(['Title Reveal', 'Travel Reveal', 'Theory Confirmed', 'Exposed Pattern', 'Hitting Connection', 'Redirection']),
+  "document": zod.string(),
+  "version": zod.number(),
+  "archived": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListDossiersResponse = zod.array(ListDossiersResponseItem)
+
+
+export const createDossierBodyTitleMax = 120;
+
+export const createDossierBodyDocumentMax = 500000;
+
+export const createDossierBodyVersionMin = 0;
+
+
+
+export const CreateDossierBody = zod.object({
+  "title": zod.string().min(1).max(createDossierBodyTitleMax),
+  "category": zod.enum(['Title Reveal', 'Travel Reveal', 'Theory Confirmed', 'Exposed Pattern', 'Hitting Connection', 'Redirection']),
+  "document": zod.string().max(createDossierBodyDocumentMax),
+  "version": zod.number().min(createDossierBodyVersionMin),
+  "archived": zod.boolean()
+})
+
+export const CreateDossierResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "category": zod.enum(['Title Reveal', 'Travel Reveal', 'Theory Confirmed', 'Exposed Pattern', 'Hitting Connection', 'Redirection']),
+  "document": zod.string(),
+  "version": zod.number(),
+  "archived": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+export const getDossierPathIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+
+
+export const GetDossierParams = zod.object({
+  "id": zod.coerce.string().regex(getDossierPathIdRegExp)
+})
+
+export const GetDossierResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "category": zod.enum(['Title Reveal', 'Travel Reveal', 'Theory Confirmed', 'Exposed Pattern', 'Hitting Connection', 'Redirection']),
+  "document": zod.string(),
+  "version": zod.number(),
+  "archived": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+export const updateDossierPathIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+
+
+export const UpdateDossierParams = zod.object({
+  "id": zod.coerce.string().regex(updateDossierPathIdRegExp)
+})
+
+export const updateDossierBodyTitleMax = 120;
+
+export const updateDossierBodyDocumentMax = 500000;
+
+export const updateDossierBodyVersionMin = 0;
+
+
+
+export const UpdateDossierBody = zod.object({
+  "title": zod.string().min(1).max(updateDossierBodyTitleMax),
+  "category": zod.enum(['Title Reveal', 'Travel Reveal', 'Theory Confirmed', 'Exposed Pattern', 'Hitting Connection', 'Redirection']),
+  "document": zod.string().max(updateDossierBodyDocumentMax),
+  "version": zod.number().min(updateDossierBodyVersionMin),
+  "archived": zod.boolean()
+})
+
+export const UpdateDossierResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "category": zod.enum(['Title Reveal', 'Travel Reveal', 'Theory Confirmed', 'Exposed Pattern', 'Hitting Connection', 'Redirection']),
+  "document": zod.string(),
+  "version": zod.number(),
+  "archived": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
 /**
  * Returns server health status
  * @summary Health check

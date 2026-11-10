@@ -29,6 +29,8 @@ import { StatusDot, DotPickerModal } from './StatusDot';
 import { resolveMediaUrl } from '@/lib/mediaService';
 import { BUTTON_ACCENT, BUTTON_ACCENT_SOFT } from '@/lib/buttonAccent';
 
+const PhotoResolver = React.createContext<((uri: string) => string | undefined) | undefined>(undefined);
+
 const GOLD = '#D4A853';
 const CREAM = '#F5E8C8';
 
@@ -135,9 +137,11 @@ function RegionPhoto({ el, x0, x1, y0, y1, active, onPress, framed }: {
   framed?: boolean;
 }) {
   const fs = Math.max(6, el.w * 0.05);
+  const privateResolver = React.useContext(PhotoResolver);
+  const photoUri = el.uri ? (privateResolver ? privateResolver(el.uri) : resolveMediaUrl(el.uri)) : undefined;
   const box = [fbox(el, x0, x1, y0, y1), framed && styles.regionPhotoWell];
-  const inner = el.uri
-    ? <Image source={{ uri: resolveMediaUrl(el.uri) }} style={StyleSheet.absoluteFill as any} resizeMode="cover" />
+  const inner = photoUri
+    ? <Image source={{ uri: photoUri }} style={StyleSheet.absoluteFill as any} resizeMode="cover" />
     : (active && framed
         ? <Text style={[styles.regionPhotoHint, { fontSize: fs }]}>Tap to{'\n'}upload</Text>
         : null);
@@ -341,7 +345,17 @@ function CanvasElement({ el, zoom, selected, editable, onSelect, onChange, onDel
 
 // ─── The canvas ───────────────────────────────────────────────────
 
-export function SpreadCanvas({ value, onChange, editable, height, onPickPhoto, onGestureActive }: {
+export function SpreadCanvas(props: React.ComponentProps<typeof SpreadCanvasBody> & {
+  resolvePhoto?: (uri: string) => string | undefined;
+}) {
+  return (
+    <PhotoResolver.Provider value={props.resolvePhoto}>
+      <SpreadCanvasBody {...props} />
+    </PhotoResolver.Provider>
+  );
+}
+
+function SpreadCanvasBody({ value, onChange, editable, height, onPickPhoto, onGestureActive }: {
   value: SpreadState;
   onChange: (next: SpreadState) => void;
   editable: boolean;

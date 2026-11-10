@@ -3,6 +3,7 @@ export type MediaPath =
   | { kind: "admin-photo"; uid: string }
   | { kind: "target-photo"; uid: string }
   | { kind: "chat-photo"; uid: string }
+  | { kind: "dossier-photo"; uid: string }
   | { kind: "vault-file"; entryId: string; fileName: string };
 
 const UID = /^[A-Za-z0-9:_-]{1,128}$/;
@@ -15,6 +16,10 @@ export function validateMediaPath(path: string): MediaPath | null {
   }
   const parts = path.split("/");
   if (parts.some((part) => !part || part === "." || part === "..")) return null;
+  if (parts.length === 3 && parts[0] === "dossiers" && UID.test(parts[1]!)
+    && /^[0-9]{10,16}_[a-z0-9]{6,20}\.jpg$/.test(parts[2]!)) {
+    return { kind: "dossier-photo", uid: parts[1]! };
+  }
   if (parts.length === 3 && parts[0] === "users" && UID.test(parts[1]!)) {
     if (parts[2] === "mug.jpg" || /^mug-[a-z0-9]+-[a-z0-9]+\.jpg$/.test(parts[2]!))
       return { kind: "mug", uid: parts[1]! };
