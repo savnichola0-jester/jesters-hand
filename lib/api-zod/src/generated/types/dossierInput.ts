@@ -19,4 +19,6 @@ export interface DossierInput {
   /** @minimum 0 */
   version: number;
   archived: boolean;
+  /** Publish this saved version for all active members. False saves a private draft without changing the published version. */
+  publish: boolean;
 }

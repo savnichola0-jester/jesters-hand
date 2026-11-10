@@ -36,7 +36,7 @@ export default function TargetTicketScreen() {
   const topInset  = Platform.OS === 'web' ? 50 : insets.top;
   const navBottom = topInset + NAV_H;
 
-  const { user, isJester } = useAuth();
+  const { user } = useAuth();
   useEffect(() => { if (user === null) router.replace('/'); }, [user]);
 
   const [tickets, setTickets] = useState<TargetTicket[]>([]);
@@ -126,10 +126,10 @@ export default function TargetTicketScreen() {
       {/* The tabbed case file — its body is the scrolling feed frame */}
       <View style={[s.folderWrap, { top: navBottom + 12 }]}>
         <View style={{ flexDirection: 'row', gap: 4 }}>
-          <View style={[s.tab, { width: Math.min(SW * (isJester ? 0.4 : 0.55), 230), height: TAB_H }]}>
-            <Text style={[s.tabText, isJester && { fontSize: 10, letterSpacing: 1 }]} numberOfLines={1}>TARGET TICKETS</Text>
+          <View style={[s.tab, { width: Math.min(SW * 0.4, 230), height: TAB_H }]}>
+            <Text style={[s.tabText, { fontSize: 10, letterSpacing: 1 }]} numberOfLines={1}>TARGET TICKETS</Text>
           </View>
-          {isJester && (
+          {(
             <TouchableOpacity
               style={[s.tab, { flex: 1, height: TAB_H }]}
               onPress={() => router.push('/(tabs)/jesters-dossier')}

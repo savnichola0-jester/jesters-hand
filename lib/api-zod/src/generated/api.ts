@@ -21,6 +21,9 @@ export const ListDossiersResponseItem = zod.object({
   "document": zod.string(),
   "version": zod.number(),
   "archived": zod.boolean(),
+  "published": zod.boolean(),
+  "publishedAt": zod.string().nullable(),
+  "canEdit": zod.boolean(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -40,7 +43,8 @@ export const CreateDossierBody = zod.object({
   "category": zod.enum(['Title Reveal', 'Travel Reveal', 'Theory Confirmed', 'Exposed Pattern', 'Hitting Connection', 'Redirection']),
   "document": zod.string().max(createDossierBodyDocumentMax),
   "version": zod.number().min(createDossierBodyVersionMin),
-  "archived": zod.boolean()
+  "archived": zod.boolean(),
+  "publish": zod.boolean().describe('Publish this saved version for all active members. False saves a private draft without changing the published version.')
 })
 
 export const CreateDossierResponse = zod.object({
@@ -50,6 +54,9 @@ export const CreateDossierResponse = zod.object({
   "document": zod.string(),
   "version": zod.number(),
   "archived": zod.boolean(),
+  "published": zod.boolean(),
+  "publishedAt": zod.string().nullable(),
+  "canEdit": zod.boolean(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -69,6 +76,9 @@ export const GetDossierResponse = zod.object({
   "document": zod.string(),
   "version": zod.number(),
   "archived": zod.boolean(),
+  "published": zod.boolean(),
+  "publishedAt": zod.string().nullable(),
+  "canEdit": zod.boolean(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -94,7 +104,8 @@ export const UpdateDossierBody = zod.object({
   "category": zod.enum(['Title Reveal', 'Travel Reveal', 'Theory Confirmed', 'Exposed Pattern', 'Hitting Connection', 'Redirection']),
   "document": zod.string().max(updateDossierBodyDocumentMax),
   "version": zod.number().min(updateDossierBodyVersionMin),
-  "archived": zod.boolean()
+  "archived": zod.boolean(),
+  "publish": zod.boolean().describe('Publish this saved version for all active members. False saves a private draft without changing the published version.')
 })
 
 export const UpdateDossierResponse = zod.object({
@@ -104,6 +115,9 @@ export const UpdateDossierResponse = zod.object({
   "document": zod.string(),
   "version": zod.number(),
   "archived": zod.boolean(),
+  "published": zod.boolean(),
+  "publishedAt": zod.string().nullable(),
+  "canEdit": zod.boolean(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })

@@ -26,7 +26,7 @@ paths:
           schema: { type: boolean, default: false }
       responses:
         "200":
-          description: Private dossiers belonging to the active 00-00 seat
+          description: Published dossiers for members, plus own drafts for 00-00
           content:
             application/json:
               schema:
@@ -61,7 +61,7 @@ paths:
       security: [{ bearerAuth: [] }]
       responses:
         "200":
-          description: Private dossier
+          description: Published dossier, or own draft for 00-00
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Dossier" }
@@ -219,16 +219,17 @@ components:
     DossierInput:
       type: object
       additionalProperties: false
-      required: [title, category, document, version, archived]
+      required: [title, category, document, version, archived, publish]
       properties:
         title: { type: string, minLength: 1, maxLength: 120 }
         category: { $ref: "#/components/schemas/DossierCategory" }
         document: { type: string, maxLength: 500000 }
         version: { type: integer, minimum: 0 }
         archived: { type: boolean }
+        publish: { type: boolean, description: Publish this saved version for all active members. False saves a private draft without changing the published version. }
     Dossier:
       type: object
-      required: [id, title, category, document, version, archived, createdAt, updatedAt]
+      required: [id, title, category, document, version, archived, published, publishedAt, canEdit, createdAt, updatedAt]
       properties:
         id: { type: string }
         title: { type: string }
@@ -236,6 +237,9 @@ components:
         document: { type: string }
         version: { type: integer }
         archived: { type: boolean }
+        published: { type: boolean }
+        publishedAt: { type: ["string", "null"] }
+        canEdit: { type: boolean }
         createdAt: { type: string }
         updatedAt: { type: string }
     ActivationRequest:

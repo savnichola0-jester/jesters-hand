@@ -29,6 +29,8 @@ export interface DossierInput {
   /** @minimum 0 */
   version: number;
   archived: boolean;
+  /** Publish this saved version for all active members. False saves a private draft without changing the published version. */
+  publish: boolean;
 }
 
 export interface Dossier {
@@ -38,6 +40,10 @@ export interface Dossier {
   document: string;
   version: number;
   archived: boolean;
+  published: boolean;
+  /** @nullable */
+  publishedAt: string | null;
+  canEdit: boolean;
   createdAt: string;
   updatedAt: string;
 }

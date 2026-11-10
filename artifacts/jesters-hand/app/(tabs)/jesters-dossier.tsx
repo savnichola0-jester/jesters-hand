@@ -1,5 +1,5 @@
-// The Jester's Dossier — private 00-00-only case files living inside the
-// Target Ticket home. Never shared, never broadcast, never archived publicly.
+// Only 00-00 authors Dossiers. Members read explicit published snapshots;
+// working drafts and sealed files remain private to their creator.
 // List (active / archived) and editor share this route: ?id=<id> or ?id=new.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -51,7 +51,7 @@ const isDossierKey = (q: Query) => {
 function errText(e: unknown, fallback: string): string {
   const status = (e as { status?: number } | null)?.status;
   if (status === 409) return 'This dossier changed elsewhere since you opened it. Reload to get the latest version before saving.';
-  if (status === 401 || status === 403) return 'Access refused. Only the active 00-00 seat may open dossiers.';
+  if (status === 401 || status === 403) return 'Access refused. Sign in to read published dossiers. Only 00-00 can create or change them.';
   if (status === 404) return 'This dossier no longer exists.';
   if (status === 413) return 'The dossier is too large to save. Remove some elements and try again.';
   if (e instanceof Error && e.message) return `${fallback} (${e.message})`;
@@ -75,14 +75,17 @@ export default function JestersDossierScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const openId = typeof id === 'string' && id ? id : null;
 
-  // Logout / role loss: purge every private dossier query and leave.
+  const scope = `${user?.uid ?? ''}:${isJester}`;
+  // Never reuse the author's draft cache for a member session.
+  useEffect(() => () => { qc.removeQueries({ predicate: isDossierKey }); }, [qc, scope]);
   useEffect(() => {
     if (loading) return;
-    if (!user || !isJester) {
+    if (!user) {
       qc.removeQueries({ predicate: isDossierKey });
-      router.replace(user ? '/(tabs)/target-ticket' : '/');
+      router.replace('/');
     }
-  }, [user, isJester, loading, qc]);
+    if (user && !isJester && openId === 'new') router.setParams({ id: '' });
+  }, [user, isJester, loading, qc, openId]);
 
   const dirtyRef = useRef(false);
   const leave = (to: () => void) => {
@@ -110,7 +113,7 @@ export default function JestersDossierScreen() {
     };
   }, [openId]);
 
-  if (loading || !user || !isJester) {
+  if (loading || !user) {
     return <View style={s.root}><ActivityIndicator color={GOLD} style={{ marginTop: 140 }} /></View>;
   }
 
@@ -138,9 +141,9 @@ export default function JestersDossierScreen() {
         </View>
       </View>
 
-      {openId
-        ? <DossierEditor key={openId} id={openId} top={navBottom} bottomInset={insets.bottom} dirtyRef={dirtyRef} />
-        : <DossierList top={navBottom} bottomInset={insets.bottom} />}
+      {openId && (openId !== 'new' || isJester)
+        ? <DossierEditor key={`${scope}:${openId}`} id={openId} top={navBottom} bottomInset={insets.bottom} dirtyRef={dirtyRef} />
+        : <DossierList key={scope} top={navBottom} bottomInset={insets.bottom} />}
     </View>
   );
 }
@@ -148,12 +151,13 @@ export default function JestersDossierScreen() {
 // ─── List ─────────────────────────────────────────────────────────
 
 function DossierList({ top, bottomInset }: { top: number; bottomInset: number }) {
+  const { user, isJester } = useAuth();
   const [archived, setArchived] = useState(false);
   const [cat, setCat] = useState<DossierCategory | 'all'>('all');
   const params = { archived };
   const q = useListDossiers(params, {
     query: {
-      queryKey: getListDossiersQueryKey(params),
+      queryKey: [...getListDossiersQueryKey(params), `${user?.uid}:${isJester}`],
       refetchOnMount: 'always',
       refetchInterval: POLL_MS,
     },
@@ -168,12 +172,12 @@ function DossierList({ top, bottomInset }: { top: number; bottomInset: number })
     <>
       <View style={[s.folderWrap, { top: top + 12, bottom: Math.max(bottomInset, 14) + 72 }]}>
         <View style={s.tabRow}>
-          {([false, true] as const).map(a => (
+          {(isJester ? [false, true] : [false]).map(a => (
             <TouchableOpacity key={String(a)} style={[s.tab, archived === a && s.tabActive]}
               onPress={() => setArchived(a)} testID={a ? 'dossier-tab-archived' : 'dossier-tab-active'}
               accessibilityRole="tab" accessibilityState={{ selected: archived === a }}
               accessibilityLabel={a ? 'Archived dossiers' : 'Active dossiers'}>
-              <Text style={[s.tabText, archived !== a && { opacity: 0.5 }]}>{a ? 'SEALED' : 'OPEN FILES'}</Text>
+              <Text style={[s.tabText, archived !== a && { opacity: 0.5 }]}>{a ? 'SEALED' : isJester ? 'OPEN FILES' : 'PUBLISHED'}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -201,7 +205,9 @@ function DossierList({ top, bottomInset }: { top: number; bottomInset: number })
               <Feather name={archived ? 'archive' : 'lock'} size={22} color={BRONZE} />
               <Text style={s.emptyTitle}>{archived ? 'Nothing Sealed' : 'The Drawer Is Empty'}</Text>
               <Text style={s.emptyText}>
-                {archived ? 'Archived dossiers rest here until restored.' : 'Only you will ever read what goes in here.'}
+                {archived ? 'Sealed dossiers are private until restored and published again.'
+                  : isJester ? 'Save a private draft, then publish it for everyone to read.'
+                  : 'Dossiers published by 00-00 will appear here.'}
               </Text>
             </View>
           ) : (
@@ -220,7 +226,7 @@ function DossierList({ top, bottomInset }: { top: number; bottomInset: number })
           )}
         </View>
       </View>
-      {!archived && (
+      {isJester && !archived && (
         <TouchableOpacity style={[s.primaryBtn, s.floatBtn, { bottom: Math.max(bottomInset, 14) + 6 }]}
           onPress={() => router.setParams({ id: 'new' })} activeOpacity={0.85}
           testID="dossier-new" accessibilityRole="button" accessibilityLabel="Open a new dossier">
@@ -238,7 +244,7 @@ function DossierRow({ d }: { d: Dossier }) {
       <View style={s.seal}><Text style={s.sealText}>{d.category.split(' ').map(w => w[0]).join('')}</Text></View>
       <View style={{ flex: 1 }}>
         <Text style={s.rowTitle} numberOfLines={1}>{d.title || 'Untitled'}</Text>
-        <Text style={s.rowMeta} numberOfLines={1}>{d.category}  ·  {fmtDate(d.updatedAt)}</Text>
+        <Text style={s.rowMeta} numberOfLines={1}>{d.category}  ·  {d.published ? 'Published' : 'Draft'}  ·  {fmtDate(d.updatedAt)}</Text>
       </View>
       <Feather name="chevron-right" size={16} color={BRONZE} />
     </TouchableOpacity>
@@ -264,10 +270,14 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
   id: string; top: number; bottomInset: number; dirtyRef: React.MutableRefObject<boolean>;
 }) {
   const isNew = id === 'new';
-  const { user } = useAuth();
+  const { user, isJester } = useAuth();
+  const scope = `${user?.uid}:${isJester}`;
   const qc = useQueryClient();
   const detail = useGetDossier(id, {
-    query: { queryKey: getGetDossierQueryKey(id), enabled: !isNew, refetchOnMount: 'always' },
+    query: {
+      queryKey: [...getGetDossierQueryKey(id), scope], enabled: !isNew, refetchOnMount: 'always',
+      refetchInterval: isJester ? false : POLL_MS,
+    },
   });
   const create = useCreateDossier();
   const update = useUpdateDossier();
@@ -293,7 +303,7 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
 
   // Initialise once per record id; later refetches never overwrite edits.
   useEffect(() => {
-    if (isNew || !detail.data || initFor.current === id) return;
+    if (isNew || !detail.data || (initFor.current === id && isJester)) return;
     initFor.current = id;
     try {
       const d = parseDossierDraft(detail.data);
@@ -307,7 +317,7 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
     } catch (error) {
       setLoadError(errText(error, 'Could not read this dossier.'));
     }
-  }, [detail.data, id, isNew]);
+  }, [detail.data, id, isNew, isJester]);
 
   const dirty = ready && snapshot(title, category, draft) !== baseline.current;
   useEffect(() => { dirtyRef.current = dirty; }, [dirty, dirtyRef]);
@@ -329,9 +339,10 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
   }, [user]);
 
   const busy = create.isPending || update.isPending;
+  const mayEdit = isJester && (isNew || !!record?.canEdit);
 
   const afterWrite = (saved: Dossier, text: string) => {
-    qc.setQueryData(getGetDossierQueryKey(saved.id), saved);
+    qc.setQueryData([...getGetDossierQueryKey(saved.id), scope], saved);
     void qc.invalidateQueries({ predicate: isDossierKey });
     initFor.current = saved.id;
     setRecord(saved);
@@ -340,13 +351,13 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
     setSaveError(null);
   };
 
-  const persist = (archived: boolean, onDone?: () => void) => {
-    if (busy) return;
+  const persist = (archived: boolean, onDone?: () => void, publish = false) => {
+    if (busy || !mayEdit) return;
     const t = title.trim();
     if (!t) { setSaveError('A title is required before this dossier can be saved.'); return; }
     let document: string;
     try { document = JSON.stringify({ ...draft, title: t }); } catch { setSaveError('Could not encode this dossier.'); return; }
-    const data = { title: t, category, document, archived, version: record ? record.version : 0 };
+    const data = { title: t, category, document, archived, publish, version: record ? record.version : 0 };
     const text = snapshot(title, category, draft);
     setSaveError(null);
     const opts = {
@@ -385,6 +396,11 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
     else doReload();
   };
 
+  if (!isJester && detail.isError) {
+    return <View style={{ marginTop: top + 40 }}>
+      <ErrorPane message={errText(detail.error, 'This dossier is no longer published.')} onRetry={() => detail.refetch()} />
+    </View>;
+  }
   if (!isNew && !ready) {
     if (loadError) {
       return <View style={{ marginTop: top + 40 }}><ErrorPane message={loadError} onRetry={reload} /></View>;
@@ -400,6 +416,7 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
   }
 
   const archived = record?.archived ?? false;
+  const readOnly = archived || !mayEdit;
 
   return (
     <KeyboardAwareScrollViewCompat
@@ -411,14 +428,15 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
       scrollEnabled={!scrollLocked}
     >
       <View style={s.ribbon}>
-        <Feather name="lock" size={11} color={BRONZE} />
-        <Text style={s.ribbonText}>{archived ? 'SEALED  ·  READ ONLY' : 'EYES OF 00-00 ONLY'}</Text>
+        <Feather name={record?.published ? 'eye' : 'lock'} size={11} color={BRONZE} />
+        <Text style={s.ribbonText}>{archived ? 'SEALED  ·  PRIVATE' : record?.published
+          ? 'PUBLISHED  ·  ALL MEMBERS' : 'DRAFT  ·  00-00 ONLY'}</Text>
         {dirty && <Text style={s.unsaved}>UNSAVED</Text>}
       </View>
 
       <View style={s.editTab}>
         <TextInput
-          style={s.tabInput} value={title} onChangeText={setTitle} editable={!archived}
+          style={s.tabInput} value={title} onChangeText={setTitle} editable={!readOnly}
           placeholder="NAME THIS DOSSIER" placeholderTextColor="rgba(212,168,83,0.4)"
           selectionColor={GOLD} maxLength={120} testID="dossier-title" accessibilityLabel="Dossier title"
         />
@@ -429,9 +447,9 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
           {DOSSIER_CATEGORIES.map(c => {
             const on = category === c;
             return (
-              <TouchableOpacity key={c} disabled={archived} style={[s.catBtn, on && s.catBtnOn]}
+              <TouchableOpacity key={c} disabled={readOnly} style={[s.catBtn, on && s.catBtnOn]}
                 onPress={() => setCategory(c)} testID={`dossier-category-${c}`}
-                accessibilityRole="radio" accessibilityState={{ selected: on, disabled: archived }}
+                accessibilityRole="radio" accessibilityState={{ selected: on, disabled: readOnly }}
                 accessibilityLabel={`Category ${c}`}>
                 <View style={[s.catDot, on && { backgroundColor: BUTTON_ACCENT }]} />
                 <Text style={[s.catText, on && { color: CREAM }]}>{c}</Text>
@@ -440,15 +458,15 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
           })}
         </View>
 
-        <TicketDocument draft={draft} onChange={setDraft} editable={!archived} hideSuit />
+        <TicketDocument draft={draft} onChange={setDraft} editable={!readOnly} hideSuit />
 
         <Text style={[s.sectionLabel, { marginTop: 22 }]}>The Spread</Text>
         <DotLegend />
-        {photos.error && <Text style={s.inlineErr}>Some private images could not load: {photos.error}</Text>}
+        {photos.error && <Text style={s.inlineErr}>Some evidence images could not load: {photos.error}</Text>}
         <SpreadCanvas
           value={draft.spread}
           onChange={sp => setDraft(d => ({ ...d, spread: sp }))}
-          editable={!archived}
+          editable={!readOnly}
           height={Math.round(SH * 0.55)}
           onPickPhoto={pickPhoto}
           onGestureActive={setScrollLocked}
@@ -471,7 +489,7 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
         </View>
       )}
 
-      <View style={s.btnRow}>
+      {mayEdit && <View style={s.btnRow}>
         {record && (archived ? (
           <TouchableOpacity style={s.ghostBtn} disabled={busy} testID="dossier-restore"
             accessibilityRole="button" accessibilityLabel="Restore dossier"
@@ -482,7 +500,7 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
           <TouchableOpacity style={s.voidBtn} disabled={busy} testID="dossier-archive"
             accessibilityRole="button" accessibilityLabel="Archive dossier"
             onPress={() => confirmAction('Seal this dossier?',
-              'It moves to Sealed and can be restored at any time. Unsaved edits are saved with it.',
+              'This removes it from member view and saves your edits privately. Restoring returns it to a draft; publish it again when ready.',
               'Seal', () => persist(true, () => router.setParams({ id: '' })), false)}>
             <Text style={s.voidText}>Seal</Text>
           </TouchableOpacity>
@@ -492,10 +510,22 @@ function DossierEditor({ id, top, bottomInset, dirtyRef }: {
             disabled={busy || (!dirty && !!record)} onPress={() => persist(false)} testID="dossier-save"
             accessibilityRole="button" accessibilityLabel="Save dossier">
             {busy ? <ActivityIndicator color="#FFD700" size="small" />
-              : <Text style={s.primaryText}>{record ? (dirty ? 'Save' : 'Saved') : 'File Dossier'}</Text>}
+              : <Text style={s.primaryText}>{record && !dirty ? 'Draft Saved' : 'Save Draft'}</Text>}
           </TouchableOpacity>
         )}
-      </View>
+      </View>}
+      {mayEdit && !archived && <>
+        <TouchableOpacity style={[s.primaryBtn, { marginTop: 12 }, busy && { opacity: 0.55 }]}
+          disabled={busy} testID="dossier-publish" accessibilityRole="button" accessibilityLabel="Publish dossier"
+          onPress={() => confirmAction('Publish this dossier?',
+            'All active members will be able to read this version and its evidence photos. Only 00-00 can create or edit it.',
+            'Publish', () => persist(false, undefined, true), false)}>
+          <Text style={s.primaryText}>{record?.published ? 'Publish Changes' : 'Publish'}</Text>
+        </TouchableOpacity>
+        <Text style={[s.emptyText, { marginTop: 10, textAlign: 'center' }]}>
+          Save Draft keeps your edits private. Publish shares this version with every member.
+        </Text>
+      </>}
     </KeyboardAwareScrollViewCompat>
   );
 }

@@ -50,8 +50,7 @@ export function useDossierPhotos(spread: SpreadState, enabled: boolean) {
       const errors: string[] = [];
       await Promise.all((JSON.parse(pointers) as string[]).map(async pointer => {
         try {
-          const prefix = `dossier://dossiers/${uid}/`;
-          if (!pointer.startsWith(prefix) || !/^[0-9]{10,16}_[a-z0-9]{6,20}\.jpg$/.test(pointer.slice(prefix.length))) {
+          if (!/^dossier:\/\/dossiers\/[a-zA-Z0-9_-]+\/[0-9]{10,16}_[a-z0-9]{6,20}\.jpg$/.test(pointer)) {
             throw new Error('An evidence photo has an invalid private address.');
           }
           const file = await fetchProtectedImage(pointer.slice('dossier://'.length), 'image/jpeg', 'replit');

@@ -14,6 +14,10 @@ export interface Dossier {
   document: string;
   version: number;
   archived: boolean;
+  published: boolean;
+  /** @nullable */
+  publishedAt: string | null;
+  canEdit: boolean;
   createdAt: string;
   updatedAt: string;
 }

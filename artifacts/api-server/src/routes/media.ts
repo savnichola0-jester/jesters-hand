@@ -3,6 +3,7 @@ import { Storage, type File } from "@google-cloud/storage";
 import { Router, type IRouter, type Request } from "express";
 import { Transform } from "node:stream";
 import { actorFor, readMemberDocument as readDocument, type MemberActor as Actor } from "../lib/memberActor";
+import { dossierPhotoPublished } from "../lib/dossierAccess";
 import {
   isCurrentReplitVaultObject,
   isVaultCoverPath,
@@ -305,7 +306,7 @@ router.get("/media/private", async (req, res) => {
   if (!actor) return void res.status(403).json({ error: "active member required" });
   try {
     const allowed = parsedPath.kind === "dossier-photo"
-      ? actor.isKeeper && parsedPath.uid === actor.uid
+      ? (actor.isKeeper && parsedPath.uid === actor.uid) || await dossierPhotoPublished(path)
       : await checkVaultReadAccess(actor, parsedPath, path);
     if (!allowed) {
       return void res.status(403).json({ error: "forbidden" });
@@ -330,6 +331,9 @@ router.delete("/media/object", async (req, res) => {
   if (!actor) return void res.status(403).json({ error: "active member required" });
   if (!mayDelete(parsedPath, actor)) return void res.status(403).json({ error: "forbidden" });
   try {
+    if (parsedPath.kind === "dossier-photo" && await dossierPhotoPublished(path)) {
+      return void res.status(409).json({ error: "This photo is in a published Dossier. Remove it from the publication before deleting it." });
+    }
     const file = fileFor(path);
     const generation = await currentGeneration(file);
     // Idempotent for retryable archive purge and Go Dark.
